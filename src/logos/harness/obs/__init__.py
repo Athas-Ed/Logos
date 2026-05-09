@@ -1,4 +1,4 @@
-"""Obs: unified logging, ``logs/`` init, and structured formats for the ``logos`` namespace."""
+"""观测（Obs）：统一日志、``logs/`` 目录初始化，以及 ``logos`` 命名空间下的结构化格式。"""
 
 from logos.harness.obs.logging_setup import (
     configure_logging,

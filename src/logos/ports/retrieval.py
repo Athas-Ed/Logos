@@ -6,7 +6,7 @@ from typing import Protocol, runtime_checkable
 
 @dataclass(frozen=True, slots=True)
 class Citation:
-    """Aligned with SSE `citations.items` in API-V0.1.md (path / snippet / score)."""
+    """与 ``API-V0.1.md`` 中 SSE ``citations.items`` 字段对齐（path / snippet / score）。"""
 
     path: str
     snippet: str
@@ -15,7 +15,7 @@ class Citation:
 
 @runtime_checkable
 class RetrievalService(Protocol):
-    """Fused HSI + SVS retrieval."""
+    """融合检索：HSI（高速索引）+ SVS（语义向量库）。"""
 
     def query(self, *, text: str, top_k: int = 8) -> list[Citation]:
         ...

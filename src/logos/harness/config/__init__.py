@@ -1,4 +1,4 @@
-"""Config: ``defaults.yaml`` + ``local.yaml`` merge and optional ``LOGOS_*`` env overrides."""
+"""配置：合并 ``defaults.yaml`` 与 ``local.yaml``，并支持 ``LOGOS_*`` 环境变量覆盖。"""
 
 from logos.harness.config.loader import (
     apply_env_overrides,

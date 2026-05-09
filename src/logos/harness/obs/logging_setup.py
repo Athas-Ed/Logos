@@ -13,14 +13,14 @@ _FILE_NAME: Final[str] = "logos.log"
 
 
 def ensure_logs_directory(settings: AppSettings) -> Path:
-    """Create ``settings.logs_root`` (and parents) if missing; return resolved path."""
+    """若不存在则创建 ``settings.logs_root``（含父目录），返回解析后的路径。"""
     root = Path(settings.logs_root)
     root.mkdir(parents=True, exist_ok=True)
     return root
 
 
 def get_obs_logger(name: str = "") -> logging.Logger:
-    """Logger under the ``logos`` namespace (e.g. ``get_obs_logger("api")`` → ``logos.api``)."""
+    """取得 ``logos`` 命名空间下的记录器；例如 ``get_obs_logger("api")`` → ``logos.api``。"""
     qual = "logos" if not name.strip() else f"logos.{name.strip()}"
     return logging.getLogger(qual)
 
@@ -34,15 +34,15 @@ def configure_logging(
     log_file_name: str | None = None,
     log_format: str | None = None,
 ) -> AppSettings:
-    """Configure the ``logos`` logger tree: console + file under ``settings.logs_root``.
+    """配置 ``logos`` 根记录器：控制台 + 写入 ``settings.logs_root`` 下的日志文件。
 
-    Loads merged YAML (including optional ``logging.yaml``) once for format / filename;
-    if *settings* is omitted, builds :class:`~logos.ports.AppSettings` from that merge.
+    会加载合并后的 YAML（含可选 ``logging.yaml``）以决定格式与文件名；
+    若省略 *settings*，则从上述合并结果构造 :class:`~logos.ports.AppSettings`。
 
-    *log_file_name* / *log_format* override YAML when not ``None`` (values: ``text`` / ``json``).
+    *log_file_name* / *log_format* 非 ``None`` 时覆盖 YAML（取值 ``text`` / ``json``）。
 
-    Idempotent: clears existing ``logos`` handlers before attaching new ones.
-    Returns the :class:`~logos.ports.AppSettings` used.
+    幂等：会先移除 ``logos`` 上已有 handler 再挂载新的。
+    返回实际使用的 :class:`~logos.ports.AppSettings`。
     """
     merged = load_merged_config_dict(config_dir, environ=environ)
     resolved = merged_dict_to_app_settings(merged) if settings is None else settings
