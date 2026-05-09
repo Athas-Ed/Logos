@@ -15,6 +15,11 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0",
+    "httpx>=0.27",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "chromadb>=0.5",
+    "sentence-transformers>=2.2",
 ]
 
 [tool.setuptools.packages.find]
@@ -23,3 +28,6 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+markers = [
+    "slow: 需要本机 BGE 权重或较慢的集成测（可用 pytest -m \"not slow\" 跳过）",
+]

@@ -17,9 +17,8 @@ class BgeSmallZhEmbedder:
             from sentence_transformers import SentenceTransformer
         except ImportError as e:  # pragma: no cover - env without torch/ST
             msg = (
-                "BgeSmallZhEmbedder requires optional dependency `sentence-transformers` "
-                "(and a compatible PyTorch install). "
-                "Install e.g. `pip install sentence-transformers`."
+                "BgeSmallZhEmbedder 需要可选依赖 sentence-transformers（及可用的 PyTorch）。"
+                "请执行：pip install sentence-transformers"
             )
             raise ImportError(msg) from e
         self._model = SentenceTransformer(self._model_path)

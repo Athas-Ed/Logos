@@ -7,6 +7,7 @@ paths:
   example_ksfs_root: "./example_ksfs"
   # 所有索引类文件默认根目录（不入库）
   index_root: "./.index"
+  # 应用日志根目录（Obs）；不存在时会自动创建。可用 local.yaml 或 LOGOS_PATHS__LOGS_ROOT 覆盖。
   logs_root: "./logs"
 
   # HSI：SQLite 单文件，默认文件名 .high-speed_index

@@ -1,0 +1,314 @@
+.layout {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem 1.25rem 1.5rem;
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.titleBlock {
+  min-width: 200px;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.subtitle {
+  margin: 0.25rem 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.headerActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.modeLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.select {
+  padding: 0.35rem 0.6rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  min-width: 11rem;
+}
+
+.ghostBtn {
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.ghostBtn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.health {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.healthText {
+  font-variant-numeric: tabular-nums;
+}
+
+.healthDotOk,
+.healthDotBad,
+.healthDotUnknown {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.healthDotOk {
+  background: var(--ok);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--ok) 55%, transparent);
+}
+
+.healthDotBad {
+  background: var(--err);
+}
+
+.healthDotUnknown {
+  background: var(--muted);
+}
+
+.main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr minmax(260px, 320px);
+  gap: 1rem;
+  min-height: 0;
+  margin-top: 1rem;
+}
+
+@media (max-width: 860px) {
+  .main {
+    grid-template-columns: 1fr;
+  }
+}
+
+.chatPanel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.errorBanner {
+  padding: 0.6rem 1rem;
+  background: color-mix(in srgb, var(--err) 18%, transparent);
+  color: var(--text);
+  font-size: 0.875rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.messageList {
+  flex: 1;
+  overflow: auto;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.emptyHint {
+  margin: 2rem auto;
+  max-width: 28rem;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.bubbleUser,
+.bubbleAssistant {
+  max-width: 92%;
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+
+.bubbleUser {
+  align-self: flex-end;
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+}
+
+.bubbleAssistant {
+  align-self: flex-start;
+  background: var(--bg);
+}
+
+.bubbleMeta {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin-bottom: 0.25rem;
+}
+
+.bubbleContent {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.95rem;
+}
+
+.composer {
+  border-top: 1px solid var(--border);
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 4.5rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+}
+
+.textarea:focus {
+  outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  outline-offset: 1px;
+}
+
+.composerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.muted {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.primaryBtn {
+  padding: 0.45rem 1.1rem;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.primaryBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.secondaryBtn {
+  padding: 0.45rem 0.9rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.secondaryBtn:hover {
+  border-color: var(--err);
+  color: var(--err);
+}
+
+.citePanel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.85rem 1rem;
+  min-height: 200px;
+  overflow: auto;
+}
+
+.citeTitle {
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.citeEmpty {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.citeList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.citeCard {
+  padding: 0.55rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.citePath {
+  font-size: 0.8rem;
+  font-weight: 600;
+  word-break: break-all;
+  color: var(--accent);
+}
+
+.citeScore {
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin: 0.15rem 0 0.35rem;
+}
+
+.citeSnippet {
+  margin: 0;
+  font-size: 0.78rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text);
+  font-family: ui-monospace, "Cascadia Code", monospace;
+}
