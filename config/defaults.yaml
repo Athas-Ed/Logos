@@ -1,0 +1,22 @@
+# 可提交仓库的默认配置（勿写真实密钥）。本机覆盖请用 local.yaml。
+
+# operating_mode: author
+
+paths:
+  workspace_root: "./workspace"
+  example_ksfs_root: "./example_ksfs"
+  # 所有索引类文件默认根目录（不入库）
+  index_root: "./.index"
+  logs_root: "./logs"
+
+  # HSI：SQLite 单文件，默认文件名 .high-speed_index
+  hsi_sqlite_path: "./.index/.high-speed_index"
+
+embeddings:
+  provider: "bge_small_zh"
+  model_path: "models/tooling/embeddings/bge-small-zh-v1.5"
+
+chroma:
+  # SVS：Chroma 持久化目录
+  persist_directory: "./.index/.vector_index"
+  collection: "lkc_chunks_v0"

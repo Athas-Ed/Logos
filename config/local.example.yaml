@@ -1,0 +1,10 @@
+# 复制为 local.yaml 并填写真实值。local.yaml 已在 .gitignore 中忽略。
+
+# 大模型（OpenAI 兼容示例）
+# llm:
+#   api_key: "sk-..."
+#   base_url: "https://api.openai.com/v1"
+
+# 可选：覆盖路径类
+# paths:
+#   workspace_root: "../workspace"
