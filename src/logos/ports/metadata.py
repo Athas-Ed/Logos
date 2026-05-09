@@ -6,7 +6,7 @@ from typing import Protocol, runtime_checkable
 
 @dataclass(frozen=True, slots=True)
 class MetadataRecord:
-    """HSI row shape (fields may grow in later milestones)."""
+    """HSI（高速索引）一行记录的形状（后续里程碑可增字段）。"""
 
     entity_id: str
     title: str
@@ -17,7 +17,7 @@ class MetadataRecord:
 
 @runtime_checkable
 class MetadataIndex(Protocol):
-    """Structured index (e.g. SQLite HSI)."""
+    """结构化元数据索引（例如 SQLite 实现的 HSI）。"""
 
     def upsert(self, records: list[MetadataRecord]) -> None:
         ...

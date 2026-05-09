@@ -1,4 +1,4 @@
-"""Abstract ports (DIP). Implementations live in infrastructure / persistence."""
+"""抽象端口（依赖倒置）。具体实现放在 infrastructure / persistence 等包中。"""
 
 from logos.ports.embedding import TextEmbedder
 from logos.ports.knowledge_source import KnowledgeSource, SourceDocument

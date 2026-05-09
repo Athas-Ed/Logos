@@ -8,3 +8,8 @@
 # 可选：覆盖路径类
 # paths:
 #   workspace_root: "../workspace"
+
+# 可选：日志格式（亦可用 LOGOS_LOGGING__FORMAT=json / LOGOS_LOGGING__FILE_NAME=app.log）
+# logging:
+#   format: text
+#   file_name: logos.log

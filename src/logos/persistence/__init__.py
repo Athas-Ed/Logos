@@ -1,4 +1,4 @@
-"""HDL implementation (KSS, LKC, HSI) — Stream 2."""
+"""持久层 HDL 实现（KSS、HSI、与 SVS 衔接等）— Stream 2。"""
 
 from __future__ import annotations
 

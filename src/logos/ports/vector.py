@@ -14,7 +14,7 @@ class VectorQueryHit:
 
 @runtime_checkable
 class SemanticStore(Protocol):
-    """Vector index (e.g. Chroma) — add / delete / similarity search."""
+    """向量索引（例如 Chroma）：写入分块、删除、相似度检索。"""
 
     def upsert_chunks(
         self,

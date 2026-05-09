@@ -1,4 +1,4 @@
-"""Stream 0: package import smoke tests."""
+"""Stream 0：包导入烟测。"""
 
 from __future__ import annotations
 

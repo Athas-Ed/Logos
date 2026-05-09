@@ -1,1 +1,1 @@
-"""System tools (filesystem helpers, etc.) — infrastructure-adjacent."""
+"""系统工具（文件系统辅助等）— 与基础设施相邻的模块。"""

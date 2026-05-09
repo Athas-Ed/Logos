@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True, slots=True)
 class AppSettings:
-    """Read-only snapshot after merging defaults + local + env (Stream 1)."""
+    """合并 defaults + local + 环境变量后的只读配置快照（Stream 1）。"""
 
     workspace_root: str
     example_ksfs_root: str
