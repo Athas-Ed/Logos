@@ -1,0 +1,5 @@
+# Harness / Obs 默认（可经 local.yaml 或 LOGOS_* 覆盖）。勿写密钥。
+logging:
+  # text：经典行格式；json：每行一条 JSON（结构化）
+  format: json
+  file_name: logos.log
