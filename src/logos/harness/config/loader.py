@@ -102,11 +102,17 @@ def load_merged_config_dict(
     *,
     environ: Mapping[str, str] | None = None,
 ) -> dict[str, Any]:
-    """Load ``defaults.yaml`` + ``local.yaml`` from *config_dir*, then env overrides."""
+    """Load ``defaults.yaml`` + ``local.yaml`` + optional ``logging.yaml``, then env overrides.
+
+    ``logging.yaml`` is optional (missing file is ignored); use it for harness / Obs
+    defaults without editing ``defaults.yaml``.
+    """
     root = resolve_config_dir(config_dir, environ=environ)
     defaults = load_yaml_dict(root / "defaults.yaml")
     local = load_yaml_dict(root / "local.yaml")
     merged = deep_merge(defaults, local)
+    logging_overlay = load_yaml_dict(root / "logging.yaml")
+    merged = deep_merge(merged, logging_overlay)
     return apply_env_overrides(merged, environ=environ)
 
 
