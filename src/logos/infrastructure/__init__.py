@@ -1,1 +1,1 @@
-"""Infrastructure (Retrieval, MS, tools) — Stream 3."""
+"""基础设施（检索、模型侧、工具调用适配等）— Stream 3。"""

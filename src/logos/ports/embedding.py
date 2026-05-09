@@ -5,8 +5,8 @@ from typing import Protocol, runtime_checkable
 
 @runtime_checkable
 class TextEmbedder(Protocol):
-    """Maps text chunks to dense vectors (replaceable; config-driven)."""
+    """将文本块映射为稠密向量（可替换实现；由配置驱动）。"""
 
     def embed(self, texts: list[str]) -> list[list[float]]:
-        """Return one vector per input text; same order as *texts*."""
+        """每个输入文本对应一个向量，顺序与 *texts* 一致。"""
         ...

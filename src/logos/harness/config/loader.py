@@ -12,7 +12,7 @@ _ENV_PREFIX = "LOGOS_"
 
 
 def deep_merge(base: Mapping[str, Any], override: Mapping[str, Any]) -> dict[str, Any]:
-    """Recursively merge ``override`` into a copy of ``base`` (dict values merge, else replace)."""
+    """递归合并：在 *base* 的副本上叠 *override*；子字典继续递归，否则覆盖。"""
     out: dict[str, Any] = dict(base)
     for key, val in override.items():
         if (
@@ -38,12 +38,11 @@ def _set_nested(target: dict[str, Any], segments: list[str], value: str) -> None
 
 
 def apply_env_overrides(tree: dict[str, Any], environ: Mapping[str, str] | None = None) -> dict[str, Any]:
-    """Apply ``LOGOS_*`` environment variables onto a nested config dict (in place).
+    """将 ``LOGOS_*`` 环境变量写入嵌套配置 *tree*（原地修改）。
 
-    Naming: ``LOGOS_<section>__<key>`` → ``tree[section.lower()][key.lower()]`` with
-    segment names lowercased and joined by ``__``. Single segment
-    ``LOGOS_OPERATING_MODE`` sets top-level ``operating_mode``.
-    Empty values are skipped.
+    命名规则：``LOGOS_<段>__<键>`` → ``tree[段小写][键小写]``，段之间用 ``__``。
+    单独一段 ``LOGOS_OPERATING_MODE`` 写入顶层 ``operating_mode``。
+    空字符串的环境变量会被跳过。
     """
     env = environ if environ is not None else os.environ
     for raw_name, raw_val in env.items():
@@ -63,12 +62,13 @@ def resolve_config_dir(
     explicit: Path | str | None = None,
     environ: Mapping[str, str] | None = None,
 ) -> Path:
-    """Directory containing ``defaults.yaml`` (and optional ``local.yaml``).
+    """返回存放 ``defaults.yaml``（及可选 ``local.yaml``）的配置目录。
 
-    Resolution:
-    1. ``explicit`` if given.
-    2. ``LOGOS_CONFIG_DIR`` from ``environ`` / ``os.environ``.
-    3. Walk parents from :func:`Path.cwd` looking for ``config/defaults.yaml``.
+    解析顺序：
+    1. 若传入 *explicit*，直接使用其路径。
+    2. 否则看环境变量 ``LOGOS_CONFIG_DIR``（*environ* 或 ``os.environ``）。
+    3. 否则从当前工作目录向上查找存在 ``config/defaults.yaml`` 的目录。
+    4. 都找不到则返回 ``当前目录/config``（可能尚不存在，由调用方处理）。
     """
     env = environ if environ is not None else os.environ
     if explicit is not None:
@@ -85,6 +85,7 @@ def resolve_config_dir(
 
 
 def load_yaml_dict(path: Path) -> dict[str, Any]:
+    """读取 YAML 文件为字典；文件不存在返回空字典；根非 dict 则抛 ValueError。"""
     if not path.is_file():
         return {}
     with path.open(encoding="utf-8") as f:
@@ -92,7 +93,7 @@ def load_yaml_dict(path: Path) -> dict[str, Any]:
     if data is None:
         return {}
     if not isinstance(data, dict):
-        msg = f"YAML root must be a mapping: {path}"
+        msg = f"YAML 根节点必须是键值映射（mapping），文件：{path}"
         raise ValueError(msg)
     return data
 
@@ -102,10 +103,9 @@ def load_merged_config_dict(
     *,
     environ: Mapping[str, str] | None = None,
 ) -> dict[str, Any]:
-    """Load ``defaults.yaml`` + ``local.yaml`` + optional ``logging.yaml``, then env overrides.
+    """加载 ``defaults.yaml`` + ``local.yaml`` + 可选 ``logging.yaml``，再应用环境变量覆盖。
 
-    ``logging.yaml`` is optional (missing file is ignored); use it for harness / Obs
-    defaults without editing ``defaults.yaml``.
+    ``logging.yaml`` 可省略（不存在则忽略），用于在不改 ``defaults.yaml`` 的前提下调节日志等。
     """
     root = resolve_config_dir(config_dir, environ=environ)
     defaults = load_yaml_dict(root / "defaults.yaml")
@@ -143,7 +143,7 @@ def load_app_settings(
     *,
     environ: Mapping[str, str] | None = None,
 ) -> AppSettings:
-    """Merge YAML + env and return :class:`~logos.ports.AppSettings`."""
+    """合并 YAML 与环境变量后，返回 :class:`~logos.ports.AppSettings`。"""
     return merged_dict_to_app_settings(
         load_merged_config_dict(config_dir, environ=environ)
     )

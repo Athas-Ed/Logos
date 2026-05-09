@@ -1,4 +1,4 @@
-"""Stream 1: config merge / env overrides and Obs logging."""
+"""Stream 1：配置合并、环境变量覆盖与 Obs 日志。"""
 
 from __future__ import annotations
 
@@ -72,6 +72,25 @@ def test_logging_yaml_layer_merges(tmp_path: Path) -> None:
     assert data["paths"]["logs_root"] == "./a"
     assert data["logging"]["format"] == "json"
     assert data["logging"]["file_name"] == "x.log"
+
+
+def test_local_yaml_overrides_defaults(tmp_path: Path) -> None:
+    cfg = tmp_path / "config"
+    cfg.mkdir()
+    (cfg / "defaults.yaml").write_text(
+        "paths:\n  logs_root: ./from_defaults\n  workspace_root: ./w1\n",
+        encoding="utf-8",
+    )
+    (cfg / "local.yaml").write_text(
+        "paths:\n  logs_root: ./from_local\n",
+        encoding="utf-8",
+    )
+    data = load_merged_config_dict(cfg, environ={})
+    assert data["paths"]["logs_root"] == "./from_local"
+    assert data["paths"]["workspace_root"] == "./w1"
+    s = load_app_settings(cfg)
+    assert s.logs_root == "./from_local"
+    assert s.workspace_root == "./w1"
 
 
 def test_env_overrides_logging_keys(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -158,5 +177,5 @@ def test_configure_logging_json_lines(
     assert log_path.is_file()
     line = log_path.read_text(encoding="utf-8").strip().splitlines()[-1]
     payload = json.loads(line)
-    assert payload["message"] == "json_event"
-    assert payload["logger"] == "logos.api"
+    assert payload["消息"] == "json_event"
+    assert payload["记录器"] == "logos.api"

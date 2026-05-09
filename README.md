@@ -19,3 +19,4 @@ pytest
 
 - 默认配置：`config/defaults.yaml`；本机密钥与覆盖：`config/local.yaml`（从 `config/local.example.yaml` 复制，勿提交）。
 - 个人创作目录：`workspace/`（默认已 `.gitignore`）。
+- 面向本机阅读的**日志行、JSON 日志字段名、常见异常提示**等以**简体中文**为主（便于日常使用）；API 路径、配置键名、代码标识符仍保持英文以便与文档/生态对齐。
