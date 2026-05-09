@@ -20,7 +20,9 @@ from .container import AppPorts
 def get_app_ports(request: Request) -> AppPorts:
     ports = getattr(request.app.state, "ports", None)
     if ports is None:
-        raise RuntimeError("AppPorts not configured on app.state (use create_app).")
+        raise RuntimeError(
+            "应用未在 app.state 上配置 AppPorts，请先通过 create_app(ports=...) 注入。"
+        )
     return ports
 
 

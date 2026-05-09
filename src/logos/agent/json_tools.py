@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 from dataclasses import dataclass
 from typing import Any
@@ -20,6 +21,8 @@ class ParsedStep:
 
 
 _FENCE = re.compile(r"```(?:json)?\s*([\s\S]*?)```", re.IGNORECASE)
+
+_log = logging.getLogger("logos.agent.json_tools")
 
 
 def _strip_json_comments(s: str) -> str:
@@ -100,7 +103,13 @@ def parse_react_json(text: str) -> ParsedStep:
         )
     try:
         data = json.loads(_strip_json_comments(blob))
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as exc:
+        preview = blob[:240].replace("\n", " ")
+        _log.warning(
+            "ReAct JSON 解析失败（json.loads）：%s；片段：%s",
+            exc.msg,
+            preview,
+        )
         return ParsedStep(
             raw_text=text,
             thought=None,
@@ -109,6 +118,10 @@ def parse_react_json(text: str) -> ParsedStep:
             final_answer=None,
         )
     if not isinstance(data, dict):
+        _log.warning(
+            "ReAct JSON 根类型无效：期望对象，实际为 %s",
+            type(data).__name__,
+        )
         return ParsedStep(
             raw_text=text,
             thought=None,

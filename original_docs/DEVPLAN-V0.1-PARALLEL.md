@@ -147,11 +147,11 @@ chroma:
 | 状态 | 步 | 动作 | 完成标准 |
 |------|----|------|----------|
 | ✅ | 0 | **Stream 0**：`pyproject.toml`、包 **`logos`**（`src/logos/ports/` 契约）、`tests/`、`example_ksfs/` 最小样例、`src/gui/` 占位 | `pytest` 通过；`import logos` |
-| ⬜ | 1 | **Stream 1**：合并 YAML、`local.yaml` 逻辑、Obs→`logs/` | 启动即写 `logs/*.log`（或单文件） |
-| ⬜ | 2 | **Stream 2**：KSS + LKC 同步 + HSI 写入 `.index/.high-speed_index` | 样例 KSFS 可索引；单测覆盖哈希 |
-| ⬜ | 3 | **Stream 3**：`TextEmbedder` + Chroma→`.index/.vector_index` + Retrieval | Retrieval DTO 与 SSE `citations.items` 字段一致 |
-| ⬜ | 4 | **Stream 4**：Shell + ReAct + JSON tools | fake LLM 下工具链可跑 |
-| ⬜ | 5 | **Stream 5**：FastAPI + SSE `chat` + health + 静态挂载 `gui/dist` | `curl` health；SSE 符合 `API-V0.1.md` |
+| ✅ | 1 | **Stream 1**：合并 YAML、`local.yaml` 逻辑、Obs→`logs/` | 启动即写 `logs/*.log`（或单文件） |
+| ✅ | 2 | **Stream 2**：KSS + LKC 同步 + HSI 写入 `.index/.high-speed_index` | 样例 KSFS 可索引；单测覆盖哈希 |
+| ✅ | 3 | **Stream 3**：`TextEmbedder` + Chroma→`.index/.vector_index` + Retrieval | Retrieval DTO 与 SSE `citations.items` 字段一致 |
+| ✅ | 4 | **Stream 4**：Shell + ReAct + JSON tools | fake LLM 下工具链可跑 |
+| ✅ | 5 | **Stream 5**：FastAPI + SSE `chat` + health + 静态挂载 `gui/dist` | `curl` health；SSE 符合 `API-V0.1.md` |
 | ⬜ | 6 | **Stream 6**：`src/gui/` Vite 工程 + EventSource 消费 SSE | 浏览器可见流式正文与引用 |
 | ⬜ | 7 | **Stream 7**：S&G 沙箱 + 示例 MCP skill | `write_draft` 越权失败；MCP 可测起停 |
 | ⬜ | 8 | **收尾**：README、`docs/` 同步、`scripts/` 一键启动 | 与 SPEC 验收判据一致 |

@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 
 from logos.ports.llm import ChatMessage, LLMClient
 
 from logos.agent import cb, json_tools
 from logos.agent.tool_registry import ToolRegistry
+
+_log = logging.getLogger("logos.agent.react")
 
 
 @dataclass(frozen=True, slots=True)
@@ -46,19 +49,25 @@ def run_react_loop(
             continue
 
         if nudge_budget <= 0:
+            _log.warning(
+                "ReAct 在 %d 步内仍无法得到合法 JSON 步骤（已无重试预算），停止循环。",
+                steps,
+            )
             return ReActResult(
-                answer="agent stopped: could not parse a valid JSON step",
+                answer="已停止：连续多轮无法解析为有效的 JSON 工具步骤。",
                 steps=steps,
                 messages=messages,
             )
         nudge_budget -= 1
-        detail = "missing final_answer and valid action"
+        detail = "缺少 final_answer 与合法 action"
         if step.thought:
-            detail += f"; thought was: {step.thought[:200]}"
+            detail += f"；thought 摘要：{step.thought[:200]}"
+        _log.info("ReAct 输出不完整，追加格式提示：%s", detail[:300])
         cb.append_format_nudge(messages, detail)
 
+    _log.warning("ReAct 达到最大步数上限（%d），仍未结束。", max_steps)
     return ReActResult(
-        answer="agent stopped: max ReAct steps exceeded",
+        answer="已停止：达到 ReAct 最大步数上限。",
         steps=steps,
         messages=messages,
     )

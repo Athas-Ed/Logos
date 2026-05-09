@@ -9,10 +9,7 @@ def _require_chromadb() -> Any:
     try:
         import chromadb
     except ImportError as e:  # pragma: no cover - minimal CI env
-        msg = (
-            "ChromaSemanticStore requires `chromadb`. "
-            "Install with `pip install chromadb`."
-        )
+        msg = "ChromaSemanticStore 需要 chromadb 包。请执行：pip install chromadb"
         raise ImportError(msg) from e
     return chromadb
 
