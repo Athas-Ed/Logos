@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 from pathlib import Path
 
 import pytest
@@ -20,7 +21,20 @@ from logos.ports.retrieval import Citation
 
 class _StubLLM:
     def complete(self, messages, *, json_mode: bool = False) -> str:
-        return "答复：" + messages[-1].content
+        users = [m for m in messages if m.role == "user"]
+        last_user = users[-1].content if users else ""
+        if json_mode:
+            return json.dumps(
+                {"thought": "stub", "final_answer": "答复：" + last_user},
+                ensure_ascii=False,
+            )
+        return "答复：" + last_user
+
+    def stream_completion(self, messages, *, json_mode: bool = False):
+        text = self.complete(messages, json_mode=json_mode)
+        step = 8
+        for i in range(0, len(text), step):
+            yield text[i : i + step]
 
 
 class _StubRetrieval:
@@ -66,6 +80,7 @@ def _make_ports(tmp_path: Path) -> AppPorts:
     settings = AppSettings(
         workspace_root=str(tmp_path / "workspace"),
         example_ksfs_root=str(tmp_path / "ksfs"),
+        lkc_root=str(tmp_path / "lkc"),
         index_root=str(tmp_path / ".index"),
         logs_root=str(tmp_path / "logs"),
         hsi_sqlite_path=str(tmp_path / ".index" / "hsi.sqlite"),
@@ -104,6 +119,7 @@ def test_api_v1_chat_sse_delta_and_done(tmp_path: Path) -> None:
         ) as stream:
             assert stream.status_code == 200
             raw = stream.read().decode("utf-8")
+    assert "event: reasoning_delta" in raw
     assert "event: delta" in raw
     assert "data:" in raw
     assert "event: done" in raw

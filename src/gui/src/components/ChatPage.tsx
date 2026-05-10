@@ -30,9 +30,10 @@ export function ChatPage() {
     setHealthOk(await fetchHealth());
   }, []);
 
+  // 与「发消息」无关：仅轮询 /api/v1/health 更新右上角圆点。开发模式下 React StrictMode 可能让本 effect 多跑一次。
   useEffect(() => {
     void refreshHealth();
-    const id = window.setInterval(() => void refreshHealth(), 15000);
+    const id = window.setInterval(() => void refreshHealth(), 60000);
     return () => window.clearInterval(id);
   }, [refreshHealth]);
 
@@ -55,7 +56,10 @@ export function ChatPage() {
 
     const userMsg: ChatMessage = { role: "user", content: text };
     const nextMessages = [...messages, userMsg];
-    setMessages([...nextMessages, { role: "assistant", content: "" }]);
+    setMessages([
+      ...nextMessages,
+      { role: "assistant", content: "", reasoning: "" },
+    ]);
     setCitations([]);
 
     setStreaming(true);
@@ -63,6 +67,7 @@ export function ChatPage() {
     abortRef.current = ac;
 
     let assistantText = "";
+    let reasoningText = "";
 
     try {
       await streamChat({
@@ -70,13 +75,30 @@ export function ChatPage() {
         operatingMode,
         signal: ac.signal,
         onEvent: (ev) => {
-          if (ev.kind === "delta") {
+          if (ev.kind === "reasoning_delta") {
+            reasoningText += ev.text;
+            setMessages((prev) => {
+              const copy = [...prev];
+              const last = copy.length - 1;
+              if (last >= 0 && copy[last].role === "assistant") {
+                copy[last] = {
+                  ...copy[last],
+                  reasoning: reasoningText,
+                };
+              }
+              return copy;
+            });
+          } else if (ev.kind === "delta") {
             assistantText += ev.text;
             setMessages((prev) => {
               const copy = [...prev];
               const last = copy.length - 1;
               if (last >= 0 && copy[last].role === "assistant") {
-                copy[last] = { ...copy[last], content: assistantText };
+                copy[last] = {
+                  ...copy[last],
+                  content: assistantText,
+                  reasoning: reasoningText || copy[last].reasoning,
+                };
               }
               return copy;
             });
@@ -168,8 +190,8 @@ export function ChatPage() {
           <div className={styles.messageList}>
             {messages.length === 0 ? (
               <p className={styles.emptyHint}>
-                发送一条消息开始对话。响应为 SSE：delta 拼正文，citations
-                展示在右侧。
+                发送一条消息开始对话。SSE：reasoning_delta 为 ReAct
+                中间输出（多为 JSON），delta 为最终答复；citations 在右侧。
               </p>
             ) : (
               messages.map((m, i) => (
@@ -184,9 +206,19 @@ export function ChatPage() {
                   </div>
                   <div className={styles.bubbleContent}>
                     {m.role === "assistant" &&
+                    (m.reasoning?.length ?? 0) > 0 ? (
+                      <details className={styles.reasoningFold} open>
+                        <summary className={styles.reasoningSummary}>
+                          推理过程（流式）
+                        </summary>
+                        <pre className={styles.reasoningPre}>{m.reasoning}</pre>
+                      </details>
+                    ) : null}
+                    {m.role === "assistant" &&
                     streaming &&
                     i === messages.length - 1 &&
-                    !m.content
+                    !m.content &&
+                    (m.reasoning?.length ?? 0) === 0
                       ? "…"
                       : m.content}
                   </div>

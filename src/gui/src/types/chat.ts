@@ -3,6 +3,8 @@ export type ChatRole = "system" | "user" | "assistant";
 export interface ChatMessage {
   role: ChatRole;
   content: string;
+  /** ReAct 中间流式输出（SSE event: reasoning_delta），仅助手消息使用 */
+  reasoning?: string;
 }
 
 export interface CitationItem {

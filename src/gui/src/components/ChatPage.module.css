@@ -188,6 +188,35 @@
   font-size: 0.95rem;
 }
 
+.reasoningFold {
+  margin-bottom: 0.5rem;
+  font-size: 0.8rem;
+  border-radius: calc(var(--radius) - 2px);
+  border: 1px dashed color-mix(in srgb, var(--muted) 35%, var(--border));
+  padding: 0.35rem 0.5rem;
+  background: color-mix(in srgb, var(--muted) 6%, transparent);
+}
+
+.reasoningSummary {
+  cursor: pointer;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.reasoningPre {
+  margin: 0.35rem 0 0;
+  padding: 0.45rem 0.5rem;
+  overflow: auto;
+  max-height: 14rem;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: color-mix(in srgb, var(--bg) 80%, var(--surface));
+  border-radius: 4px;
+  border: 1px solid var(--border);
+}
+
 .composer {
   border-top: 1px solid var(--border);
   padding: 0.75rem;

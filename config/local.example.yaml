@@ -1,9 +1,15 @@
 # 复制为 local.yaml 并填写真实值。local.yaml 已在 .gitignore 中忽略。
 
-# 大模型（OpenAI 兼容示例）
+# 大模型（OpenAI 兼容：DeepSeek / OpenAI 等）
 # llm:
 #   api_key: "sk-..."
-#   base_url: "https://api.openai.com/v1"
+#   base_url: "https://api.deepseek.com/v1"
+#   model: "deepseek-chat"
+#   verify_ssl: true
+#   ca_bundle: "C:/path/to/custom-ca.cer"
+#   http_proxy: "http://127.0.0.1:26561"
+#   https_proxy: "http://127.0.0.1:26561"
+#   no_proxy: "127.0.0.1,localhost"
 
 # 可选：覆盖路径类
 # paths:

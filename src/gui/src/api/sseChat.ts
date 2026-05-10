@@ -4,6 +4,7 @@ const CHAT_PATH = "/api/v1/chat";
 
 export type StreamChatEvent =
   | { kind: "delta"; text: string }
+  | { kind: "reasoning_delta"; text: string }
   | { kind: "citations"; items: CitationItem[] }
   | { kind: "done"; payload: Record<string, unknown> }
   | { kind: "error"; code: string; message: string };
@@ -31,6 +32,11 @@ function parseSseBlock(block: string): StreamChatEvent | null {
         const text =
           typeof payload.text === "string" ? payload.text : String(payload.text ?? "");
         return { kind: "delta", text };
+      }
+      case "reasoning_delta": {
+        const text =
+          typeof payload.text === "string" ? payload.text : String(payload.text ?? "");
+        return { kind: "reasoning_delta", text };
       }
       case "citations": {
         const raw = payload.items;
