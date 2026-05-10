@@ -152,9 +152,9 @@ chroma:
 | ✅ | 3 | **Stream 3**：`TextEmbedder` + Chroma→`.index/.vector_index` + Retrieval | Retrieval DTO 与 SSE `citations.items` 字段一致 |
 | ✅ | 4 | **Stream 4**：Shell + ReAct + JSON tools | fake LLM 下工具链可跑 |
 | ✅ | 5 | **Stream 5**：FastAPI + SSE `chat` + health + 静态挂载 `gui/dist` | `curl` health；SSE 符合 `API-V0.1.md` |
-| ⬜ | 6 | **Stream 6**：`src/gui/` Vite 工程 + EventSource 消费 SSE | 浏览器可见流式正文与引用 |
-| ⬜ | 7 | **Stream 7**：S&G 沙箱 + 示例 MCP skill | `write_draft` 越权失败；MCP 可测起停 |
-| ⬜ | 8 | **收尾**：README、`docs/` 同步、`scripts/` 一键启动 | 与 SPEC 验收判据一致 |
+| ✅ | 6 | **Stream 6**：`src/gui/` Vite 工程 + EventSource 消费 SSE | 浏览器可见流式正文与引用 |
+| ✅ | 7 | **Stream 7**：S&G 沙箱 + 示例 MCP skill | `write_draft` 越权失败；MCP 可测起停 |
+| ✅ | 8 | **收尾**：README、`docs/` 同步、`scripts/` 一键启动 | 与 SPEC 验收判据一致 |
 
 **裁量项（不列入上表门禁）**：日志滚动；chunk 参数；`/index/rebuild`；`/chat/debug`。
 
@@ -197,4 +197,4 @@ Stream 1 与后续流耦合少，可**只开一个 Agent**，提示词示例：
 
 ---
 
-*文档版本：V0.1 已定案可开工；§7 步骤 0 已完成；§8 为多 Agent 指引。*
+*文档版本：V0.1 已定案可开工；§7 步骤 0～8 已勾选完成；§8 为多 Agent 指引。*

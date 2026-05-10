@@ -116,13 +116,37 @@ def load_merged_config_dict(
     return apply_env_overrides(merged, environ=environ)
 
 
+def _coerce_truthy(raw: Any, *, default: bool = True) -> bool:
+    """将 YAML / 环境变量中的真假值规范为 bool。"""
+    if raw is None:
+        return default
+    if isinstance(raw, bool):
+        return raw
+    if isinstance(raw, (int, float)):
+        return bool(raw)
+    s = str(raw).strip().lower()
+    if s in ("0", "false", "no", "off", ""):
+        return False
+    if s in ("1", "true", "yes", "on"):
+        return True
+    return default
+
+
+def _str_opt(raw: Any) -> str:
+    if raw is None:
+        return ""
+    return str(raw).strip()
+
+
 def merged_dict_to_app_settings(data: Mapping[str, Any]) -> AppSettings:
     paths = data.get("paths") or {}
     emb = data.get("embeddings") or {}
     chroma = data.get("chroma") or {}
+    llm = data.get("llm") or {}
     return AppSettings(
         workspace_root=str(paths.get("workspace_root", "./workspace")),
         example_ksfs_root=str(paths.get("example_ksfs_root", "./example_ksfs")),
+        lkc_root=str(paths.get("lkc_root", "./workspace/lkc")),
         index_root=str(paths.get("index_root", "./.index")),
         logs_root=str(paths.get("logs_root", "./logs")),
         hsi_sqlite_path=str(paths.get("hsi_sqlite_path", "./.index/.high-speed_index")),
@@ -135,6 +159,14 @@ def merged_dict_to_app_settings(data: Mapping[str, Any]) -> AppSettings:
             emb.get("model_path", "models/tooling/embeddings/bge-small-zh-v1.5")
         ),
         operating_mode=str(data.get("operating_mode", "author")),
+        llm_api_key=str(llm.get("api_key", "") or ""),
+        llm_base_url=str(llm.get("base_url", "https://api.deepseek.com/v1")),
+        llm_model=str(llm.get("model", "deepseek-chat")),
+        llm_verify_ssl=_coerce_truthy(llm.get("verify_ssl"), default=True),
+        llm_ca_bundle=_str_opt(llm.get("ca_bundle")),
+        llm_http_proxy=_str_opt(llm.get("http_proxy")),
+        llm_https_proxy=_str_opt(llm.get("https_proxy")),
+        llm_no_proxy=_str_opt(llm.get("no_proxy")),
     )
 
 

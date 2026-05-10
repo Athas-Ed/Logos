@@ -9,7 +9,13 @@ from logos.agent.cb import (
 )
 from logos.agent.json_tools import ParsedStep, parse_react_json
 from logos.agent.pr import select_paradigm
-from logos.agent.react import ReActResult, run_react_loop
+from logos.agent.react import (
+    ReActResult,
+    ReActStreamDone,
+    ReActStreamReasoning,
+    iter_react_loop,
+    run_react_loop,
+)
 from logos.agent.shell import AgentShell
 from logos.agent.tool_registry import RegisteredTool, ToolRegistry
 
@@ -17,6 +23,8 @@ __all__ = [
     "AgentShell",
     "ParsedStep",
     "ReActResult",
+    "ReActStreamDone",
+    "ReActStreamReasoning",
     "RegisteredTool",
     "ToolRegistry",
     "append_assistant",
@@ -24,6 +32,7 @@ __all__ = [
     "append_observation",
     "build_react_system_message",
     "parse_react_json",
+    "iter_react_loop",
     "run_react_loop",
     "seed_messages",
     "select_paradigm",

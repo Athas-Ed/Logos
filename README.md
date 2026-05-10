@@ -16,11 +16,22 @@ pytest
 - Python **3.11+**
 - 包根：`import logos`（源码在 `src/logos/`，说明见 `src/README.md`）
 
+## 前后端联调（V0.1）
+
+- **桩后端**：`python scripts/run_backend_stub.py`（读 `config/`，SSE 与 GUI 契约一致）。
+- **GUI**：`cd src/gui && npm install && npm run dev`（默认代理 `/api` → `http://127.0.0.1:8000`）。
+- **一键**：推荐 `scripts/start_logos.ps1`（或双击 `scripts/start_logos.cmd`）；macOS/Linux 用 `chmod +x scripts/start_logos.sh && ./scripts/start_logos.sh`。`scripts/run_dev.*` 为兼容别名，行为相同。
+- 更细的步骤见 [`docs/V0.1-QUICKSTART.md`](docs/V0.1-QUICKSTART.md)。
+
 ## 配置与隐私
 
 - 默认配置：`config/defaults.yaml`；本机密钥与覆盖：`config/local.yaml`（从 `config/local.example.yaml` 复制，勿提交）。
 - 个人创作目录：`workspace/`（默认已 `.gitignore`）。
 - 面向本机阅读的**日志行、JSON 日志字段名、常见异常提示**等以**简体中文**为主（便于日常使用）；API 路径、配置键名、代码标识符仍保持英文以便与文档/生态对齐。
+
+## 大模型（主依赖）
+
+- **`httpx`**：OpenAI 兼容对话 API（如 DeepSeek）已接入 `logos.infrastructure.llm`；在 `config/local.yaml` 配置 `llm.api_key` 后，`python scripts/run_backend_stub.py` 即走真实模型。
 
 ## 向量与 HTTP（开发依赖）
 

@@ -29,6 +29,9 @@ def test_run_react_loop_logs_on_format_nudge() -> None:
         def complete(self, messages, *, json_mode: bool = False) -> str:
             return "not json at all"
 
+        def stream_completion(self, messages, *, json_mode: bool = False):
+            yield self.complete(messages, json_mode=json_mode)
+
     reg = ToolRegistry()
     with patch("logos.agent.react._log.info") as mock_info:
         run_react_loop(_NoiseLLM(), reg, "task", max_steps=6)
@@ -41,6 +44,9 @@ def test_run_react_loop_logs_on_exhausted_nudge() -> None:
     class _NoiseLLM:
         def complete(self, messages, *, json_mode: bool = False) -> str:
             return "still not json"
+
+        def stream_completion(self, messages, *, json_mode: bool = False):
+            yield self.complete(messages, json_mode=json_mode)
 
     reg = ToolRegistry()
     with patch("logos.agent.react._log.warning") as mock_warn:

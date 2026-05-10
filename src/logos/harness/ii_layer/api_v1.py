@@ -3,14 +3,21 @@
 from __future__ import annotations
 
 import json
+import logging
 from collections.abc import Iterator
 from typing import Any, Literal
 
+_log = logging.getLogger("logos.api.v1")
+
 from pydantic import BaseModel, Field
 
+from logos.agent.react import ReActStreamDone, ReActStreamReasoning
+from logos.agent.shell import AgentShell
+from logos.harness.sg_layer import build_v01_guarded_tool_registry
 from logos.ports.llm import ChatMessage
+from logos.ports.retrieval import Citation
 
-from .deps import LLMDep, RetrievalDep
+from .deps import AppPortsDep, LLMDep, RetrievalDep
 
 
 class ChatMessageBody(BaseModel):
@@ -25,6 +32,46 @@ class ChatRequestBody(BaseModel):
 
 def _sse_frame(event: str, payload: dict[str, Any]) -> str:
     return f"event: {event}\ndata: {json.dumps(payload, ensure_ascii=False)}\n\n"
+
+
+def _operating_mode_suffix(mode: str) -> str:
+    m = (mode or "author").strip().lower()
+    if m == "screenwriter":
+        return (
+            "【运行模式：编剧（screenwriter）】请侧重剧本结构、场次、对白节奏与视听叙事；"
+            "引用设定时务必先用 retrieve，再视需要用 read_lkc 查看原文。"
+        )
+    return (
+        "【运行模式：作者（author）】请侧重小说叙事、人物与情节推进；"
+        "需要设定依据时先 retrieve，再用 read_lkc 阅读细节。"
+    )
+
+
+def _split_request_messages(
+    raw: list[ChatMessageBody],
+) -> tuple[str | None, list[ChatMessage], str]:
+    """拆出前端 system 补充、对话历史（不含最后一条）、当前轮用户文本。"""
+    if not raw:
+        return None, [], ""
+    system_parts: list[str] = []
+    conv: list[ChatMessage] = []
+    for m in raw:
+        if m.role == "system":
+            if m.content.strip():
+                system_parts.append(m.content.strip())
+        elif m.role in ("user", "assistant"):
+            conv.append(ChatMessage(role=m.role, content=m.content))
+    client_extra = "\n\n".join(system_parts) if system_parts else None
+    if not conv:
+        return client_extra, [], ""
+    last = conv[-1]
+    history = conv[:-1]
+    return client_extra, history, last.content
+
+
+def _chunk_text(text: str, size: int = 24) -> Iterator[str]:
+    for i in range(0, len(text), size):
+        yield text[i : i + size]
 
 
 def build_v1_router() -> Any:
@@ -42,31 +89,77 @@ def build_v1_router() -> Any:
         body: ChatRequestBody,
         llm: LLMDep,
         retrieval: RetrievalDep,
+        ports: AppPortsDep,
     ) -> StreamingResponse:
         def event_stream() -> Iterator[str]:
             try:
-                user_msgs = [m for m in body.messages if m.role == "user"]
-                last_user = user_msgs[-1].content.strip() if user_msgs else ""
-                if last_user:
-                    cites = retrieval.query(text=last_user, top_k=8)
-                    if cites:
-                        items = [
-                            {"path": c.path, "snippet": c.snippet, "score": c.score}
-                            for c in cites
-                        ]
-                        yield _sse_frame("citations", {"items": items})
-                port_messages = [
-                    ChatMessage(role=m.role, content=m.content) for m in body.messages
-                ]
-                assistant = llm.complete(port_messages, json_mode=False)
-                step = 48
-                for i in range(0, len(assistant), step):
-                    yield _sse_frame("delta", {"text": assistant[i : i + step]})
+                client_sys, history, user_text = _split_request_messages(body.messages)
+                ut = user_text.strip()
+                if not ut:
+                    yield _sse_frame(
+                        "error",
+                        {"code": "empty_message", "message": "缺少有效用户消息"},
+                    )
+                    return
+
+                citation_sink: list[Citation] = []
+                tools = build_v01_guarded_tool_registry(
+                    ports.settings,
+                    retrieval=retrieval,
+                    citation_sink=citation_sink,
+                )
+                shell = AgentShell(llm=llm, tools=tools)
+
+                extra = _operating_mode_suffix(body.operating_mode)
+                if client_sys:
+                    extra = f"{extra}\n\n【来自前端的 system 补充】\n{client_sys}"
+
+                result = None
+                for item in shell.iter_run_task(
+                    ut,
+                    max_steps=16,
+                    extra_system=extra,
+                    json_mode=True,
+                    history=history,
+                    stream_assistant=True,
+                ):
+                    if isinstance(item, ReActStreamReasoning):
+                        yield _sse_frame("reasoning_delta", {"text": item.text})
+                    elif isinstance(item, ReActStreamDone):
+                        result = item.result
+
+                if result is None:
+                    yield _sse_frame(
+                        "error",
+                        {
+                            "code": "internal",
+                            "message": "Agent 未返回结束状态",
+                        },
+                    )
+                    return
+
+                cites = list(citation_sink)
+                if not cites:
+                    cites = retrieval.query(text=ut, top_k=8)
+                if cites:
+                    items = [
+                        {"path": c.path, "snippet": c.snippet, "score": c.score}
+                        for c in cites
+                    ]
+                    yield _sse_frame("citations", {"items": items})
+
+                for piece in _chunk_text(result.answer):
+                    if piece:
+                        yield _sse_frame("delta", {"text": piece})
                 yield _sse_frame("done", {})
             except Exception as exc:  # noqa: BLE001 — 契约要求以 error 事件结束流
+                _log.exception("POST /api/v1/chat 流处理异常")
+                msg = str(exc)
+                if isinstance(exc, OSError) and getattr(exc, "filename", None):
+                    msg = f"{msg}（路径: {exc.filename!s}）"
                 yield _sse_frame(
                     "error",
-                    {"code": type(exc).__name__, "message": str(exc)},
+                    {"code": type(exc).__name__, "message": msg},
                 )
 
         return StreamingResponse(
@@ -75,6 +168,7 @@ def build_v1_router() -> Any:
             headers={
                 "Cache-Control": "no-cache",
                 "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
             },
         )
 

@@ -138,6 +138,7 @@ def test_configure_logging_writes_file(
     settings = AppSettings(
         workspace_root=".",
         example_ksfs_root=".",
+        lkc_root=".",
         index_root=".",
         logs_root=str(log_root),
         hsi_sqlite_path=".",
