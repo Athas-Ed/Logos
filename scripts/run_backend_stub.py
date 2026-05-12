@@ -2,15 +2,22 @@
 
 - 若在 ``config/local.yaml`` 中配置了 ``llm.api_key``（及可选 ``base_url`` / ``model``），
   则使用 **OpenAI 兼容** HTTP 客户端调用远程模型（如 DeepSeek）。
-- 否则 LLM 为内存桩；检索与向量等仍为桩，便于先联调 GUI。
+- 否则 LLM 为内存桩。
+- **检索**：从 ``paths.ksfs_root`` 同步 **HSI**（SQLite），并装配 ``FusedRetrievalService``。
+  若已安装 ``chromadb`` 且 ``embeddings.model_path`` 下存在 BGE 权重，则启动时尝试 **重建 Chroma 单块索引**
+  （每 Markdown 文件一块；失败则仅 HSI 关键词检索，并在日志中提示）。
 
 用法（仓库根、已激活 venv）::
 
     python scripts/run_backend_stub.py
+
+若 ``config`` 中启用了 ``skills.amap_weather``，请确认当前解释器已安装 ``mcp``（``pip install "mcp>=1.2.0"`` 或 ``pip install -e .``）；否则启动时会在终端提示且无法挂载天气 MCP。
 """
 
 from __future__ import annotations
 
+import importlib.util
+import logging
 import os
 import sys
 from pathlib import Path
@@ -19,22 +26,28 @@ _REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(_REPO_ROOT / "src") not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT / "src"))
 
+_log = logging.getLogger("logos.run_backend_stub")
+
 
 def main() -> None:
+    logging.basicConfig(level=logging.INFO)
     try:
         import uvicorn
     except ImportError as e:
         raise SystemExit("请先安装开发依赖：pip install -e '.[dev]'") from e
 
-    # 配置里的相对路径（如 ./workspace）以仓库根为基准，避免因从其它 cwd 启动而找不到目录。
     os.chdir(_REPO_ROOT)
+    os.environ.setdefault("LOGOS_REPO_ROOT", str(_REPO_ROOT))
 
     from logos.harness.config import load_app_settings
     from logos.harness.ii_layer.app import create_app
     from logos.harness.ii_layer.container import AppPorts
+    from logos.harness.ii_layer.developer import DeveloperToggles
     from logos.infrastructure.llm import build_chat_llm_from_settings
-    from logos.ports.knowledge_source import SourceDocument
-    from logos.ports.retrieval import Citation
+    from logos.infrastructure.retrieval.fused import FusedRetrievalService
+    from logos.persistence import SqliteMetadataIndex, sync_ksfs_hsi
+    from logos.persistence.chroma_bootstrap import reindex_ksfs_to_semantic_store
+    from logos.persistence.ksfs_filesystem import FilesystemKnowledgeSource
 
     class _StubLLM:
         def complete(self, messages, *, json_mode: bool = False) -> str:
@@ -46,26 +59,6 @@ def main() -> None:
             for i in range(0, len(text), step):
                 yield text[i : i + step]
 
-    class _StubRetrieval:
-        def query(self, *, text: str, top_k: int = 8):
-            if "引用" in text:
-                return [Citation(path="demo.md", snippet="示例片段", score=0.9)]
-            return []
-
-    class _StubKnowledgeSource:
-        def iter_documents(self) -> list[SourceDocument]:
-            return []
-
-        def read_document(self, relative_path: str) -> SourceDocument:
-            raise FileNotFoundError(relative_path)
-
-    class _StubMetadataIndex:
-        def upsert(self, records) -> None:  # noqa: ANN001
-            return None
-
-        def search_paths(self, *, prefix: str | None, limit: int):
-            return []
-
     class _StubSemanticStore:
         def upsert_chunks(self, **kwargs) -> None:  # noqa: ANN003
             return None
@@ -76,20 +69,86 @@ def main() -> None:
         def query(self, query_embedding: list[float], top_k: int):
             return []
 
-    class _StubEmbedder:
+    class _StubEmbedder512:
         def embed(self, texts: list[str]) -> list[list[float]]:
-            return [[0.0] * 8 for _ in texts]
+            return [[0.0] * 512 for _ in texts]
 
     settings = load_app_settings(config_dir=_REPO_ROOT / "config")
+    if settings.skills_amap_weather_enabled and importlib.util.find_spec("mcp") is None:
+        print(
+            "\n[Logos] 配置 skills.amap_weather.enabled=true，但当前解释器未安装 Python 包 mcp，"
+            "高德 MCP 无法挂载。\n"
+            f'  请执行: "{sys.executable}" -m pip install "mcp>=1.2.0"\n'
+            "  或在仓库根: pip install -e .\n"
+            "  安装后请重新启动本脚本。\n",
+            file=sys.stderr,
+        )
     llm = build_chat_llm_from_settings(settings) or _StubLLM()
+
+    ksfs_root = Path(settings.ksfs_root).resolve()
+    hsi_db = Path(settings.hsi_sqlite_path).resolve()
+    metadata = SqliteMetadataIndex(hsi_db)
+    try:
+        report = sync_ksfs_hsi(ksfs_root=ksfs_root, hsi_db=hsi_db)
+        _log.info(
+            "HSI 已同步：扫描 %s 条，写入 %s 条，跳过 %s 条",
+            report.documents_scanned,
+            report.hsi_upserted,
+            report.hsi_skipped_unchanged,
+        )
+    except OSError:
+        _log.exception("sync_ksfs_hsi 失败（检查 ksfs_root / 权限）")
+
+    semantic_store = _StubSemanticStore()
+    embedder: object = _StubEmbedder512()
+    try:
+        from logos.infrastructure.vector.chroma_store import ChromaSemanticStore
+
+        semantic_store = ChromaSemanticStore(
+            persist_directory=settings.chroma_persist_directory,
+            collection_name=settings.chroma_collection,
+        )
+    except ImportError:
+        _log.warning("未安装 chromadb，向量检索关闭（仅 HSI 关键词融合）")
+
+    model_dir = Path(settings.embedding_model_path)
+    if model_dir.is_dir():
+        try:
+            from logos.infrastructure.embeddings.bge_small_zh import BgeSmallZhEmbedder
+
+            embedder = BgeSmallZhEmbedder(str(model_dir))
+        except ImportError:
+            _log.warning(
+                "未安装 sentence-transformers，向量检索使用占位向量（效果差）"
+            )
+
+    if not isinstance(semantic_store, _StubSemanticStore):
+        try:
+            n = reindex_ksfs_to_semantic_store(
+                ksfs_root=ksfs_root,
+                store=semantic_store,
+                embedder=embedder,
+            )
+            _log.info("Chroma 已写入 %s 个 KSFS 块（每文件一块）", n)
+        except Exception:  # noqa: BLE001
+            _log.exception("KSFS→Chroma 重建失败（仍可依赖 HSI 分支）")
+
+    retrieval = FusedRetrievalService(
+        metadata_index=metadata,
+        semantic_store=semantic_store,
+        embedder=embedder,
+    )
+    knowledge_source = FilesystemKnowledgeSource(ksfs_root)
+
     ports = AppPorts(
         settings=settings,
         llm=llm,
-        retrieval=_StubRetrieval(),
-        knowledge_source=_StubKnowledgeSource(),
-        metadata_index=_StubMetadataIndex(),
-        semantic_store=_StubSemanticStore(),
-        text_embedder=_StubEmbedder(),
+        retrieval=retrieval,
+        knowledge_source=knowledge_source,
+        metadata_index=metadata,
+        semantic_store=semantic_store,
+        text_embedder=embedder,
+        developer=DeveloperToggles(prompt_echo=settings.developer_prompt_echo),
     )
     app = create_app(ports)
     uvicorn.run(app, host="127.0.0.1", port=8000, log_level="info")

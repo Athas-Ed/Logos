@@ -30,6 +30,15 @@ class ChatRequestBody(BaseModel):
     operating_mode: str = Field(default="author", description="operating_mode，与 SPEC 对齐")
 
 
+class DeveloperUIResponse(BaseModel):
+    show_dev_tools_ui: bool
+    prompt_echo: bool
+
+
+class PromptEchoBody(BaseModel):
+    enabled: bool
+
+
 def _sse_frame(event: str, payload: dict[str, Any]) -> str:
     return f"event: {event}\ndata: {json.dumps(payload, ensure_ascii=False)}\n\n"
 
@@ -39,11 +48,11 @@ def _operating_mode_suffix(mode: str) -> str:
     if m == "screenwriter":
         return (
             "【运行模式：编剧（screenwriter）】请侧重剧本结构、场次、对白节奏与视听叙事；"
-            "引用设定时务必先用 retrieve，再视需要用 read_lkc 查看原文。"
+            "引用设定时务必先用 retrieve；若不确定路径，可用 list_ksfs 浏览目录，再用 read_ksfs 读原文。"
         )
     return (
         "【运行模式：作者（author）】请侧重小说叙事、人物与情节推进；"
-        "需要设定依据时先 retrieve，再用 read_lkc 阅读细节。"
+        "需要设定依据时先 retrieve，必要时 list_ksfs + read_ksfs 核对 KSFS 文件。"
     )
 
 
@@ -69,13 +78,14 @@ def _split_request_messages(
     return client_extra, history, last.content
 
 
-def _chunk_text(text: str, size: int = 24) -> Iterator[str]:
+def _chunk_text(text: str, size: int = 512) -> Iterator[str]:
+    """将长文本切成多段 SSE；默认块较大，避免把短中文用户句拆到两段导致验收/搜索断字。"""
     for i in range(0, len(text), size):
         yield text[i : i + size]
 
 
 def build_v1_router() -> Any:
-    from fastapi import APIRouter
+    from fastapi import APIRouter, HTTPException
     from fastapi.responses import StreamingResponse
 
     router = APIRouter(prefix="/api/v1", tags=["api-v1"])
@@ -108,13 +118,21 @@ def build_v1_router() -> Any:
                     retrieval=retrieval,
                     citation_sink=citation_sink,
                 )
-                shell = AgentShell(llm=llm, tools=tools)
+                shell = AgentShell(
+                    llm=llm,
+                    tools=tools,
+                    prompt_echo=ports.developer.prompt_echo,
+                )
 
                 extra = _operating_mode_suffix(body.operating_mode)
                 if client_sys:
                     extra = f"{extra}\n\n【来自前端的 system 补充】\n{client_sys}"
-
-                result = None
+                if ports.settings.skills_amap_weather_enabled:
+                    extra += (
+                        "\n\n【工具】高德实况天气已启用：用户询问气温、天气、降雨、带伞建议等时，"
+                        "应调用工具 query_weather，参数 city 为中文城市/区县名或 6 位 adcode；"
+                        "该查询不需要先 retrieve。"
+                    )
                 for item in shell.iter_run_task(
                     ut,
                     max_steps=16,
@@ -171,5 +189,57 @@ def build_v1_router() -> Any:
                 "X-Accel-Buffering": "no",
             },
         )
+
+    @router.get("/developer/ui")
+    def developer_ui(ports: AppPortsDep) -> DeveloperUIResponse:
+        return DeveloperUIResponse(
+            show_dev_tools_ui=ports.settings.developer_show_dev_tools_ui,
+            prompt_echo=ports.developer.prompt_echo,
+        )
+
+    @router.put("/developer/prompt-echo")
+    def developer_set_prompt_echo(
+        body: PromptEchoBody,
+        ports: AppPortsDep,
+    ) -> dict[str, bool]:
+        if not ports.settings.developer_show_dev_tools_ui:
+            raise HTTPException(
+                status_code=403,
+                detail="配置 developer.show_dev_tools_ui 为 false，禁止运行时切换。",
+            )
+        ports.developer.prompt_echo = body.enabled
+        return {"prompt_echo": body.enabled}
+
+    @router.get("/developer/agent-tools")
+    def developer_agent_tools(
+        ports: AppPortsDep,
+        retrieval: RetrievalDep,
+    ) -> dict[str, Any]:
+        """列出当前会注入对话的 Agent 工具名（含 MCP）；仅开发 UI 开启时可用。"""
+        if not ports.settings.developer_show_dev_tools_ui:
+            raise HTTPException(
+                status_code=403,
+                detail="配置 developer.show_dev_tools_ui 为 false，禁止查看。",
+            )
+        from pathlib import Path
+
+        from logos.harness.mcp_stdio import amap_weather_mcp_command, resolve_repo_root
+
+        cmd = amap_weather_mcp_command()
+        script = Path(cmd[1])
+        reg = build_v01_guarded_tool_registry(
+            ports.settings,
+            retrieval=retrieval,
+        )
+        return {
+            "tools": sorted(reg.names()),
+            "skills_amap_weather_enabled": ports.settings.skills_amap_weather_enabled,
+            "amap_weather_script": str(script),
+            "amap_weather_script_exists": script.is_file(),
+            "repo_root_resolved": str(resolve_repo_root()),
+            "web_api_key_configured": bool(
+                (ports.settings.skills_amap_weather_web_api_key or "").strip()
+            ),
+        }
 
     return router

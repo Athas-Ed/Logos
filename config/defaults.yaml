@@ -5,14 +5,15 @@
 paths:
   workspace_root: "./workspace"
   example_ksfs_root: "./example_ksfs"
-  # LKC 镜像根（KSFS→LKC 同步产物；read_lkc 仅读此目录下）
-  lkc_root: "./workspace/lkc"
-  # 所有索引类文件默认根目录（不入库）
+  # KSFS 事实源（叙事知识 .md 根）；见 original_docs/重要子系统开发文档/KSFS开发.md
+  ksfs_root: "./resources/ksfs"
+  # 实体模板契约根；见 resources/entity_template/README.md
+  entity_template_root: "./resources/entity_template"
+  entity_template_profile: "default_import_v0"
+  # 待落户设定草稿子目录（位于 workspace_root 下）；见 KSFS开发.md §2
+  setting_entry_subdir: "setting_entry"
   index_root: "./.index"
-  # 应用日志根目录（Obs）；不存在时会自动创建。可用 local.yaml 或 LOGOS_PATHS__LOGS_ROOT 覆盖。
   logs_root: "./logs"
-
-  # HSI：SQLite 单文件，默认文件名 .high-speed_index
   hsi_sqlite_path: "./.index/.high-speed_index"
 
 embeddings:
@@ -20,18 +21,23 @@ embeddings:
   model_path: "models/tooling/embeddings/bge-small-zh-v1.5"
 
 chroma:
-  # SVS：Chroma 持久化目录
   persist_directory: "./.index/.vector_index"
-  collection: "lkc_chunks_v0"
+  collection: "ksfs_chunks_v0"
 
-# OpenAI 兼容对话（DeepSeek 等）；密钥仅放 local.yaml 或环境变量 LOGOS_LLM__API_KEY
+developer:
+  show_dev_tools_ui: false
+  prompt_echo: false
+
+skills:
+  amap_weather:
+    enabled: false
+    web_api_key: ""
+
 llm:
   base_url: "https://api.deepseek.com/v1"
   model: "deepseek-chat"
-  # HTTPS 校验：false / 0 关闭校验（不推荐）；ca_bundle 为 PEM/CER 信任包路径
   verify_ssl: true
   ca_bundle: null
-  # 仅作用于 LLM 的 httpx 客户端；留空则仍可读系统环境变量 HTTP_PROXY 等（trust_env）
   http_proxy: null
   https_proxy: null
   no_proxy: "127.0.0.1,localhost"

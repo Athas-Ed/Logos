@@ -12,6 +12,8 @@ from logos.ports import (
     TextEmbedder,
 )
 
+from .developer import DeveloperToggles
+
 
 @dataclass(frozen=True, slots=True)
 class AppPorts:
@@ -24,3 +26,4 @@ class AppPorts:
     metadata_index: MetadataIndex
     semantic_store: SemanticStore
     text_embedder: TextEmbedder
+    developer: DeveloperToggles

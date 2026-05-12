@@ -17,6 +17,8 @@ class AgentShell:
 
     llm: LLMClient
     tools: ToolRegistry
+    #: 为 True 时不调用 LLM，将 CB 拼装后的完整 messages 作为唯一答复（见 ``developer.prompt_echo``）。
+    prompt_echo: bool = False
 
     def run_task(
         self,
@@ -39,6 +41,7 @@ class AgentShell:
             extra_system=extra_system,
             json_mode=json_mode,
             history=history,
+            prompt_echo=self.prompt_echo,
         )
 
     def iter_run_task(
@@ -64,4 +67,5 @@ class AgentShell:
             json_mode=json_mode,
             history=history,
             stream_assistant=stream_assistant,
+            prompt_echo=self.prompt_echo,
         )

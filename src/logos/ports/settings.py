@@ -9,7 +9,7 @@ class AppSettings:
 
     workspace_root: str
     example_ksfs_root: str
-    lkc_root: str  # LKC 根；read_lkc 仅允许读此树内相对路径
+    ksfs_root: str  # KSFS 事实源；read_ksfs 仅允许读此树内相对路径
     index_root: str
     logs_root: str
     hsi_sqlite_path: str
@@ -28,3 +28,10 @@ class AppSettings:
     llm_http_proxy: str = ""
     llm_https_proxy: str = ""
     llm_no_proxy: str = ""
+    #: 为 true 时 GUI 可展示开发者控件并允许 PUT 切换 prompt 回显
+    developer_show_dev_tools_ui: bool = False
+    #: 启动初值；运行时可由 :class:`~logos.harness.ii_layer.developer.DeveloperToggles` 改写
+    developer_prompt_echo: bool = False
+    #: 高德天气 MCP（``skills/amap-weather-mcp``）；密钥走 ``skills.amap_weather.web_api_key`` 或环境变量
+    skills_amap_weather_enabled: bool = False
+    skills_amap_weather_web_api_key: str = ""

@@ -1,4 +1,4 @@
-"""Orchestrate KSS → LKC → HSI with hash + mtime incremental upserts."""
+"""Scan KSFS and incrementally upsert HSI (hash + mtime)."""
 
 from __future__ import annotations
 
@@ -10,16 +10,14 @@ from logos.ports.metadata import MetadataRecord
 
 from ._front_matter import extract_entity_id, extract_title, split_front_matter
 from .hsi_sqlite import SqliteMetadataIndex
-from .kss_filesystem import FilesystemKnowledgeSource, document_rel_posix
-from .lkc_sync import LkcSyncResult, sync_lkc_from_documents
+from .ksfs_filesystem import FilesystemKnowledgeSource, document_rel_posix
 
 
 @dataclass(frozen=True, slots=True)
 class HdlSyncReport:
-    """Summary after ``sync_ksfs_lkc_hsi``."""
+    """Summary after ``sync_ksfs_hsi``."""
 
     documents_scanned: int
-    lkc: LkcSyncResult
     hsi_upserted: int
     hsi_skipped_unchanged: int
     hsi_deleted_stale: int
@@ -39,26 +37,18 @@ def _metadata_for_doc(doc: SourceDocument, *, ksfs_root: Path) -> MetadataRecord
     )
 
 
-def sync_ksfs_lkc_hsi(
+def sync_ksfs_hsi(
     *,
     ksfs_root: Path,
-    lkc_root: Path,
     hsi_db: Path,
-    prune: bool = True,
 ) -> HdlSyncReport:
     """
-    Scan KSFS (KSS), mirror normalized Markdown into LKC, then incrementally
-    refresh HSI rows when ``content_hash`` or ``mtime_ns`` differs.
+    Scan KSFS for ``*.md``, then incrementally refresh HSI when ``content_hash``
+    or ``mtime_ns`` differs. No intermediate mirror directory.
     """
     ksfs_r = ksfs_root.resolve()
-    kss = FilesystemKnowledgeSource(ksfs_r)
-    documents = kss.iter_documents()
-    lkc = sync_lkc_from_documents(
-        ksfs_root=ksfs_r,
-        lkc_root=lkc_root.resolve(),
-        documents=documents,
-        prune=prune,
-    )
+    source = FilesystemKnowledgeSource(ksfs_r)
+    documents = source.iter_documents()
 
     hsi = SqliteMetadataIndex(hsi_db)
     rel_paths = [document_rel_posix(d, ksfs_r) for d in documents]
@@ -84,7 +74,6 @@ def sync_ksfs_lkc_hsi(
 
     return HdlSyncReport(
         documents_scanned=len(documents),
-        lkc=lkc,
         hsi_upserted=len(upserts),
         hsi_skipped_unchanged=skipped,
         hsi_deleted_stale=deleted,
@@ -92,6 +81,6 @@ def sync_ksfs_lkc_hsi(
 
 
 def default_hsi_db_path(index_root: Path | None = None) -> Path:
-    """Default SQLite path per SPEC (``.index/.high-speed_index``)."""
+    """Default SQLite path (``.index/.high-speed_index``)."""
     base = index_root if index_root is not None else Path(".index")
     return base / ".high-speed_index"

@@ -1,4 +1,4 @@
-"""Stream 2：HDL 哈希、LKC/HSI 同步行为单测。"""
+"""Stream 2：HDL 哈希与 KSFS→HSI 同步行为单测。"""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from logos.persistence import (
     SqliteMetadataIndex,
     content_hash_hex,
     normalize_text_for_storage,
-    sync_ksfs_lkc_hsi,
+    sync_ksfs_hsi,
 )
 from logos.ports.metadata import MetadataRecord
 
@@ -24,26 +24,24 @@ def test_content_hash_changes_when_text_changes() -> None:
     assert content_hash_hex("alpha") == h1
 
 
-def test_sync_ksfs_lkc_hsi_first_and_second_run(tmp_path: Path) -> None:
+def test_sync_ksfs_hsi_first_and_second_run(tmp_path: Path) -> None:
     ksfs = tmp_path / "ksfs"
-    lkc = tmp_path / "lkc"
     hsi = tmp_path / "hsi" / "db.sqlite"
     (ksfs / "doc").mkdir(parents=True)
     md = ksfs / "doc" / "note.md"
     md.write_text("# T\n\nbody v1\n", encoding="utf-8")
 
-    r1 = sync_ksfs_lkc_hsi(ksfs_root=ksfs, lkc_root=lkc, hsi_db=hsi, prune=True)
+    r1 = sync_ksfs_hsi(ksfs_root=ksfs, hsi_db=hsi)
     assert r1.documents_scanned == 1
     assert r1.hsi_upserted == 1
     assert r1.hsi_skipped_unchanged == 0
-    assert (lkc / "doc" / "note.md").is_file()
 
-    r2 = sync_ksfs_lkc_hsi(ksfs_root=ksfs, lkc_root=lkc, hsi_db=hsi, prune=True)
+    r2 = sync_ksfs_hsi(ksfs_root=ksfs, hsi_db=hsi)
     assert r2.hsi_upserted == 0
     assert r2.hsi_skipped_unchanged == 1
 
     md.write_text("# T\n\nbody v2\n", encoding="utf-8")
-    r3 = sync_ksfs_lkc_hsi(ksfs_root=ksfs, lkc_root=lkc, hsi_db=hsi, prune=True)
+    r3 = sync_ksfs_hsi(ksfs_root=ksfs, hsi_db=hsi)
     assert r3.hsi_upserted == 1
     assert r3.hsi_skipped_unchanged == 0
 

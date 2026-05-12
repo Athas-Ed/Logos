@@ -82,7 +82,7 @@ def test_build_v01_guarded_tool_registry_writes_under_workspace(tmp_path: Path) 
     settings = AppSettings(
         workspace_root=str(ws),
         example_ksfs_root=str(tmp_path / "ksfs"),
-        lkc_root=str(tmp_path / "lkc"),
+        ksfs_root=str(tmp_path / "ksfs"),
         index_root=str(tmp_path / "idx"),
         logs_root=str(tmp_path / "logs"),
         hsi_sqlite_path=str(tmp_path / "idx" / "hsi"),
@@ -98,6 +98,28 @@ def test_build_v01_guarded_tool_registry_writes_under_workspace(tmp_path: Path) 
     )
     assert "已写入" in ok
     assert (ws / "a" / "b.md").read_text(encoding="utf-8") == "body"
+
+
+def test_list_ksfs_tool_lists_subdirectory(tmp_path: Path) -> None:
+    ks = tmp_path / "ksfs"
+    (ks / "Test").mkdir(parents=True)
+    (ks / "Test" / "山巅城堡.md").write_text("# x\n", encoding="utf-8")
+    settings = AppSettings(
+        workspace_root=str(tmp_path / "workspace"),
+        example_ksfs_root=str(tmp_path / "ex"),
+        ksfs_root=str(ks),
+        index_root=str(tmp_path / "idx"),
+        logs_root=str(tmp_path / "logs"),
+        hsi_sqlite_path=str(tmp_path / "idx" / "hsi"),
+        chroma_persist_directory=str(tmp_path / "idx" / "chroma"),
+        chroma_collection="c",
+        embedding_provider="bge_small_zh",
+        embedding_model_path="models/x",
+    )
+    reg = build_v01_guarded_tool_registry(settings)
+    raw = reg.execute("list_ksfs", {"path": "Test"})
+    assert "山巅城堡.md" in raw
+    assert "entries" in raw
 
 
 def test_stdio_echo_worker_exits_cleanly() -> None:

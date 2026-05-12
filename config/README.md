@@ -16,6 +16,13 @@
   - `no_proxy`：写入进程内 `NO_PROXY`（供 httpx/urllib 解析），便于本地直连不走代理。
 - **环境变量覆盖**（与 `LOGOS_*` 规则一致）：`LOGOS_LLM__VERIFY_SSL`、`LOGOS_LLM__CA_BUNDLE`、`LOGOS_LLM__HTTP_PROXY`、`LOGOS_LLM__HTTPS_PROXY`、`LOGOS_LLM__NO_PROXY`。
 
+## 可选 MCP 技能（`skills`）
+
+- **`skills.amap_weather`**：挂载 `skills/amap-weather-mcp`（高德实况天气）。`defaults.yaml` 默认 `enabled: false`；在 **`local.yaml`** 填写 `web_api_key` 并置 `enabled: true`。
+- **环境变量**：`LOGOS_SKILLS__AMAP_WEATHER__ENABLED`、`LOGOS_SKILLS__AMAP_WEATHER__WEB_API_KEY`。
+- **说明**：后端将 Key 注入 MCP 子进程的环境变量 `AMAP_WEB_KEY`；勿把真实 Key 写入可提交 Git 的 YAML。细节见 `skills/amap-weather-mcp/README.md`。
+- **MCP 与仓库路径**：若 Agent 对话里看不到 `query_weather`，请确认本机 `skills/amap-weather-mcp/server.py` 存在；从非仓库 cwd 启动或包在 site-packages 时，设置 **`LOGOS_REPO_ROOT`** 指向仓库根（`scripts/run_backend_stub.py` 已默认 `setdefault`）。
+
 ## 日志目录（`logs/`）
 
 - **配置位置**：`defaults.yaml` → `paths.logs_root`（默认 `./logs`）；可用 `local.yaml` 覆盖，或用环境变量 `LOGOS_PATHS__LOGS_ROOT`。

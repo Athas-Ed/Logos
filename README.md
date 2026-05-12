@@ -1,6 +1,17 @@
 # Logos
 
-游戏叙事向双模式 Agent（作家 / 编剧）。**V0.1 规格**见 `original_docs/SPEC-V0.1.md`；并行开发见 `original_docs/DEVPLAN-V0.1-PARALLEL.md`。
+游戏叙事向双模式 Agent（作家 / 编剧）。
+
+**现行开发入口（仓库内）**
+
+| 内容 | 路径 |
+|------|------|
+| **下一阶段排期与任务块（A1～A8）** | [`original_docs/下一阶段开发计划.md`](original_docs/下一阶段开发计划.md) |
+| **目录结构与分层** | [`original_docs/ARCHITECTURE.md`](original_docs/ARCHITECTURE.md)（见 **§3 项目目录结构**） |
+| **已定案决策备忘** | [`original_docs/DECISIONS.md`](original_docs/DECISIONS.md) |
+| **KSFS / HDL 权威** | [`original_docs/重要子系统开发文档/KSFS开发.md`](original_docs/重要子系统开发文档/KSFS开发.md) |
+
+**V0.1 历史规格（归档对照）**：[`original_docs/已完成文档/SPEC-V0.1.md`](original_docs/已完成文档/SPEC-V0.1.md)；并行计划归档：[`original_docs/已完成文档/DEVPLAN-V0.1-PARALLEL.md`](original_docs/已完成文档/DEVPLAN-V0.1-PARALLEL.md)。若根目录下仍有同名拷贝，以 **`已完成文档/`** 内为归档主本。
 
 ## Stream 0 本地环境
 

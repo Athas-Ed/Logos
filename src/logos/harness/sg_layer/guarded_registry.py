@@ -11,7 +11,7 @@ from .output_filter import filter_tool_output
 
 # V0.1 契约中的最小工具集（与 DEVPLAN / SPEC 对齐；未实现的工具可稍后注册）。
 V01_SG_TOOL_WHITELIST: frozenset[str] = frozenset(
-    {"retrieve", "read_lkc", "write_draft"},
+    {"retrieve", "read_ksfs", "list_ksfs", "write_draft"},
 )
 
 
