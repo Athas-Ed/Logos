@@ -1,0 +1,19 @@
+# 设定导入 — MVP profile 单一入口（A6）
+profile_id: default_import_v0
+version: "0.1.0"
+
+schema: schema.json
+render: render_spec.yaml
+llm_instructions: llm_instructions.md
+
+# 相对 workspace_root；与 workspace/setting_entry/README.md 一致
+drafts_subdir: setting_entry
+
+notes: >
+  首版用于 Schema 校验 + 本地渲染落盘到 workspace/setting_entry/ 下约定子树。
+  S&G 全量接入前可用窄白名单路径实现（见下一阶段开发计划 §2.6.7）。
+
+extras:
+  # 占位：未来 KG 指针、黑白名单路径等（§2.6.13）
+  kg_json_placeholder: null
+  prompt_allow_deny_lists: null

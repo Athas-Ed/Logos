@@ -1,0 +1,18 @@
+{
+  "batch_id": "02BRZ3NDEKTSV4RRFFQ69G5FBW",
+  "source_label": "fixture-suggestions",
+  "units": [
+    {
+      "classification": "location",
+      "slug": "qingyang-town",
+      "title": "青阳镇",
+      "body_markdown": "边陲小镇。",
+      "suggestions": [
+        {
+          "verbatim_quote": "边陲",
+          "message": "是否与正文「边陲重镇」用语冲突，请核对原作。"
+        }
+      ]
+    }
+  ]
+}

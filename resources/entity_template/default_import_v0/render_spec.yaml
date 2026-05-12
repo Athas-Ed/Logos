@@ -1,0 +1,43 @@
+# 本地渲染规格：由实现读取，将校验后的 JSON 转为 workspace/setting_entry/ 下 .md
+version: "0.1.0"
+
+# 解析：目标根 = {workspace_root}/{drafts_subdir}/ （drafts_subdir 见 manifest）
+# 下列 rel_path_template 均相对于该根
+
+classifications:
+  character:
+    rel_path_template: "characters/{slug}.md"
+  location:
+    rel_path_template: "locations/{slug}.md"
+  item:
+    rel_path_template: "items/{slug}.md"
+  faction:
+    rel_path_template: "factions/{slug}.md"
+  lore_note:
+    rel_path_template: "lore/{slug}.md"
+
+# 写入 YAML front matter 时允许的键（实现应拒绝列表外键）
+front_matter_keys_allowlist:
+  - id
+  - title
+  - tags
+  - classification
+  - slug
+  - batch_id
+  - source_label
+
+# 草稿在落户前占位；与下一阶段开发计划 §2.6.12 一致
+draft_id_placeholder: "待分配"
+
+# 正文结构顺序（实现按序拼装）
+sections:
+  - type: yaml_front_matter
+  - type: title_heading
+    # 若 unit.title 缺失则用 slug 美化或直接使用 slug，由实现决定；金样使用 title
+    heading_template: "## {title}"
+  - type: body_markdown
+  - type: suggestions
+    # 无 suggestions 时可省略整节
+    heading: "## 修改建议"
+    bullet_template: "- （摘）「{verbatim_quote}」 — {message}"
+    bullet_no_quote_template: "- {message}"
