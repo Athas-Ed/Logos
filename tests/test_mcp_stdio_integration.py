@@ -63,8 +63,8 @@ def _repo_root() -> Path:
 def _settings(tmp_path: Path) -> AppSettings:
     return AppSettings(
         workspace_root=str(tmp_path / "workspace"),
-        ksfs_root=str(tmp_path / "ksfs"),
         example_ksfs_root=str(tmp_path / "example_ksfs"),
+        lkc_root=str(tmp_path / "lkc"),
         index_root=str(tmp_path / "idx"),
         logs_root=str(tmp_path / "logs"),
         hsi_sqlite_path=str(tmp_path / "idx" / "hsi"),
@@ -178,5 +178,5 @@ def test_react_uses_mcp_proxied_tool(tmp_path: Path) -> None:
 
 
 def test_v01_whitelist_constant_unchanged_for_builtin_only() -> None:
-    assert _V01_CORE == frozenset({"retrieve", "read_ksfs", "write_draft"})
+    assert _V01_CORE == frozenset({"retrieve", "read_lkc", "write_draft"})
     assert V01_EXAMPLE_MCP_TOOL_NAMES == frozenset({"echo_write_draft"})

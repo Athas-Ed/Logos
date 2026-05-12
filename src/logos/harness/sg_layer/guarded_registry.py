@@ -9,7 +9,7 @@ from logos.agent.tool_registry import ToolRegistry
 
 # V0.1 契约中的最小工具集（与 DEVPLAN / SPEC 对齐；未实现的工具可稍后注册）。
 V01_SG_TOOL_WHITELIST: frozenset[str] = frozenset(
-    {"retrieve", "read_ksfs", "write_draft"},
+    {"retrieve", "read_lkc", "write_draft"},
 )
 
 # 与 ``skills/example-stdio-mcp`` 中 MCP 工具名对齐；仅在使用 MCP 桥接时加入 ``extra_allowed_tools``。
