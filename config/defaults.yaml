@@ -24,6 +24,12 @@ chroma:
   persist_directory: "./.index/.vector_index"
   collection: "lkc_chunks_v0"
 
+ui:
+  default_presentation: "work"
+
+obs:
+  log_profile: "standard"
+
 # OpenAI 兼容对话（DeepSeek 等）；密钥仅放 local.yaml 或环境变量 LOGOS_LLM__API_KEY
 llm:
   base_url: "https://api.deepseek.com/v1"
