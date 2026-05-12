@@ -85,6 +85,12 @@ def main() -> None:
         )
     llm = build_chat_llm_from_settings(settings) or _StubLLM()
 
+    _log.info(
+        "正在准备检索索引（KSFS→HSI，以及可选的 Chroma 重建）；"
+        "此时尚未监听 http://127.0.0.1:8000 。"
+        "若 Vite 已开，/api 代理可能出现 ECONNREFUSED，属正常，请待本进程打出 Uvicorn 启动日志后再刷新前端。"
+    )
+
     ksfs_root = Path(settings.ksfs_root).resolve()
     hsi_db = Path(settings.hsi_sqlite_path).resolve()
     metadata = SqliteMetadataIndex(hsi_db)
@@ -151,6 +157,7 @@ def main() -> None:
         developer=DeveloperToggles(prompt_echo=settings.developer_prompt_echo),
     )
     app = create_app(ports)
+    _log.info("索引准备完毕，开始监听 http://127.0.0.1:8000")
     uvicorn.run(app, host="127.0.0.1", port=8000, log_level="info")
 
 
