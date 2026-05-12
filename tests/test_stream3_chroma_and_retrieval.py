@@ -86,7 +86,7 @@ def test_chroma_semantic_store_roundtrip(tmp_path: Path) -> None:
     persist = tmp_path / "chroma_persist"
     store = ChromaSemanticStore(
         persist_directory=str(persist),
-        collection_name="pytest_lkc",
+        collection_name="pytest_ksfs",
     )
     emb = [[0.02] * 512]
     store.upsert_chunks(
@@ -98,6 +98,30 @@ def test_chroma_semantic_store_roundtrip(tmp_path: Path) -> None:
     got = store.query(emb[0], top_k=3)
     assert len(got) >= 1
     assert got[0].source_path == "notes/demo.md"
+
+
+def test_fused_hsi_matches_chinese_title_with_extra_token() -> None:
+    """「山巅城堡 设定」类查询应命中标题「山巅城堡」（HSI 分支）。"""
+    from logos.infrastructure.retrieval import fused as fused_mod
+
+    rows = [
+        MetadataRecord(
+            entity_id="x",
+            title="山巅城堡",
+            source_path="Test/山巅城堡.md",
+            content_hash="0" * 64,
+            mtime_ns=1,
+        )
+    ]
+    svc = FusedRetrievalService(
+        metadata_index=_MemMetadata(rows),
+        semantic_store=_MemVectorStore([]),
+        embedder=_FixedEmbedder(),
+    )
+    out = svc.query(text="山巅城堡 设定", top_k=5)
+    assert len(out) >= 1
+    assert out[0].path == "Test/山巅城堡.md"
+    assert fused_mod._hsi_keyword_score("山巅城堡 设定", rows[0]) > 0
 
 
 @pytest.mark.slow

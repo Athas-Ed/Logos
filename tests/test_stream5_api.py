@@ -14,6 +14,7 @@ from fastapi.testclient import TestClient
 
 from logos.harness.ii_layer.app import create_app
 from logos.harness.ii_layer.container import AppPorts
+from logos.harness.ii_layer.developer import DeveloperToggles
 from logos.ports import AppSettings
 from logos.ports.knowledge_source import SourceDocument
 from logos.ports.retrieval import Citation
@@ -76,11 +77,18 @@ class _StubEmbedder:
         return [[0.0] * 512 for _ in texts]
 
 
-def _make_ports(tmp_path: Path) -> AppPorts:
+def _make_ports(
+    tmp_path: Path,
+    *,
+    developer_show_ui: bool = False,
+    developer_prompt_echo: bool = False,
+    skills_amap_weather_enabled: bool = False,
+    skills_amap_weather_web_api_key: str = "",
+) -> AppPorts:
     settings = AppSettings(
         workspace_root=str(tmp_path / "workspace"),
         example_ksfs_root=str(tmp_path / "ksfs"),
-        lkc_root=str(tmp_path / "lkc"),
+        ksfs_root=str(tmp_path / "ksfs"),
         index_root=str(tmp_path / ".index"),
         logs_root=str(tmp_path / "logs"),
         hsi_sqlite_path=str(tmp_path / ".index" / "hsi.sqlite"),
@@ -88,6 +96,10 @@ def _make_ports(tmp_path: Path) -> AppPorts:
         chroma_collection="t",
         embedding_provider="stub",
         embedding_model_path="stub",
+        developer_show_dev_tools_ui=developer_show_ui,
+        developer_prompt_echo=developer_prompt_echo,
+        skills_amap_weather_enabled=skills_amap_weather_enabled,
+        skills_amap_weather_web_api_key=skills_amap_weather_web_api_key,
     )
     return AppPorts(
         settings=settings,
@@ -97,6 +109,7 @@ def _make_ports(tmp_path: Path) -> AppPorts:
         metadata_index=_StubMetadataIndex(),
         semantic_store=_StubSemanticStore(),
         text_embedder=_StubEmbedder(),
+        developer=DeveloperToggles(prompt_echo=developer_prompt_echo),
     )
 
 
@@ -167,3 +180,85 @@ def test_api_v1_chat_via_httpx_async_asgi(tmp_path: Path) -> None:
 
     data = asyncio.run(_run())
     assert "event: done" in data
+
+
+def test_api_v1_developer_ui(tmp_path: Path) -> None:
+    app = create_app(
+        _make_ports(tmp_path, developer_show_ui=True, developer_prompt_echo=True)
+    )
+    with TestClient(app) as client:
+        r = client.get("/api/v1/developer/ui")
+    assert r.status_code == 200
+    assert r.json() == {"show_dev_tools_ui": True, "prompt_echo": True}
+
+
+def test_api_v1_developer_agent_tools_forbidden(tmp_path: Path) -> None:
+    app = create_app(_make_ports(tmp_path))
+    with TestClient(app) as client:
+        r = client.get("/api/v1/developer/agent-tools")
+    assert r.status_code == 403
+
+
+def test_api_v1_developer_agent_tools_includes_mcp(tmp_path: Path) -> None:
+    app = create_app(
+        _make_ports(
+            tmp_path,
+            developer_show_ui=True,
+            skills_amap_weather_enabled=True,
+        )
+    )
+    with TestClient(app) as client:
+        r = client.get("/api/v1/developer/agent-tools")
+    assert r.status_code == 200
+    data = r.json()
+    assert "query_weather" in data["tools"]
+    assert data["skills_amap_weather_enabled"] is True
+    assert data["amap_weather_script_exists"] is True
+
+
+def test_api_v1_developer_put_prompt_echo_forbidden(tmp_path: Path) -> None:
+    app = create_app(_make_ports(tmp_path))
+    with TestClient(app) as client:
+        r = client.put("/api/v1/developer/prompt-echo", json={"enabled": True})
+    assert r.status_code == 403
+
+
+def test_api_v1_developer_put_prompt_echo_ok(tmp_path: Path) -> None:
+    app = create_app(_make_ports(tmp_path, developer_show_ui=True))
+    with TestClient(app) as client:
+        r = client.put("/api/v1/developer/prompt-echo", json={"enabled": True})
+        assert r.status_code == 200
+        assert r.json() == {"prompt_echo": True}
+        r2 = client.get("/api/v1/developer/ui")
+        assert r2.json()["prompt_echo"] is True
+
+
+def test_api_v1_chat_prompt_echo_no_llm(tmp_path: Path) -> None:
+    class _ExplodingLLM(_StubLLM):
+        def stream_completion(self, messages, *, json_mode: bool = False):
+            msg = "LLM 不应在 prompt 回显模式下被调用"
+            raise RuntimeError(msg)
+
+    ports = _make_ports(tmp_path, developer_prompt_echo=True)
+    ports = AppPorts(
+        settings=ports.settings,
+        llm=_ExplodingLLM(),
+        retrieval=ports.retrieval,
+        knowledge_source=ports.knowledge_source,
+        metadata_index=ports.metadata_index,
+        semantic_store=ports.semantic_store,
+        text_embedder=ports.text_embedder,
+        developer=ports.developer,
+    )
+    app = create_app(ports)
+    with TestClient(app) as client:
+        with client.stream(
+            "POST",
+            "/api/v1/chat",
+            json={"messages": [{"role": "user", "content": "你好"}]},
+        ) as stream:
+            raw = stream.read().decode("utf-8")
+    assert "【Prompt 回显模式】" in raw
+    assert "role=" in raw and "user" in raw
+    assert "你好" in raw
+    assert "event: done" in raw

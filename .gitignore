@@ -5,8 +5,11 @@ config/secrets.yaml
 .env
 .env.local
 
-# 个人创作与工作区（可阅览修改的 KSFS/LKC/未来 KG 产物等，不上传 GitHub）
-workspace/
+# 个人创作与工作区（默认全部忽略；仅例外提交两份说明，见 KSFS开发.md §2）
+/workspace/**
+!/workspace/README.md
+!/workspace/setting_entry/
+!/workspace/setting_entry/README.md
 
 # 兼容旧约定（若仍使用可保留）
 user_data/
@@ -28,3 +31,6 @@ logs/
 # 常见本地数据（路径可按实现调整）
 *.sqlite
 *.sqlite3
+
+# Windows 目录元数据
+desktop.ini

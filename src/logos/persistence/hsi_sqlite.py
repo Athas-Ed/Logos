@@ -100,7 +100,7 @@ class SqliteMetadataIndex:
         ]
 
     def delete_paths(self, source_paths: list[str]) -> None:
-        """Remove rows (used when KSFS files disappear and LKC is pruned)."""
+        """Remove rows (e.g. when KSFS files disappear from scan set)."""
         if not source_paths:
             return
         with closing(self._connect()) as con:

@@ -1,10 +1,10 @@
-"""KSS: scan KSFS tree and expose KnowledgeSource."""
+"""Scan KSFS tree and expose :class:`~logos.ports.knowledge_source.KnowledgeSource`."""
 
 from __future__ import annotations
 
 from pathlib import Path
 
-from logos.ports.knowledge_source import KnowledgeSource, SourceDocument
+from logos.ports.knowledge_source import SourceDocument
 
 from ._hash import content_hash_hex, normalize_text_for_storage
 from ._paths import resolve_under_root, to_posix_relative

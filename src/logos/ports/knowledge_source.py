@@ -7,7 +7,7 @@ from typing import Protocol, runtime_checkable
 
 @dataclass(frozen=True, slots=True)
 class SourceDocument:
-    """KSFS / LKC 下某一文件的规范化视图。"""
+    """KSFS 下某一 Markdown 文件的规范化视图（供索引与 HSI）。"""
 
     path: Path
     text: str
@@ -17,7 +17,7 @@ class SourceDocument:
 
 @runtime_checkable
 class KnowledgeSource(Protocol):
-    """知识源服务（KSS）：枚举并读取叙事源文件（V0.1 中 KSFS → LKC）。"""
+    """枚举并读取 KSFS 源文件（叙事知识事实源）。"""
 
     def iter_documents(self) -> list[SourceDocument]:
         ...

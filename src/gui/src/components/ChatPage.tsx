@@ -1,4 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  fetchDeveloperUi,
+  putPromptEcho,
+} from "../api/developer";
 import { fetchHealth } from "../api/health";
 import { streamChat } from "../api/sseChat";
 import {
@@ -23,6 +27,11 @@ export function ChatPage() {
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
   const [streamError, setStreamError] = useState<string | null>(null);
+  const [devUi, setDevUi] = useState<{
+    show: boolean;
+    promptEcho: boolean;
+  } | null>(null);
+  const [devToggleBusy, setDevToggleBusy] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const listEndRef = useRef<HTMLDivElement | null>(null);
 
@@ -36,6 +45,17 @@ export function ChatPage() {
     const id = window.setInterval(() => void refreshHealth(), 60000);
     return () => window.clearInterval(id);
   }, [refreshHealth]);
+
+  useEffect(() => {
+    void (async () => {
+      const s = await fetchDeveloperUi();
+      if (!s?.show_dev_tools_ui) {
+        setDevUi(null);
+        return;
+      }
+      setDevUi({ show: true, promptEcho: s.prompt_echo });
+    })();
+  }, []);
 
   useEffect(() => {
     listEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -152,6 +172,32 @@ export function ChatPage() {
               ))}
             </select>
           </label>
+          {devUi?.show ? (
+            <label
+              className={styles.devToolToggle}
+              title="不调用 LLM，将完整 Prompt 作为助手答复（检视 CB 拼装）"
+            >
+              <input
+                type="checkbox"
+                checked={devUi.promptEcho}
+                disabled={devToggleBusy || streaming}
+                onChange={(e) => {
+                  const on = e.target.checked;
+                  setDevToggleBusy(true);
+                  void (async () => {
+                    const ok = await putPromptEcho(on);
+                    if (ok) {
+                      setDevUi((prev) =>
+                        prev ? { ...prev, promptEcho: on } : prev,
+                      );
+                    }
+                    setDevToggleBusy(false);
+                  })();
+                }}
+              />
+              <span>Prompt 回显</span>
+            </label>
+          ) : null}
           <button
             type="button"
             className={styles.ghostBtn}

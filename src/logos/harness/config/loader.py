@@ -143,17 +143,20 @@ def merged_dict_to_app_settings(data: Mapping[str, Any]) -> AppSettings:
     emb = data.get("embeddings") or {}
     chroma = data.get("chroma") or {}
     llm = data.get("llm") or {}
+    dev = data.get("developer") or {}
+    skills = data.get("skills") or {}
+    amap_w = skills.get("amap_weather") or {}
     return AppSettings(
         workspace_root=str(paths.get("workspace_root", "./workspace")),
         example_ksfs_root=str(paths.get("example_ksfs_root", "./example_ksfs")),
-        lkc_root=str(paths.get("lkc_root", "./workspace/lkc")),
+        ksfs_root=str(paths.get("ksfs_root", "./resources/ksfs")),
         index_root=str(paths.get("index_root", "./.index")),
         logs_root=str(paths.get("logs_root", "./logs")),
         hsi_sqlite_path=str(paths.get("hsi_sqlite_path", "./.index/.high-speed_index")),
         chroma_persist_directory=str(
             chroma.get("persist_directory", "./.index/.vector_index")
         ),
-        chroma_collection=str(chroma.get("collection", "lkc_chunks_v0")),
+        chroma_collection=str(chroma.get("collection", "ksfs_chunks_v0")),
         embedding_provider=str(emb.get("provider", "bge_small_zh")),
         embedding_model_path=str(
             emb.get("model_path", "models/tooling/embeddings/bge-small-zh-v1.5")
@@ -167,6 +170,14 @@ def merged_dict_to_app_settings(data: Mapping[str, Any]) -> AppSettings:
         llm_http_proxy=_str_opt(llm.get("http_proxy")),
         llm_https_proxy=_str_opt(llm.get("https_proxy")),
         llm_no_proxy=_str_opt(llm.get("no_proxy")),
+        developer_show_dev_tools_ui=_coerce_truthy(
+            dev.get("show_dev_tools_ui"), default=False
+        ),
+        developer_prompt_echo=_coerce_truthy(dev.get("prompt_echo"), default=False),
+        skills_amap_weather_enabled=_coerce_truthy(
+            amap_w.get("enabled"), default=False
+        ),
+        skills_amap_weather_web_api_key=_str_opt(amap_w.get("web_api_key")),
     )
 
 

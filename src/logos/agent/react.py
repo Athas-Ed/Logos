@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from logos.ports.llm import ChatMessage, LLMClient
 
 from logos.agent import cb, json_tools
+from logos.agent.prompt_echo import format_messages_for_prompt_echo
 from logos.agent.tool_registry import ToolRegistry
 
 _log = logging.getLogger("logos.agent.react")
@@ -45,6 +46,7 @@ def iter_react_loop(
     json_mode: bool = True,
     history: list[ChatMessage] | None = None,
     stream_assistant: bool = True,
+    prompt_echo: bool = False,
 ) -> Iterator[ReActStreamReasoning | ReActStreamDone]:
     """与 :func:`run_react_loop` 相同语义；若 *stream_assistant* 则每轮助手输出以流式片段产出。"""
     messages = cb.seed_messages_with_history(
@@ -53,6 +55,12 @@ def iter_react_loop(
         user_text,
         extra_system=extra_system,
     )
+    if prompt_echo:
+        echo_text = format_messages_for_prompt_echo(messages)
+        yield ReActStreamDone(
+            ReActResult(answer=echo_text, steps=0, messages=messages)
+        )
+        return
     steps = 0
     nudge_budget = 2
 
@@ -120,6 +128,7 @@ def run_react_loop(
     extra_system: str | None = None,
     json_mode: bool = True,
     history: list[ChatMessage] | None = None,
+    prompt_echo: bool = False,
 ) -> ReActResult:
     """Thought → (optional) tool → observation, until final_answer or cap（非流式）。"""
     final: ReActResult | None = None
@@ -132,6 +141,7 @@ def run_react_loop(
         json_mode=json_mode,
         history=history,
         stream_assistant=False,
+        prompt_echo=prompt_echo,
     ):
         if isinstance(item, ReActStreamDone):
             final = item.result

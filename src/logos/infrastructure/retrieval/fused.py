@@ -36,6 +36,10 @@ def _hsi_keyword_score(query: str, rec: MetadataRecord) -> float:
     parts = [p for p in q.split() if len(p) > 1]
     if parts and any(p in path_l or p in title_l for p in parts):
         return 0.62
+    # 中文等：去掉空白后整段是否命中标题/路径（如「山巅城堡 设定」→「山巅城堡」）
+    compact = "".join(q.split())
+    if len(compact) >= 2 and (compact in path_l or compact in title_l):
+        return 0.58
     return 0.0
 
 
