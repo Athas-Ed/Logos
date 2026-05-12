@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from collections.abc import Iterator
 from dataclasses import dataclass
@@ -35,6 +36,14 @@ class ReActStreamDone:
     result: ReActResult
 
 
+@dataclass(frozen=True, slots=True)
+class ReActStreamToolTrace:
+    tool_name: str
+    arguments_json: str
+    observation: str
+    error: str | None
+
+
 def iter_react_loop(
     llm: LLMClient,
     registry: ToolRegistry,
@@ -45,7 +54,7 @@ def iter_react_loop(
     json_mode: bool = True,
     history: list[ChatMessage] | None = None,
     stream_assistant: bool = True,
-) -> Iterator[ReActStreamReasoning | ReActStreamDone]:
+) -> Iterator[ReActStreamReasoning | ReActStreamToolTrace | ReActStreamDone]:
     """与 :func:`run_react_loop` 相同语义；若 *stream_assistant* 则每轮助手输出以流式片段产出。"""
     messages = cb.seed_messages_with_history(
         registry,
@@ -77,7 +86,27 @@ def iter_react_loop(
             return
 
         if step.action_name:
-            obs = registry.execute(step.action_name, step.action_arguments)
+            args = step.action_arguments or {}
+            try:
+                args_json = json.dumps(args, ensure_ascii=False)
+            except (TypeError, ValueError):
+                args_json = "{}"
+            try:
+                obs = registry.execute(step.action_name, step.action_arguments)
+            except Exception as exc:  # noqa: BLE001
+                yield ReActStreamToolTrace(
+                    tool_name=step.action_name,
+                    arguments_json=args_json,
+                    observation="",
+                    error=f"{type(exc).__name__}: {exc}",
+                )
+                raise
+            yield ReActStreamToolTrace(
+                tool_name=step.action_name,
+                arguments_json=args_json,
+                observation=obs,
+                error=None,
+            )
             cb.append_observation(messages, obs)
             continue
 

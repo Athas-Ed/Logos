@@ -1,4 +1,4 @@
-"""A1：``POST /api/v1/chat`` SSE 事件名与最小 JSON 契约（与 API-V0.1、api_v1、GUI 对齐）。"""
+"""A3：``POST /api/v1/chat`` SSE 分档位事件契约（与 API-V0.1、api_v1、GUI 对齐）。"""
 
 from __future__ import annotations
 
@@ -13,7 +13,6 @@ from fastapi.testclient import TestClient
 
 from logos.harness.ii_layer.app import create_app
 from logos.harness.ii_layer.container import AppPorts
-from logos.harness.ii_layer.developer import DeveloperToggles
 from logos.harness.ii_layer.sse_contract import (
     CHAT_SSE_EVENT_NAMES,
     CHAT_SSE_MINIMAL_JSON,
@@ -80,11 +79,11 @@ class _StubEmbedder:
         return [[0.0] * 512 for _ in texts]
 
 
-def _make_ports(tmp_path: Path, *, prompt_echo: bool = False) -> AppPorts:
+def _make_ports(tmp_path: Path) -> AppPorts:
     settings = AppSettings(
         workspace_root=str(tmp_path / "workspace"),
-        ksfs_root=str(tmp_path / "resources" / "ksfs"),
-        example_ksfs_root=str(tmp_path / "example_ksfs"),
+        example_ksfs_root=str(tmp_path / "ksfs"),
+        lkc_root=str(tmp_path / "lkc"),
         index_root=str(tmp_path / ".index"),
         logs_root=str(tmp_path / "logs"),
         hsi_sqlite_path=str(tmp_path / ".index" / "hsi.sqlite"),
@@ -92,8 +91,6 @@ def _make_ports(tmp_path: Path, *, prompt_echo: bool = False) -> AppPorts:
         chroma_collection="t",
         embedding_provider="stub",
         embedding_model_path="stub",
-        developer_show_dev_tools_ui=False,
-        developer_prompt_echo=prompt_echo,
     )
     return AppPorts(
         settings=settings,
@@ -103,7 +100,6 @@ def _make_ports(tmp_path: Path, *, prompt_echo: bool = False) -> AppPorts:
         metadata_index=_StubMetadataIndex(),
         semantic_store=_StubSemanticStore(),
         text_embedder=_StubEmbedder(),
-        developer=DeveloperToggles(prompt_echo=prompt_echo),
     )
 
 
@@ -114,13 +110,13 @@ def test_minimal_json_examples_validate() -> None:
 
 def test_iter_chat_sse_events_roundtrip() -> None:
     raw = (
-        'event: reasoning_delta\ndata: {"text": "a"}\n\n'
+        'event: reasoning_summary\ndata: {"text": "a"}\n\n'
         'event: delta\ndata: {"text": "b"}\n\n'
         'event: done\ndata: {}\n\n'
     )
     events = list(iter_chat_sse_events(raw))
     assert events == [
-        ("reasoning_delta", {"text": "a"}),
+        ("reasoning_summary", {"text": "a"}),
         ("delta", {"text": "b"}),
         ("done", {}),
     ]
@@ -142,7 +138,7 @@ def test_contract_full_stream_from_app(tmp_path: Path) -> None:
         assert event in CHAT_SSE_EVENT_NAMES
         validate_chat_sse_payload(event, payload)
     names = [e for e, _ in parsed]
-    assert "reasoning_delta" in names
+    assert "reasoning_summary" in names
     assert "delta" in names
     assert names[-1] == "done"
 
@@ -164,19 +160,22 @@ def test_contract_empty_user_yields_error_only(tmp_path: Path) -> None:
     validate_chat_sse_payload("error", payload)
 
 
-def test_contract_prompt_echo_no_reasoning_delta(tmp_path: Path) -> None:
-    """与 API 文档一致：prompt_echo 时不经 LLM 流式 ReAct，可无 reasoning_delta。"""
-    app = create_app(_make_ports(tmp_path, prompt_echo=True))
+def test_contract_developer_presentation_emits_reasoning_full(tmp_path: Path) -> None:
+    app = create_app(_make_ports(tmp_path))
     with TestClient(app) as client:
         with client.stream(
             "POST",
             "/api/v1/chat",
-            json={"messages": [{"role": "user", "content": "hi"}]},
+            json={
+                "messages": [{"role": "user", "content": "契约"}],
+                "presentation": "developer",
+            },
+            headers={"Accept": "text/event-stream"},
         ) as stream:
             raw = stream.read().decode("utf-8")
     names = [e for e, _ in iter_chat_sse_events(raw)]
-    assert "reasoning_delta" not in names
-    assert "delta" in names and names[-1] == "done"
+    assert "reasoning_full" in names
+    assert "reasoning_summary" not in names
     for ev, pl in iter_chat_sse_events(raw):
         validate_chat_sse_payload(ev, pl)
 
@@ -195,7 +194,6 @@ def test_contract_citations_items_shape(tmp_path: Path) -> None:
         metadata_index=ports.metadata_index,
         semantic_store=ports.semantic_store,
         text_embedder=ports.text_embedder,
-        developer=ports.developer,
     )
     app = create_app(ports)
     with TestClient(app) as client:
@@ -206,7 +204,7 @@ def test_contract_citations_items_shape(tmp_path: Path) -> None:
         ) as stream:
             raw = stream.read().decode("utf-8")
     cite_events = [
-        pl for ev, pl in iter_chat_sse_events(raw) if ev == "citations"
+        pl for ev, pl in iter_chat_sse_events(raw) if ev == "citations_partial"
     ]
     assert cite_events
-    validate_chat_sse_payload("citations", cite_events[0])
+    validate_chat_sse_payload("citations_partial", cite_events[0])

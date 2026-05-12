@@ -138,11 +138,27 @@ def _str_opt(raw: Any) -> str:
     return str(raw).strip()
 
 
+def _normalize_presentation(raw: Any) -> str:
+    s = str(raw or "").strip().lower()
+    if s in ("work", "developer"):
+        return s
+    return "work"
+
+
+def _normalize_log_profile(raw: Any) -> str:
+    s = str(raw or "").strip().lower()
+    if s in ("minimal", "standard", "verbose", "audit"):
+        return s
+    return "standard"
+
+
 def merged_dict_to_app_settings(data: Mapping[str, Any]) -> AppSettings:
     paths = data.get("paths") or {}
     emb = data.get("embeddings") or {}
     chroma = data.get("chroma") or {}
     llm = data.get("llm") or {}
+    ui = data.get("ui") if isinstance(data.get("ui"), dict) else {}
+    obs = data.get("obs") if isinstance(data.get("obs"), dict) else {}
     return AppSettings(
         workspace_root=str(paths.get("workspace_root", "./workspace")),
         example_ksfs_root=str(paths.get("example_ksfs_root", "./example_ksfs")),
@@ -167,6 +183,8 @@ def merged_dict_to_app_settings(data: Mapping[str, Any]) -> AppSettings:
         llm_http_proxy=_str_opt(llm.get("http_proxy")),
         llm_https_proxy=_str_opt(llm.get("https_proxy")),
         llm_no_proxy=_str_opt(llm.get("no_proxy")),
+        ui_default_presentation=_normalize_presentation(ui.get("default_presentation")),
+        obs_log_profile=_normalize_log_profile(obs.get("log_profile")),
     )
 
 

@@ -28,3 +28,5 @@ class AppSettings:
     llm_http_proxy: str = ""
     llm_https_proxy: str = ""
     llm_no_proxy: str = ""
+    ui_default_presentation: str = "work"
+    obs_log_profile: str = "standard"

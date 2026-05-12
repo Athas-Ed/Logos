@@ -50,7 +50,9 @@ class AgentShell:
         json_mode: bool = True,
         history: list[ChatMessage] | None = None,
         stream_assistant: bool = True,
-    ) -> Iterator[react.ReActStreamReasoning | react.ReActStreamDone]:
+    ) -> Iterator[
+        react.ReActStreamReasoning | react.ReActStreamToolTrace | react.ReActStreamDone
+    ]:
         paradigm = pr.select_paradigm(user_text)
         if paradigm != "react":
             msg = f"unsupported paradigm: {paradigm!r}"
