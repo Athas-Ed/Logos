@@ -2,7 +2,7 @@
 
 > **文档地位**：在 [`SPEC-V0.1.md`](./SPEC-V0.1.md) 的 V0.1 范围之上，约定 **用户可见内容的展示策略** 与 **日志落盘粒度** 的产品与配置契约。实现 I&I / GUI / Obs 时以本文件为据；若与主 SPEC 的模块清单冲突，以主 SPEC 为准，本文件仅细化「展示与日志」横切需求。
 >
-> **状态**：已讨论定稿（动工前设计）；**尚未**要求代码与配置键必须已实现，但新增配置与 API 时应与本文件对齐或显式修订本文件。
+> **状态**：产品/配置契约已定稿。**A3 范围**（`ui.default_presentation`、`obs.log_profile`、`GET /api/v1/bootstrap`、按档位 SSE）已与主分支实现对齐；权威对照 **`重要子系统开发文档/API-V0.2.md`**、`src/logos/harness/ii_layer/api_v1.py`、`tests/test_sse_chat_contract.py`。**GUI 与真实后端一条完整会话联合冒烟** 以 **`第二阶段收尾计划.md` 之 A8b** 为正式收口，不在本规格单列验收。此后新增字段或改语义须同步修订本文件。
 
 ---
 
@@ -71,7 +71,7 @@ ui:
 ```
 
 - GUI **仅**在「本次会话」内覆盖该默认值；不写回 `local.yaml`。
-- 可选：服务端在只读接口（如 `GET /api/v1/bootstrap`）返回 `default_presentation`，供前端首次渲染；会话内切换 **不** 调用 config 写接口。
+- **已实现**：`GET /api/v1/bootstrap` 返回 `default_presentation`（及 `log_profile`、`operating_mode`，见 §6），供前端首屏渲染；会话内切换 **不** 调用 config 写接口。
 
 ### 5.2 日志粒度（仅 config，无 GUI）
 
@@ -127,3 +127,4 @@ obs:
 |------|------|
 | 2026-05-10 | 初稿：WM / 开发者展示 / 日志正交、config 与 GUI 职责、Obs 边界。 |
 | 2026-05-13 | §6：回填与 `API-V0.2` 一致的 SSE 事件表与 `bootstrap` 指向。 |
+| 2026-05-13 | 文首状态、§5.1：与 A3 实现对齐；**GUI↔真实后端** 联合验收明确归 A8b。 |

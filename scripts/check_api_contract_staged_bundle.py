@@ -15,6 +15,7 @@ BUNDLE_TRIGGER_PATHS: frozenset[str] = frozenset(
         "src/logos/harness/ii_layer/api_v1.py",
         "src/logos/harness/ii_layer/deps.py",
         "src/gui/src/api/sseChat.ts",
+        "src/gui/src/api/bootstrap.ts",
         "src/gui/src/api/developer.ts",
     }
 )
@@ -69,7 +70,7 @@ def main() -> int:
     req_lines = "\n".join(f"  - {m}" for m in sorted(REQUIRED_STAGED))
     print(
         "【API 契约 pre-commit】本次暂存包含以下一类或多类文件：\n"
-        "  api_v1.py / ii_layer deps.py / sseChat.ts / developer.ts\n"
+        "  api_v1.py / ii_layer deps.py / sseChat.ts / bootstrap.ts / developer.ts\n"
         "须**同时**暂存下列文件（可与上一提交相比仅有修订记录或注释级 diff，但必须出现在本提交的暂存区）：\n"
         f"{req_lines}\n"
         f"\n当前未暂存：{', '.join(missing)}\n"
