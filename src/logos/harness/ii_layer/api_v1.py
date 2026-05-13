@@ -1,4 +1,4 @@
-"""V0.2 契约路由（路径前缀 ``/api/v1``）：health、chat（SSE）、developer 端点。
+"""V0.2 契约路由（路径前缀 ``/api/v1``）：health、bootstrap、chat（SSE）、developer 端点。
 
 权威文档：``original_docs/重要子系统开发文档/API-V0.2.md``。
 """
@@ -8,13 +8,17 @@ from __future__ import annotations
 import json
 import logging
 from collections.abc import Iterator
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 _log = logging.getLogger("logos.api.v1")
 
 from pydantic import BaseModel, Field
 
-from logos.agent.react import ReActStreamDone, ReActStreamReasoning
+from logos.agent.react import (
+    ReActStreamDone,
+    ReActStreamReasoning,
+    ReActStreamToolTrace,
+)
 from logos.agent.shell import AgentShell
 from logos.harness.sg_layer import build_v01_guarded_tool_registry
 from logos.harness.sg_layer.guarded_registry import V01_SG_TOOL_WHITELIST
@@ -32,6 +36,10 @@ class ChatMessageBody(BaseModel):
 class ChatRequestBody(BaseModel):
     messages: list[ChatMessageBody]
     operating_mode: str = Field(default="author", description="operating_mode，与 SPEC 对齐")
+    presentation: str | None = Field(
+        default=None,
+        description="展示档位 work|developer；省略则用 ui.default_presentation",
+    )
 
 
 class DeveloperUIResponse(BaseModel):
@@ -43,8 +51,24 @@ class PromptEchoBody(BaseModel):
     enabled: bool
 
 
+class BootstrapResponse(BaseModel):
+    default_presentation: Literal["work", "developer"]
+    log_profile: Literal["minimal", "standard", "verbose", "audit"]
+    operating_mode: str
+
+
 def _sse_frame(event: str, payload: dict[str, Any]) -> str:
     return f"event: {event}\ndata: {json.dumps(payload, ensure_ascii=False)}\n\n"
+
+
+def _effective_presentation(raw: str | None, default: str) -> Literal["work", "developer"]:
+    if raw is None or not str(raw).strip():
+        base = default
+    else:
+        base = str(raw).strip().lower()
+    if base in ("developer", "dev"):
+        return "developer"
+    return "work"
 
 
 def _operating_mode_suffix(mode: str) -> str:
@@ -88,6 +112,66 @@ def _chunk_text(text: str, size: int = 512) -> Iterator[str]:
         yield text[i : i + size]
 
 
+def _yield_reasoning_sse(
+    presentation: Literal["work", "developer"],
+    piece: str,
+    acc_holder: dict[str, str],
+) -> Iterator[str]:
+    buf = acc_holder.setdefault("reasoning_buf", "") + piece
+    acc_holder["reasoning_buf"] = buf
+    if presentation == "developer":
+        yield _sse_frame("reasoning_full", {"text": piece})
+        return
+    max_preview = 120
+    preview = buf if len(buf) <= max_preview else buf[: max_preview - 1] + "…"
+    yield _sse_frame("reasoning_summary", {"text": preview})
+
+
+def _citation_event(
+    presentation: Literal["work", "developer"], cites: list[Citation]
+) -> tuple[str, dict[str, Any]]:
+    items_full = [
+        {"path": c.path, "snippet": c.snippet, "score": c.score} for c in cites
+    ]
+    if presentation == "work":
+        partial: list[dict[str, Any]] = []
+        for c in cites[:3]:
+            sn = c.snippet
+            if len(sn) > 160:
+                sn = sn[:157] + "…"
+            partial.append({"path": c.path, "snippet": sn, "score": c.score})
+        return "citations_partial", {"items": partial}
+    return "citations_full", {"items": items_full}
+
+
+def _yield_tool_trace_sse(
+    presentation: Literal["work", "developer"], trace: ReActStreamToolTrace
+) -> Iterator[str]:
+    if presentation == "work":
+        status = "error" if trace.error else "ok"
+        detail = (trace.error or trace.observation or "")[:240]
+        yield _sse_frame(
+            "tool_trace_summary",
+            {"tool": trace.tool_name, "status": status, "detail": detail},
+        )
+        return
+    try:
+        arguments = json.loads(trace.arguments_json) if trace.arguments_json else {}
+    except json.JSONDecodeError:
+        arguments = {}
+    if not isinstance(arguments, dict):
+        arguments = {"_raw": trace.arguments_json}
+    yield _sse_frame(
+        "tool_trace_full",
+        {
+            "tool": trace.tool_name,
+            "arguments": arguments,
+            "result": trace.observation,
+            "error": trace.error,
+        },
+    )
+
+
 def build_v1_router() -> Any:
     from fastapi import APIRouter, HTTPException
     from fastapi.responses import StreamingResponse
@@ -97,6 +181,20 @@ def build_v1_router() -> Any:
     @router.get("/health")
     def health_v1() -> dict[str, str]:
         return {"status": "ok"}
+
+    @router.get("/bootstrap")
+    def bootstrap_v1(ports: AppPortsDep) -> BootstrapResponse:
+        pres = _effective_presentation(None, ports.settings.ui_default_presentation)
+        prof = str(ports.settings.obs_log_profile or "standard").strip().lower()
+        if prof not in ("minimal", "standard", "verbose", "audit"):
+            prof = "standard"
+        return BootstrapResponse(
+            default_presentation=pres,
+            log_profile=cast(
+                Literal["minimal", "standard", "verbose", "audit"], prof
+            ),
+            operating_mode=ports.settings.operating_mode,
+        )
 
     @router.post("/chat")
     def chat_v1(
@@ -115,6 +213,10 @@ def build_v1_router() -> Any:
                         {"code": "empty_message", "message": "缺少有效用户消息"},
                     )
                     return
+
+                presentation = _effective_presentation(
+                    body.presentation, ports.settings.ui_default_presentation
+                )
 
                 citation_sink: list[Citation] = []
                 tools = build_v01_guarded_tool_registry(
@@ -138,6 +240,9 @@ def build_v1_router() -> Any:
                         f"\n\n【工具】以下 MCP 暴露的工具已启用：{listed}。"
                         "按用户意图在恰当时机调用；与 KSFS 无关的查询不必先 retrieve。"
                     )
+
+                result = None
+                reasoning_acc: dict[str, str] = {}
                 for item in shell.iter_run_task(
                     ut,
                     max_steps=16,
@@ -147,7 +252,11 @@ def build_v1_router() -> Any:
                     stream_assistant=True,
                 ):
                     if isinstance(item, ReActStreamReasoning):
-                        yield _sse_frame("reasoning_delta", {"text": item.text})
+                        yield from _yield_reasoning_sse(
+                            presentation, item.text, reasoning_acc
+                        )
+                    elif isinstance(item, ReActStreamToolTrace):
+                        yield from _yield_tool_trace_sse(presentation, item)
                     elif isinstance(item, ReActStreamDone):
                         result = item.result
 
@@ -165,11 +274,8 @@ def build_v1_router() -> Any:
                 if not cites:
                     cites = retrieval.query(text=ut, top_k=8)
                 if cites:
-                    items = [
-                        {"path": c.path, "snippet": c.snippet, "score": c.score}
-                        for c in cites
-                    ]
-                    yield _sse_frame("citations", {"items": items})
+                    ev, payload = _citation_event(presentation, cites)
+                    yield _sse_frame(ev, payload)
 
                 for piece in _chunk_text(result.answer):
                     if piece:

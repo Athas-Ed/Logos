@@ -13,6 +13,7 @@ from logos.agent.react import (
     ReActResult,
     ReActStreamDone,
     ReActStreamReasoning,
+    ReActStreamToolTrace,
     iter_react_loop,
     run_react_loop,
 )
@@ -25,6 +26,7 @@ __all__ = [
     "ReActResult",
     "ReActStreamDone",
     "ReActStreamReasoning",
+    "ReActStreamToolTrace",
     "RegisteredTool",
     "ToolRegistry",
     "append_assistant",

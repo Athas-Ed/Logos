@@ -59,7 +59,7 @@ def build_v01_guarded_tool_registry(
     *,
     retrieval: RetrievalService | None = None,
     citation_sink: list[Citation] | None = None,
-    max_output_chars: int = 100_000,
+    extra_allowed_tools: frozenset[str] | None = None,
 ) -> GuardedToolRegistry:
     """注册 ``retrieve`` / ``read_ksfs`` / ``list_ksfs`` / ``write_draft``；按配置挂载 MCP 工具。"""
     mcp_tool_specs: list[Any] = []
@@ -112,11 +112,8 @@ def build_v01_guarded_tool_registry(
                 )
 
     extra_names = frozenset(t.name for t in mcp_tool_specs)
-    allowed = V01_SG_TOOL_WHITELIST | extra_names
-    reg = GuardedToolRegistry(
-        allowed_names=allowed,
-        max_output_chars=max_output_chars,
-    )
+    allowed = V01_SG_TOOL_WHITELIST | extra_names | (extra_allowed_tools or frozenset())
+    reg = GuardedToolRegistry(allowed_names=allowed)
     workspace = Path(settings.workspace_root).resolve()
     ksfs_root = Path(settings.ksfs_root).resolve()
     rsvc: RetrievalService = retrieval if retrieval is not None else _EmptyRetrieval()
