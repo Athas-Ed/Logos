@@ -20,7 +20,7 @@
 - **能力层（Skills）** — MCP Server；注册表、渐进式披露；位于 **`skills/`**。
 - **I&I** — Interface & Integration：HTTP、**SSE**、GUI、CLI、**组合根**（`harness/ii_layer`）。
 - **S&G** — Security & Governance：沙箱、工具白名单、输出治理、**MCP 进程治理**（`harness/sg_layer`）。
-- **Obs** — 可观测性；统一日志，默认 **`logs/`**。
+- **Obs** — 可观测性；统一日志，默认根目录 **`logs/`**，其下 **`daily/`**（按日切分的日常轨）与 **`maint/`**（按子系统的维护轨）；详见 **`logs/README.md`**。
 - **Config** — **`config/defaults.yaml`** + 本机 **`config/local.yaml`**。
 
 ---

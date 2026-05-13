@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -21,7 +22,7 @@ def test_logs_subdir_auto_created_and_written(
         encoding="utf-8",
     )
     (cfg / "logging.yaml").write_text(
-        "logging:\n  format: text\n  file_name: pytest_run.log\n",
+        "logging:\n  format: text\n",
         encoding="utf-8",
     )
     monkeypatch.chdir(tmp_path)
@@ -29,7 +30,9 @@ def test_logs_subdir_auto_created_and_written(
 
     configure_logging(log_format="text")
     get_obs_logger("pytest").info("子目录日志探针")
-    log_file = logs_root / "pytest_run.log"
+    day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    ym = datetime.now(timezone.utc).strftime("%Y-%m")
+    log_file = logs_root / "daily" / ym / f"{day}.log"
     assert log_file.is_file()
     text = log_file.read_text(encoding="utf-8")
     assert "子目录日志探针" in text

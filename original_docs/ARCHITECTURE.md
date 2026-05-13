@@ -46,7 +46,7 @@
 
 - **I&I（`ii_layer/`）**：HTTP、**SSE**、静态 GUI、CLI；FastAPI 路由与组合根。
 - **S&G（`sg_layer/`）**：沙箱、工具注册、MCP 进程治理与回收。
-- **Obs（`obs/`）**：日志与可观测性；默认 **`logs/`**。
+- **Obs（`obs/`）**：日志与可观测性；默认根目录 **`logs/`**，下分 **`daily/`**（按 `YYYY-MM/YYYY-MM-DD.log` 的日常轨，固定 INFO+）与 **`maint/`**（按子系统的维护轨 + `electron-shell.log`，级别随 `obs.log_profile`）；详见仓库内 **`logs/README.md`**。
 - **Config（`config/`）**：`defaults.yaml` + 本机 **`local.yaml`**（不入库）。
 
 ### 2.6 端口与装配
@@ -91,7 +91,9 @@ Logos/
 ├── scripts/
 ├── tests/
 ├── .index/                    # Chroma、HSI 等（默认不入库）
-├── logs/                      # 默认不入库
+├── logs/                      # 占位与 README 可提交；*.log 见 .gitignore
+│   ├── daily/                 # 日常轨：YYYY-MM/YYYY-MM-DD.log（Obs）
+│   └── maint/                 # 维护轨：子系统 .log；Electron 写 electron-shell.log
 ├── original_docs/
 ├── docs/
 └── README.md
@@ -108,7 +110,7 @@ Logos/
 ## 4. 一键启动与 GitHub
 
 - **应提交**：`scripts/`、README 启动说明、**`config/local.example.yaml`**。
-- **可不提交**：大二进制、`config/local.yaml`、`.index/`、`logs/`、默认 **`workspace/`** 用户内容（例外见 `.gitignore` 与 `workspace/README.md`）。
+- **可不提交**：大二进制、`config/local.yaml`、`.index/`、**`logs/**/*.log`**（运行时落盘）、默认 **`workspace/`** 用户内容（例外见 `.gitignore` 与 `workspace/README.md`）；**`logs/`** 下说明与占位目录见 **`logs/README.md`**。
 
 ---
 
@@ -118,4 +120,4 @@ Logos/
 
 ---
 
-*最后更新：2026-05-12 — 对齐 KSFS 现行模型、DIP 路径、本会话产品形态与目录约定。*
+*最后更新：2026-05-13 — 对齐 `logs/daily` 与 `logs/maint` 落盘约定、占位目录与 .gitignore。*

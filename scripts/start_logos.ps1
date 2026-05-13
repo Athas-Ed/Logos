@@ -66,7 +66,7 @@ Write-Host "等待约 ${ViteWarmupSeconds} 秒以便 Vite 就绪，再打开 Ele
 Start-Sleep -Seconds $ViteWarmupSeconds
 
 Write-Host "正在打开 Electron 窗口（加载上述 Vite 地址）…" -ForegroundColor Cyan
-$ElectronCmd = "`$Host.UI.RawUI.WindowTitle = 'Logos Electron'; if (-not (Test-Path -LiteralPath 'node_modules')) { npm run install:with-mirror }; npm run electron:dev"
+$ElectronCmd = "`$Host.UI.RawUI.WindowTitle = 'Logos Electron'; `$env:LOGOS_ELECTRON_SKIP_BACKEND='1'; if (-not (Test-Path -LiteralPath 'node_modules')) { npm run install:with-mirror }; npm run electron:dev"
 Start-Process powershell -WorkingDirectory $ElectronDir -ArgumentList @(
     "-NoExit",
     "-NoProfile",

@@ -46,6 +46,7 @@ sleep 5
 
 (
   cd "${ELECTRON_DIR}"
+  export LOGOS_ELECTRON_SKIP_BACKEND=1
   if [[ ! -d node_modules ]]; then
     npm run install:with-mirror || npm install
   fi

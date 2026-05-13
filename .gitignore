@@ -30,7 +30,8 @@ venv/
 
 # 索引与日志（默认路径，可由 Config 改）
 .index/
-logs/
+# logs：提交 README 与 daily/maint 占位；忽略所有 .log 落盘文件（见 logs/README.md）
+logs/**/*.log
 
 # 常见本地数据（路径可按实现调整）
 *.sqlite

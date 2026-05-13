@@ -8,7 +8,7 @@
 ## 展示与日志（`ui` / `obs`）
 
 - **`ui.default_presentation`**：`work` \| `developer`；新建 GUI 会话的默认展示档位（浏览器内可覆盖，见 `SPEC-DISPLAY-AND-LOGGING-V0.1.md`）。
-- **`obs.log_profile`**：`minimal` \| `standard` \| `verbose` \| `audit`；仅影响 **Obs 落盘** 根级别（见 `logos.harness.obs.configure_logging`），与展示档位正交。
+- **`obs.log_profile`**：`minimal` \| `standard` \| `verbose` \| `audit`；影响 **维护侧** `maint/*.log` 与**控制台**的最低级别；**日常** `daily/…` 固定为 `>= INFO`，与此项解耦。
 - **环境变量覆盖**：`LOGOS_UI__DEFAULT_PRESENTATION`、`LOGOS_OBS__LOG_PROFILE`（规则同其他 `LOGOS_*` 段）。
 
 ## 大模型（`llm`）
@@ -31,5 +31,7 @@
 ## 日志目录（`logs/`）
 
 - **配置位置**：`defaults.yaml` → `paths.logs_root`（默认 `./logs`）；可用 `local.yaml` 覆盖，或用环境变量 `LOGOS_PATHS__LOGS_ROOT`。
-- **生效方式**：在进程启动时调用 `logos.harness.obs.configure_logging`（会读取合并后的配置）；内部会**自动创建**该目录（含父路径）。
+- **生效方式**：在进程启动时调用 `logos.harness.obs.configure_logging`（会读取合并后的配置）；内部会**自动创建** `logs_root`、`daily/`、`maint/`。
+- **落盘约定**：**日常**为 `daily/YYYY-MM/YYYY-MM-DD.log`（固定 `>= INFO`，与 `obs.log_profile` 解耦）；**维护**为 `maint/<子系统>.log`（级别随 `obs.log_profile`），子系统路由见 `src/logos/harness/obs/path_handlers.py`。`config/logging.yaml` 的 `logging.format` 同时作用于控制台与上述文件；`logging.file_name` 已废弃。
+- **Electron 壳**：后端崩溃/重启审计写入 **`maint/electron-shell.log`**（与 `paths.logs_root` 同根，优先 `LOGOS_REPO_ROOT`）。
 - **测试**：`pytest` 会在临时目录下创建 `…/logs/_pytest/` 子目录写入测试日志，避免污染你本机 `./logs`。
