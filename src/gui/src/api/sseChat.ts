@@ -1,13 +1,46 @@
-import type { ChatMessage, CitationItem, OperatingMode } from "../types/chat";
+import type {
+  ChatMessage,
+  CitationItem,
+  OperatingMode,
+  PresentationMode,
+} from "../types/chat";
 
 const CHAT_PATH = "/api/v1/chat";
 
 export type StreamChatEvent =
   | { kind: "delta"; text: string }
-  | { kind: "reasoning_delta"; text: string }
+  /** work 档：服务端滚动摘要（整段替换展示，勿按增量拼接） */
+  | { kind: "reasoning_summary"; text: string }
+  /** developer 档：推理片段全文流式（按片段追加） */
+  | { kind: "reasoning_full"; text: string }
   | { kind: "citations"; items: CitationItem[] }
+  | {
+      kind: "tool_trace_summary";
+      tool: string;
+      status: string;
+      detail: string;
+    }
+  | {
+      kind: "tool_trace_full";
+      tool: string;
+      arguments: Record<string, unknown>;
+      result: string;
+      error: string | null;
+    }
   | { kind: "done"; payload: Record<string, unknown> }
   | { kind: "error"; code: string; message: string };
+
+function parseCitationItems(raw: unknown): CitationItem[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((it) => {
+    const o = it as Record<string, unknown>;
+    return {
+      path: String(o.path ?? ""),
+      snippet: String(o.snippet ?? ""),
+      score: typeof o.score === "number" ? o.score : Number(o.score ?? 0),
+    };
+  });
+}
 
 function parseSseBlock(block: string): StreamChatEvent | null {
   const lines = block.split(/\r?\n/).filter((l) => l.length > 0);
@@ -33,24 +66,42 @@ function parseSseBlock(block: string): StreamChatEvent | null {
           typeof payload.text === "string" ? payload.text : String(payload.text ?? "");
         return { kind: "delta", text };
       }
-      case "reasoning_delta": {
+      case "reasoning_summary": {
         const text =
           typeof payload.text === "string" ? payload.text : String(payload.text ?? "");
-        return { kind: "reasoning_delta", text };
+        return { kind: "reasoning_summary", text };
       }
-      case "citations": {
-        const raw = payload.items;
-        const items: CitationItem[] = Array.isArray(raw)
-          ? raw.map((it) => {
-              const o = it as Record<string, unknown>;
-              return {
-                path: String(o.path ?? ""),
-                snippet: String(o.snippet ?? ""),
-                score: typeof o.score === "number" ? o.score : Number(o.score ?? 0),
-              };
-            })
-          : [];
-        return { kind: "citations", items };
+      case "reasoning_full": {
+        const text =
+          typeof payload.text === "string" ? payload.text : String(payload.text ?? "");
+        return { kind: "reasoning_full", text };
+      }
+      case "citations_partial":
+      case "citations_full": {
+        return { kind: "citations", items: parseCitationItems(payload.items) };
+      }
+      case "tool_trace_summary": {
+        return {
+          kind: "tool_trace_summary",
+          tool: String(payload.tool ?? ""),
+          status: String(payload.status ?? ""),
+          detail: String(payload.detail ?? ""),
+        };
+      }
+      case "tool_trace_full": {
+        const args = payload.arguments;
+        const argumentsObj =
+          args !== null && typeof args === "object" && !Array.isArray(args)
+            ? (args as Record<string, unknown>)
+            : {};
+        const err = payload.error;
+        return {
+          kind: "tool_trace_full",
+          tool: String(payload.tool ?? ""),
+          arguments: argumentsObj,
+          result: String(payload.result ?? ""),
+          error: err == null ? null : String(err),
+        };
       }
       case "done":
         return { kind: "done", payload };
@@ -70,6 +121,8 @@ function parseSseBlock(block: string): StreamChatEvent | null {
 export interface StreamChatOptions {
   messages: ChatMessage[];
   operatingMode: OperatingMode;
+  /** 省略则服务端使用 ``ui.default_presentation`` */
+  presentation?: PresentationMode;
   signal?: AbortSignal;
   onEvent: (ev: StreamChatEvent) => void;
 }
@@ -80,19 +133,25 @@ export interface StreamChatOptions {
 export async function streamChat({
   messages,
   operatingMode,
+  presentation,
   signal,
   onEvent,
 }: StreamChatOptions): Promise<void> {
+  const body: Record<string, unknown> = {
+    messages,
+    operating_mode: operatingMode,
+  };
+  if (presentation !== undefined) {
+    body.presentation = presentation;
+  }
+
   const res = await fetch(CHAT_PATH, {
     method: "POST",
     headers: {
       Accept: "text/event-stream",
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      messages,
-      operating_mode: operatingMode,
-    }),
+    body: JSON.stringify(body),
     signal,
   });
 
@@ -106,8 +165,8 @@ export async function streamChat({
     return;
   }
 
-  const body = res.body;
-  if (!body) {
+  const bodyStream = res.body;
+  if (!bodyStream) {
     onEvent({
       kind: "error",
       code: "no_body",
@@ -116,7 +175,7 @@ export async function streamChat({
     return;
   }
 
-  const reader = body.getReader();
+  const reader = bodyStream.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
 

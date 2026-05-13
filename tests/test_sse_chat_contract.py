@@ -1,4 +1,4 @@
-"""A3：``POST /api/v1/chat`` SSE 分档位事件契约（与 API-V0.1、api_v1、GUI 对齐）。"""
+"""A3：``POST /api/v1/chat`` SSE 分档位事件契约（与 API-V0.2、api_v1、GUI 对齐）。"""
 
 from __future__ import annotations
 

@@ -5,6 +5,12 @@
 
 加载顺序建议：`defaults.yaml` → `local.yaml`（后者覆盖前者）；若实现支持，可再允许**进程环境变量**覆盖个别键（便于容器部署），**不**使用仓库根目录的 `.env` 文件。
 
+## 展示与日志（`ui` / `obs`）
+
+- **`ui.default_presentation`**：`work` \| `developer`；新建 GUI 会话的默认展示档位（浏览器内可覆盖，见 `SPEC-DISPLAY-AND-LOGGING-V0.1.md`）。
+- **`obs.log_profile`**：`minimal` \| `standard` \| `verbose` \| `audit`；仅影响 **Obs 落盘** 根级别（见 `logos.harness.obs.configure_logging`），与展示档位正交。
+- **环境变量覆盖**：`LOGOS_UI__DEFAULT_PRESENTATION`、`LOGOS_OBS__LOG_PROFILE`（规则同其他 `LOGOS_*` 段）。
+
 ## 大模型（`llm`）
 
 - **用途**：`scripts/run_backend_stub.py` 在检测到 `llm.api_key` 非空时，通过 **OpenAI 兼容** `POST …/chat/completions` 调用远程模型（如 DeepSeek）。
