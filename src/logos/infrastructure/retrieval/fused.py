@@ -73,7 +73,7 @@ class FusedRetrievalService:
                 srep = sync_ksfs_svs_incremental(
                     ksfs_root=root,
                     hsi_db=dbp,
-                    semantic_store=self.semantic_store,
+                    store=self.semantic_store,
                     embedder=self.embedder,
                     svs_state_db=self.lazy_svs_state_db,
                 )

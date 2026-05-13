@@ -41,7 +41,7 @@
 1. **无终端用户鉴权**：`127.0.0.1` 或等价信任边界由操作系统与防火墙负责。  
 2. **URL 仍为 `/api/v1`**：语义演进靠 **文档版本（V0.2 及后续）** 与变更记录，不强行上 `/v2` URL，除非未来真有对外发布需求。  
 3. **部分错误走 HTTP 200 + SSE `error` 事件**：流式对话常见做法；非流式客户端若出现再单独约定。  
-4. **部署链与阶段收口**：`GET /api/v1/bootstrap`、分档 SSE 与配置键已在主路径实现并与 V0.2 对齐；**真实后端 + GUI 一条会话联合冒烟、启动链文档化** 仍以 **`original_docs/第二阶段收尾计划.md` 之 A8b** 为正式收口条件，完成前本文不将「对外可复现部署形态」写入个人使用基线。
+4. **部署链与阶段演进**：`GET /api/v1/bootstrap`、分档 SSE 与配置键已在主路径实现并与 V0.2 对齐。**第二阶段收尾**已宣告完成；**Electron 壳层托管后端、启动链文档化、GUI 联合冒烟与韧性** 归入 **`original_docs/第三阶段开发计划.md`**（高可用 GUI 主线）持续补强。个人使用基线仍以「本机可信边界 + 契约测」为主，不引入企业级网关为多租户场景前的默认依赖。
 
 ---
 
@@ -86,10 +86,10 @@ git config core.hooksPath .githooks
 
 此项不依赖第三阶段计划即可执行。
 
-### 4.2 配置与首屏（A3 已实现；GUI 全链待 A8b）
+### 4.2 配置与首屏（A3 已实现；壳层与韧性见第三阶段）
 
 - **已实现**（与 **`API-V0.2.md`**、**`SPEC-DISPLAY-AND-LOGGING-V0.1.md`** §6 一致）：`GET /api/v1/bootstrap`；`config/defaults.yaml`（及合并链）中的 `ui.default_presentation`、`obs.log_profile`；GUI 首屏消费 bootstrap（`src/gui/src/api/bootstrap.ts`）；`POST /api/v1/chat` 按 `presentation` 输出分档 SSE。权威对照：`src/logos/harness/ii_layer/api_v1.py`、`tests/test_stream5_api.py`、`tests/test_sse_chat_contract.py`。  
-- **仍待 A8b**：开发态下一键或文档化步骤的 **真实后端 + GUI** 全链、API 基址与首屏联合冒烟——见 **`original_docs/第二阶段收尾计划.md`** §6 行 A8b；该步完成后再把「第二阶段 GUI 侧正式收尾」记入 DEVLOG/CHANGELOG 即可。  
+- **持续工程化**：开发/打包态下 **真实后端 + GUI** 全链、API 基址、首屏冒烟与 **断线重连 / 子进程托管** 等，以 **`original_docs/第三阶段开发计划.md`** §2 为排期与验收参考（第二阶段收尾已收口，不再单列 A8b 为阻塞项）。  
 - **个人使用**：无后端时 GUI 仍可本地兜底，但**默认策略**不再依赖「把 bootstrap 默认值写死在 GUI」替代服务端契约。
 
 ### 4.3 机器可读契约（可选）
