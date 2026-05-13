@@ -58,3 +58,23 @@ def write_draft_under_workspace(workspace_root: Path, path: str, content: str) -
 
     rel = target.relative_to(workspace_root.resolve()).as_posix()
     return f"已写入草稿：{rel}（字节数 {len(content.encode('utf-8'))}）"
+
+
+def read_text_under_root(
+    root: Path,
+    user_path: str,
+    *,
+    context_label: str,
+    denied_operation: str,
+) -> str:
+    """只读打开 *root* 下相对路径文本；沙箱规则同 :func:`resolve_path_under_root`。"""
+    try:
+        target = resolve_path_under_root(root, user_path)
+    except PathSandboxViolationError as exc:
+        return f"error: {denied_operation} 被拒绝 — {exc}"
+    if not target.is_file():
+        return f"error: 未找到文件（相对 {context_label}）{user_path!r}"
+    try:
+        return target.read_text(encoding="utf-8")
+    except OSError as exc:
+        return f"error: 读取失败 — {exc}"
