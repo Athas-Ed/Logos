@@ -7,6 +7,7 @@ from pathlib import Path
 from logos.persistence import (
     SqliteMetadataIndex,
     content_hash_hex,
+    ensure_ksfs_hsi_registered,
     normalize_text_for_storage,
     sync_ksfs_hsi,
 )
@@ -35,10 +36,15 @@ def test_sync_ksfs_hsi_first_and_second_run(tmp_path: Path) -> None:
     assert r1.documents_scanned == 1
     assert r1.hsi_upserted == 1
     assert r1.hsi_skipped_unchanged == 0
+    assert r1.fm_id_writebacks == 1
+    assert r1.hsi_ids_allocated == 1
+    text = md.read_text(encoding="utf-8")
+    assert 'id: "10001"' in text
 
     r2 = sync_ksfs_hsi(ksfs_root=ksfs, hsi_db=hsi)
     assert r2.hsi_upserted == 0
     assert r2.hsi_skipped_unchanged == 1
+    assert r2.fm_id_writebacks == 0
 
     md.write_text("# T\n\nbody v2\n", encoding="utf-8")
     r3 = sync_ksfs_hsi(ksfs_root=ksfs, hsi_db=hsi)
@@ -46,7 +52,41 @@ def test_sync_ksfs_hsi_first_and_second_run(tmp_path: Path) -> None:
     assert r3.hsi_skipped_unchanged == 0
 
 
-def test_hsi_search_paths_by_prefix(tmp_path: Path) -> None:
+def test_sync_ksfs_hsi_duplicate_id_conflict_reassigns(tmp_path: Path) -> None:
+    ksfs = tmp_path / "ksfs"
+    hsi = tmp_path / "hsi" / "db.sqlite"
+    (ksfs / "a").mkdir(parents=True)
+    (ksfs / "b").mkdir(parents=True)
+    (ksfs / "a" / "x.md").write_text(
+        '---\nid: "10001"\ntitle: A\n---\n\nalpha\n',
+        encoding="utf-8",
+    )
+    (ksfs / "b" / "y.md").write_text(
+        '---\nid: "10001"\ntitle: B\n---\n\nbeta\n',
+        encoding="utf-8",
+    )
+    r = sync_ksfs_hsi(ksfs_root=ksfs, hsi_db=hsi)
+    assert r.hsi_id_conflicts_resolved >= 1
+    assert r.hsi_ids_allocated >= 1
+    ids = {
+        line.strip()
+        for p in sorted(ksfs.rglob("*.md"))
+        for line in p.read_text(encoding="utf-8").splitlines()
+        if line.strip().startswith('id: "')
+    }
+    assert ids == {'id: "10001"', 'id: "10002"'}
+
+
+def test_ensure_ksfs_hsi_registered_is_idempotent(tmp_path: Path) -> None:
+    ksfs = tmp_path / "ksfs"
+    hsi = tmp_path / "hsi" / "db.sqlite"
+    (ksfs / "doc").mkdir(parents=True)
+    (ksfs / "doc" / "note.md").write_text("# T\n\nonce\n", encoding="utf-8")
+
+    r1 = ensure_ksfs_hsi_registered(ksfs_root=ksfs, hsi_db=hsi)
+    r2 = ensure_ksfs_hsi_registered(ksfs_root=ksfs, hsi_db=hsi)
+    assert r1 is not None
+    assert r2 is None
     db = tmp_path / "hsi.sqlite"
     idx = SqliteMetadataIndex(db)
     idx.upsert(

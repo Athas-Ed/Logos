@@ -146,3 +146,35 @@ class SqliteMetadataIndex:
                 con.execute("DELETE FROM hsi_metadata WHERE source_path = ?", (p,))
             con.commit()
         return len(stale)
+
+    def entity_id_to_path_for_keep(self, keep: frozenset[str]) -> dict[str, str]:
+        """Map ``entity_id`` → ``source_path`` for rows whose path is in *keep* (last wins)."""
+        if not keep:
+            return {}
+        placeholders = ",".join("?" * len(keep))
+        with closing(self._connect()) as con:
+            cur = con.execute(
+                f"""
+                SELECT entity_id, source_path
+                FROM hsi_metadata
+                WHERE source_path IN ({placeholders})
+                """,
+                list(keep),
+            )
+            rows = cur.fetchall()
+        out: dict[str, str] = {}
+        for r in rows:
+            eid = str(r["entity_id"])
+            out[eid] = str(r["source_path"])
+        return out
+
+    def max_numeric_entity_id(self) -> int:
+        """Largest all-digit ``entity_id`` in the table (0 if none)."""
+        with closing(self._connect()) as con:
+            cur = con.execute("SELECT entity_id FROM hsi_metadata")
+            rows = [str(r[0]) for r in cur.fetchall()]
+        best = 0
+        for raw in rows:
+            if raw.isdigit():
+                best = max(best, int(raw))
+        return best

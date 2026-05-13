@@ -1,11 +1,26 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import AsyncIterator, Sequence
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from .api_v1 import build_v1_router
 from .container import AppPorts
 from .paths import default_gui_dist_dir
+
+
+@asynccontextmanager
+async def _app_lifespan(app) -> AsyncIterator[None]:  # noqa: ANN001
+    """可选：``paths.sync_hsi_on_startup`` 为真时在启动阶段登记 HSI（默认由检索懒登记）。"""
+    ports: AppPorts = app.state.ports
+    if ports.settings.sync_hsi_on_startup:
+        from logos.persistence.registration import ensure_ksfs_hsi_registered
+
+        ensure_ksfs_hsi_registered(
+            ksfs_root=Path(ports.settings.ksfs_root).resolve(),
+            hsi_db=Path(ports.settings.hsi_sqlite_path).resolve(),
+        )
+    yield
 
 
 def create_app(
@@ -24,7 +39,7 @@ def create_app(
             "使用 logos.harness.ii_layer.create_app 请先安装依赖：pip install fastapi"
         ) from e
 
-    app = FastAPI(title="Logos I&I")
+    app = FastAPI(title="Logos I&I", lifespan=_app_lifespan)
     app.state.ports = ports
 
     origins = list(cors_allow_origins) if cors_allow_origins is not None else ["*"]
