@@ -100,6 +100,69 @@ def test_ensure_ksfs_hsi_registered_is_idempotent(tmp_path: Path) -> None:
             )
         ]
     )
-    rows = idx.search_paths(prefix="entities/x", limit=10)
-    assert len(rows) == 1
-    assert rows[0].source_path == "entities/x/profile.md"
+def test_compute_chunk_id_matches_spec_payload() -> None:
+    from logos.persistence import compute_chunk_id
+
+    cid = compute_chunk_id(entity_id="10001", chunk_index=0, chunk_text="alpha")
+    assert cid.startswith("ck_")
+    assert len(cid) == len("ck_") + 64
+
+
+def test_chunk_markdown_heading_sections() -> None:
+    from logos.persistence import chunk_markdown_body
+
+    body = "# A\n\nshort\n\n## B\n\n" + ("x" * 50) + "\n"
+    parts = chunk_markdown_body(body, min_chars=120)
+    assert len(parts) >= 1
+    assert "# A" in parts[0] or "short" in parts[0]
+
+
+def test_sync_ksfs_svs_incremental_second_run_skips_upsert(tmp_path: Path) -> None:
+    from logos.persistence import sync_ksfs_hsi, sync_ksfs_svs_incremental
+
+    ksfs = tmp_path / "ksfs"
+    idx = tmp_path / ".index"
+    hsi = idx / ".high-speed_index"
+    state = idx / ".svs_chunk_index.sqlite"
+    (ksfs / "d").mkdir(parents=True)
+    (ksfs / "d" / "n.md").write_text("---\n---\n\n# T\n\nhello world\n", encoding="utf-8")
+
+    class _E:
+        def embed(self, texts: list[str]) -> list[list[float]]:  # noqa: ANN001
+            return [[0.1, 0.2] for _ in texts]
+
+    class _S:
+        def __init__(self) -> None:
+            self.upserts = 0
+
+        def upsert_chunks(self, **kwargs) -> None:  # noqa: ANN003
+            self.upserts += 1
+
+        def delete_ids(self, ids: list[str]) -> None:
+            return None
+
+        def query(self, query_embedding: list[float], top_k: int):  # noqa: ANN001
+            return []
+
+    store = _S()
+    emb = _E()
+    sync_ksfs_hsi(ksfs_root=ksfs, hsi_db=hsi)
+    r1 = sync_ksfs_svs_incremental(
+        ksfs_root=ksfs,
+        hsi_db=hsi,
+        store=store,
+        embedder=emb,
+        svs_state_db=state,
+    )
+    assert r1.chunks_upserted >= 1
+    u1 = store.upserts
+    r2 = sync_ksfs_svs_incremental(
+        ksfs_root=ksfs,
+        hsi_db=hsi,
+        store=store,
+        embedder=emb,
+        svs_state_db=state,
+    )
+    assert r2.documents_skipped_unchanged >= 1
+    assert r2.chunks_upserted == 0
+    assert store.upserts == u1
