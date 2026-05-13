@@ -26,7 +26,8 @@ embeddings:
 
 chroma:
   persist_directory: "./.index/.vector_index"
-  collection: "ksfs_chunks_v0"
+  # A5：chunk_id 与分块策略变更后使用新 collection，避免与 v0 单文件块混存
+  collection: "ksfs_chunks_v1"
 
 developer:
   show_dev_tools_ui: false

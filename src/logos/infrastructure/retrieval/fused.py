@@ -58,6 +58,8 @@ class FusedRetrievalService:
     #: 若二者均非空，则在首次（及进程内去重后的）``query`` 前执行 ``ensure_ksfs_hsi_registered``（懒登记）。
     lazy_hsi_ksfs_root: Path | None = None
     lazy_hsi_db_path: Path | None = None
+    #: 若非空，每次 ``query`` 前在 ``sync_ksfs_hsi`` 之后执行 SVS 增量（内含 HSI 对账）。
+    lazy_svs_state_db: Path | None = None
 
     def query(self, *, text: str, top_k: int = 8) -> list[Citation]:
         if top_k <= 0:
@@ -65,16 +67,35 @@ class FusedRetrievalService:
         root = self.lazy_hsi_ksfs_root
         dbp = self.lazy_hsi_db_path
         if root is not None and dbp is not None:
-            from logos.persistence.registration import ensure_ksfs_hsi_registered
+            if self.lazy_svs_state_db is not None:
+                from logos.persistence.chroma_bootstrap import sync_ksfs_svs_incremental
 
-            report = ensure_ksfs_hsi_registered(ksfs_root=root, hsi_db=dbp)
-            if report is not None:
-                _log.info(
-                    "HSI 懒登记完成：扫描 %s 条，写入 %s 条，跳过 %s 条",
-                    report.documents_scanned,
-                    report.hsi_upserted,
-                    report.hsi_skipped_unchanged,
+                srep = sync_ksfs_svs_incremental(
+                    ksfs_root=root,
+                    hsi_db=dbp,
+                    semantic_store=self.semantic_store,
+                    embedder=self.embedder,
+                    svs_state_db=self.lazy_svs_state_db,
                 )
+                _log.debug(
+                    "HDL 向量增量：HSI 扫描 %s；向量化 %s 文件，跳过 %s；upsert 块 %s，删块 %s",
+                    srep.hsi_documents_scanned,
+                    srep.documents_vectorized,
+                    srep.documents_skipped_unchanged,
+                    srep.chunks_upserted,
+                    srep.chunks_deleted_stale,
+                )
+            else:
+                from logos.persistence.registration import ensure_ksfs_hsi_registered
+
+                report = ensure_ksfs_hsi_registered(ksfs_root=root, hsi_db=dbp)
+                if report is not None:
+                    _log.info(
+                        "HSI 懒登记完成：扫描 %s 条，写入 %s 条，跳过 %s 条",
+                        report.documents_scanned,
+                        report.hsi_upserted,
+                        report.hsi_skipped_unchanged,
+                    )
         q = text.strip()
         by_path: dict[str, tuple[float, str]] = {}
 

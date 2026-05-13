@@ -5,8 +5,8 @@
 - 否则 LLM 为内存桩。
 - **检索**：装配 ``FusedRetrievalService``；**HSI**（SQLite）默认在 **首次 ``retrieve``/融合检索** 前懒登记
   （发号、回写 ``id:``）；若 ``paths.sync_hsi_on_startup: true`` 则改为进程启动时 lifespan 登记。
-  若已安装 ``chromadb`` 且 ``embeddings.model_path`` 下存在 BGE 权重，则启动时尝试 **重建 Chroma 单块索引**
-  （每 Markdown 文件一块；失败则仅 HSI 关键词检索，并在日志中提示）。
+  若已安装 ``chromadb`` 且 ``embeddings.model_path`` 下存在 BGE 权重，则启动时尝试 **SVS→Chroma 增量同步**
+  （``KSFS开发.md`` §5 分块、§5.5 ``chunk_id``；失败则仅 HSI 关键词检索，并在日志中提示）。
 
 用法（仓库根、已激活 venv）::
 
@@ -47,7 +47,10 @@ def main() -> None:
     from logos.infrastructure.llm import build_chat_llm_from_settings
     from logos.infrastructure.retrieval.fused import FusedRetrievalService
     from logos.persistence import SqliteMetadataIndex
-    from logos.persistence.chroma_bootstrap import reindex_ksfs_to_semantic_store
+    from logos.persistence.chroma_bootstrap import (
+        default_svs_state_db_path,
+        reindex_ksfs_to_semantic_store,
+    )
     from logos.persistence.ksfs_filesystem import FilesystemKnowledgeSource
 
     class _StubLLM:
@@ -95,6 +98,8 @@ def main() -> None:
 
     ksfs_root = Path(settings.ksfs_root).resolve()
     hsi_db = Path(settings.hsi_sqlite_path).resolve()
+    index_root = Path(settings.index_root).resolve()
+    svs_state_db = default_svs_state_db_path(index_root)
     metadata = SqliteMetadataIndex(hsi_db)
 
     semantic_store = _StubSemanticStore()
@@ -126,8 +131,9 @@ def main() -> None:
                 ksfs_root=ksfs_root,
                 store=semantic_store,
                 embedder=embedder,
+                index_root=index_root,
             )
-            _log.info("Chroma 已写入 %s 个 KSFS 块（每文件一块）", n)
+            _log.info("Chroma SVS 增量完成，本趟 upsert 块数：%s", n)
         except Exception:  # noqa: BLE001
             _log.exception("KSFS→Chroma 重建失败（仍可依赖 HSI 分支）")
 
@@ -137,6 +143,9 @@ def main() -> None:
         embedder=embedder,
         lazy_hsi_ksfs_root=ksfs_root,
         lazy_hsi_db_path=hsi_db,
+        lazy_svs_state_db=svs_state_db
+        if not isinstance(semantic_store, _StubSemanticStore)
+        else None,
     )
     knowledge_source = FilesystemKnowledgeSource(ksfs_root)
 
