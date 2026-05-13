@@ -1,49 +1,51 @@
-# 可提交仓库的默认配置（勿写真实密钥）。本机覆盖请用 local.yaml。
-
-# operating_mode: author
-
-paths:
-  workspace_root: "./workspace"
-  example_ksfs_root: "./example_ksfs"
-  # KSFS 事实源（叙事知识 .md 根）；见 original_docs/重要子系统开发文档/KSFS开发.md
-  ksfs_root: "./resources/ksfs"
-  # 实体模板契约根；见 resources/entity_template/README.md
-  entity_template_root: "./resources/entity_template"
-  entity_template_profile: "default_import_v0"
-  # 待落户设定草稿子目录（位于 workspace_root 下）；见 KSFS开发.md §2
-  setting_entry_subdir: "setting_entry"
-  index_root: "./.index"
-  logs_root: "./logs"
-  hsi_sqlite_path: "./.index/.high-speed_index"
-
-embeddings:
-  provider: "bge_small_zh"
-  model_path: "models/tooling/embeddings/bge-small-zh-v1.5"
-
-chroma:
-  persist_directory: "./.index/.vector_index"
-  collection: "ksfs_chunks_v0"
-
-developer:
-  show_dev_tools_ui: false
-  prompt_echo: false
-
-# MCP stdio 技能（高德、示例 echo 等）：见 original_docs/重要子系统开发文档/MCP开发.md
-skills:
-  mcp_servers: []
-
-ui:
-  default_presentation: "work"
-
-obs:
-  log_profile: "standard"
-
-# OpenAI 兼容对话（DeepSeek 等）；密钥仅放 local.yaml 或环境变量 LOGOS_LLM__API_KEY
-llm:
-  base_url: "https://api.deepseek.com/v1"
-  model: "deepseek-chat"
-  verify_ssl: true
-  ca_bundle: null
-  http_proxy: null
-  https_proxy: null
-  no_proxy: "127.0.0.1,localhost"
+# 可提交仓库的默认配置（勿写真实密钥）。本机覆盖请用 local.yaml。
+
+# operating_mode: author
+
+paths:
+  workspace_root: "./workspace"
+  example_ksfs_root: "./example_ksfs"
+  # KSFS 事实源（叙事知识 .md 根）；见 original_docs/重要子系统开发文档/KSFS开发.md
+  ksfs_root: "./resources/ksfs"
+  # KSFS→HSI 一次性登记（发号、回写 id）；见 KSFS开发.md §3.2 / §3.3
+  sync_hsi_on_startup: true
+  # 实体模板契约根；见 resources/entity_template/README.md
+  entity_template_root: "./resources/entity_template"
+  entity_template_profile: "default_import_v0"
+  # 待落户设定草稿子目录（位于 workspace_root 下）；见 KSFS开发.md §2
+  setting_entry_subdir: "setting_entry"
+  index_root: "./.index"
+  logs_root: "./logs"
+  hsi_sqlite_path: "./.index/.high-speed_index"
+
+embeddings:
+  provider: "bge_small_zh"
+  model_path: "models/tooling/embeddings/bge-small-zh-v1.5"
+
+chroma:
+  persist_directory: "./.index/.vector_index"
+  collection: "ksfs_chunks_v0"
+
+developer:
+  show_dev_tools_ui: false
+  prompt_echo: false
+
+# MCP stdio 技能（高德、示例 echo 等）：见 original_docs/重要子系统开发文档/MCP开发.md
+skills:
+  mcp_servers: []
+
+ui:
+  default_presentation: "work"
+
+obs:
+  log_profile: "standard"
+
+# OpenAI 兼容对话（DeepSeek 等）；密钥仅放 local.yaml 或环境变量 LOGOS_LLM__API_KEY
+llm:
+  base_url: "https://api.deepseek.com/v1"
+  model: "deepseek-chat"
+  verify_ssl: true
+  ca_bundle: null
+  http_proxy: null
+  https_proxy: null
+  no_proxy: "127.0.0.1,localhost"

@@ -47,5 +47,7 @@ class AppSettings:
     developer_show_dev_tools_ui: bool = False
     #: 启动初值；运行时可由 :class:`~logos.harness.ii_layer.developer.DeveloperToggles` 改写
     developer_prompt_echo: bool = False
+    #: 进程启动时是否在 FastAPI lifespan 内执行一次 KSFS→HSI 登记（可与 run_backend_stub 共享去重）
+    sync_hsi_on_startup: bool = True
     #: MCP stdio 技能列表（``config`` 中 ``skills.mcp_servers``）；见 ``重要子系统开发文档/MCP开发.md``
     mcp_servers: tuple[McpServerEntry, ...] = field(default_factory=tuple)

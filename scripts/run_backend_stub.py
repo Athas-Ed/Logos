@@ -45,9 +45,10 @@ def main() -> None:
     from logos.harness.ii_layer.developer import DeveloperToggles
     from logos.infrastructure.llm import build_chat_llm_from_settings
     from logos.infrastructure.retrieval.fused import FusedRetrievalService
-    from logos.persistence import SqliteMetadataIndex, sync_ksfs_hsi
+    from logos.persistence import SqliteMetadataIndex
     from logos.persistence.chroma_bootstrap import reindex_ksfs_to_semantic_store
     from logos.persistence.ksfs_filesystem import FilesystemKnowledgeSource
+    from logos.persistence.registration import ensure_ksfs_hsi_registered
 
     class _StubLLM:
         def complete(self, messages, *, json_mode: bool = False) -> str:
@@ -96,13 +97,14 @@ def main() -> None:
     hsi_db = Path(settings.hsi_sqlite_path).resolve()
     metadata = SqliteMetadataIndex(hsi_db)
     try:
-        report = sync_ksfs_hsi(ksfs_root=ksfs_root, hsi_db=hsi_db)
-        _log.info(
-            "HSI 已同步：扫描 %s 条，写入 %s 条，跳过 %s 条",
-            report.documents_scanned,
-            report.hsi_upserted,
-            report.hsi_skipped_unchanged,
-        )
+        report = ensure_ksfs_hsi_registered(ksfs_root=ksfs_root, hsi_db=hsi_db)
+        if report is not None:
+            _log.info(
+                "HSI 已同步：扫描 %s 条，写入 %s 条，跳过 %s 条",
+                report.documents_scanned,
+                report.hsi_upserted,
+                report.hsi_skipped_unchanged,
+            )
     except OSError:
         _log.exception("sync_ksfs_hsi 失败（检查 ksfs_root / 权限）")
 
