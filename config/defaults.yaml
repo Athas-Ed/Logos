@@ -7,7 +7,9 @@ paths:
   example_ksfs_root: "./example_ksfs"
   # KSFS 事实源（叙事知识 .md 根）；见 original_docs/重要子系统开发文档/KSFS开发.md
   ksfs_root: "./resources/ksfs"
-  # KSFS→HSI：默认在首次检索 ``query`` 前懒登记；若希望进程启动即登记，改为 true（lifespan）
+  # KSFS→HSI 登记时机（见 KSFS开发.md §3.2 / §3.3）：
+  # - false（默认）：首次融合检索 ``query`` 前懒登记（发号、回写 id:）
+  # - true：进程启动时在 FastAPI lifespan 内登记一次（仍与懒登记共用去重，重复路径不会双扫）
   sync_hsi_on_startup: false
   # 实体模板契约根；见 resources/entity_template/README.md
   entity_template_root: "./resources/entity_template"
