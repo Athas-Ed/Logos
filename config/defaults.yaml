@@ -7,8 +7,8 @@ paths:
   example_ksfs_root: "./example_ksfs"
   # KSFS 事实源（叙事知识 .md 根）；见 original_docs/重要子系统开发文档/KSFS开发.md
   ksfs_root: "./resources/ksfs"
-  # KSFS→HSI 一次性登记（发号、回写 id）；见 KSFS开发.md §3.2 / §3.3
-  sync_hsi_on_startup: true
+  # KSFS→HSI：默认在首次检索 ``query`` 前懒登记；若希望进程启动即登记，改为 true（lifespan）
+  sync_hsi_on_startup: false
   # 实体模板契约根；见 resources/entity_template/README.md
   entity_template_root: "./resources/entity_template"
   entity_template_profile: "default_import_v0"
