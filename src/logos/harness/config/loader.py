@@ -207,7 +207,7 @@ def merged_dict_to_app_settings(data: Mapping[str, Any]) -> AppSettings:
         chroma_persist_directory=str(
             chroma.get("persist_directory", "./.index/.vector_index")
         ),
-        chroma_collection=str(chroma.get("collection", "ksfs_chunks_v0")),
+        chroma_collection=str(chroma.get("collection", "ksfs_chunks_v1")),
         embedding_provider=str(emb.get("provider", "bge_small_zh")),
         embedding_model_path=str(
             emb.get("model_path", "models/tooling/embeddings/bge-small-zh-v1.5")
