@@ -109,7 +109,7 @@
 
 ## 6. 理想状态（收口画像）
 
-1. **配置**：`skills.mcp_servers` 为唯一声明入口；无仓库内默认密钥技能。  
+1. **配置**：`skills.mcp_servers` 为唯一声明入口；无仓库内默认密钥技能。**布尔项 `enabled`**：条目已写 `id` 与 `entrypoint` 时，**省略 `enabled` 视为 `true`（默认挂载）**；需临时关闭时请显式 `enabled: false`。  
 2. **治理**：所有 MCP 工具经 `GuardedToolRegistry`；命名冲突策略明确。  
 3. **披露**：P1～P3 完成，Token 与工具链可观测。  
 4. **测试**：L1+L2 为合并门槛；L3 为发布前自选。  
@@ -123,3 +123,4 @@
 |------|------|
 | 2026-05-12 | 初版：`mcp_servers` 通用管线、渐进式披露与 Obs、进程泄漏测试分级、resources/prompts 与被动读取的定案建议。 |
 | 2026-05-12 | **§1.3**：不面向其它 MCP 客户端打包资源服务；维持现状；E3 暂缓。下一阶段按 §3～§5 主队列推进。 |
+| 2026-05-13 | **§6**：`skills.mcp_servers` 条目省略 `enabled` 时默认 **挂载**（`loader._parse_mcp_servers`）；显式 `enabled: false` 关闭。宿主侧 `discover`/`call_tool` 对子进程设置 **cwd=仓库根**（与 `mcp_stdio_sync.stdio_params_for_example_skill` 一致）。 |

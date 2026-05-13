@@ -1,0 +1,17 @@
+{
+  "name": "logos-electron",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Logos Electron 桌面壳（第三阶段 P0）",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.main.json && tsc -p tsconfig.preload.json",
+    "electron:dev": "npm run build && electron .",
+    "install:with-mirror": "node install-with-electron-mirror.cjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "electron": "^33.4.11",
+    "typescript": "~5.6.3"
+  }
+}

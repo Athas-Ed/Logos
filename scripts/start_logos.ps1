@@ -1,4 +1,4 @@
-﻿# Logos 一键启动：新窗口后端 + 本窗口 Vite（文件须为 UTF-8 带 BOM，供 Windows PowerShell 5.1 正确解析中文）。
+﻿# Logos 一键启动：新窗口后端 + 新窗口 Vite + 新窗口 Electron（文件须为 UTF-8 带 BOM，供 Windows PowerShell 5.1 正确解析中文）。
 #Requires -Version 5.1
 $ErrorActionPreference = "Stop"
 
@@ -27,6 +27,17 @@ if (-not (Test-Path -LiteralPath $BackendScript)) {
     exit 1
 }
 
+$GuiDir = Join-Path $RepoRoot "src\gui"
+$ElectronDir = Join-Path $RepoRoot "src\electron"
+if (-not (Test-Path -LiteralPath $GuiDir)) {
+    Write-Host "未找到前端目录：$GuiDir" -ForegroundColor Red
+    exit 1
+}
+if (-not (Test-Path -LiteralPath $ElectronDir)) {
+    Write-Host "未找到 Electron 目录：$ElectronDir" -ForegroundColor Red
+    exit 1
+}
+
 Write-Host "仓库根: $RepoRoot" -ForegroundColor Cyan
 Write-Host "正在打开后端窗口 http://127.0.0.1:8000 …" -ForegroundColor Cyan
 
@@ -40,11 +51,30 @@ Start-Process powershell -WorkingDirectory $RepoRoot -ArgumentList @(
 
 Start-Sleep -Seconds 2
 
-Write-Host "启动 Vite http://localhost:5173 （/api 代理到 8000）…" -ForegroundColor Cyan
-Write-Host "Ctrl+C 仅结束前端；请单独关闭后端窗口。" -ForegroundColor DarkGray
+Write-Host "正在打开 Vite 窗口 http://127.0.0.1:5173 （/api 代理到 8000）…" -ForegroundColor Cyan
+$ViteCmd = "`$Host.UI.RawUI.WindowTitle = 'Logos Vite'; if (-not (Test-Path -LiteralPath 'node_modules')) { npm install }; npm run dev"
+Start-Process powershell -WorkingDirectory $GuiDir -ArgumentList @(
+    "-NoExit",
+    "-NoProfile",
+    "-Command",
+    $ViteCmd
+)
 
-Set-Location -LiteralPath (Join-Path $RepoRoot "src\gui")
-if (-not (Test-Path -LiteralPath "node_modules")) {
-    npm install
-}
-npm run dev
+# Electron loadURL 依赖 Vite 已监听；首次 Vite 编译可能较慢
+$ViteWarmupSeconds = 5
+Write-Host "等待约 ${ViteWarmupSeconds} 秒以便 Vite 就绪，再打开 Electron 壳 …" -ForegroundColor DarkGray
+Start-Sleep -Seconds $ViteWarmupSeconds
+
+Write-Host "正在打开 Electron 窗口（加载上述 Vite 地址）…" -ForegroundColor Cyan
+$ElectronCmd = "`$Host.UI.RawUI.WindowTitle = 'Logos Electron'; if (-not (Test-Path -LiteralPath 'node_modules')) { npm run install:with-mirror }; npm run electron:dev"
+Start-Process powershell -WorkingDirectory $ElectronDir -ArgumentList @(
+    "-NoExit",
+    "-NoProfile",
+    "-Command",
+    $ElectronCmd
+)
+
+Write-Host ""
+Write-Host "已在新窗口启动：Logos Backend、Logos Vite、Logos Electron。" -ForegroundColor Green
+Write-Host "若 Electron 白屏或告警未检测到 5173，请在 Vite 窗口确认编译完成后再于 Electron 窗口按 Ctrl+R 或重启 Electron。" -ForegroundColor Yellow
+Write-Host "关闭各窗口即停止对应进程；本启动脚本窗口可直接关闭。" -ForegroundColor DarkGray

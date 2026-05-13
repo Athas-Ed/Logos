@@ -17,6 +17,10 @@ user_data/
 # 工具向模型权重（自行拷贝，不入库）
 models/tooling/
 
+# Electron 壳（构建产物与依赖）
+src/electron/dist/
+src/electron/node_modules/
+
 # Python
 __pycache__/
 *.py[cod]

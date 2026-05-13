@@ -16,7 +16,7 @@
 | **Web GUI** | `src/gui/`：Vite + React + TypeScript；开发服务器默认端口 **5173**。 |
 | **开发态 API** | `vite.config.ts` 将 **`/api` 代理**到 `VITE_DEV_API_PROXY_TARGET`（默认 `http://127.0.0.1:8000`）。 |
 | **HTTP 客户端** | `src/gui/src/api/`：`health.ts`、`bootstrap.ts`、`sseChat.ts`、`developer.ts`；类型见 `src/gui/src/types/`。 |
-| **Electron** | **物理路径已定案：`src/electron/`**（Main、preload、壳层专用 `package.json` / tsconfig 等）；与 `src/gui`、`src/logos` 并列，见 §6.1。 |
+| **Electron** | **物理路径已定案：`src/electron/`**（Main、preload、壳层专用 `package.json` / tsconfig 等）；与 `src/gui`、`src/logos` 并列，见 §6.1。**开发态启动**：先 `cd src/gui && npm run dev`，再 `cd src/electron && npm install && npm run electron:dev`（Main 会 `loadURL` 至默认 `http://127.0.0.1:5173/`；若未监听则 Main 内警告对话框 + stderr 提示）。可选覆盖：`LOGOS_GUI_DEV_HOST`、`LOGOS_GUI_DEV_PORT`。若安装 Electron 时出现 **`read ECONNRESET`**，在 `src/electron` 使用 **`npm run install:with-mirror`**（见 **`README.md`**）。 |
 
 ---
 
@@ -187,3 +187,5 @@
 |------|------|
 | 2026-05-13 | 初版：与 **`第三阶段开发计划.md`**（已定案 P0+P1）对齐；Electron 定案 + Cursor 工作法 + 契约纪律。 |
 | 2026-05-13 | **§6.1**：定案 Electron 物理路径为 **`src/electron/`**；§1 表与 §6 路径表同步。 |
+| 2026-05-13 | §1：补充 **Electron 开发态启动命令** 与 `LOGOS_GUI_DEV_*` 环境变量，对齐 **`第三阶段开发计划.md`** M-A（步 1～2）。 |
+| 2026-05-13 | §1：Electron 依赖安装改为 **`npm run install:with-mirror`**（`ELECTRON_MIRROR`），避免 npm 10+ 对项目级 `electron_mirror` 的警告；与 `README.md` 互链。 |
