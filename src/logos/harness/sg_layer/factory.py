@@ -18,12 +18,13 @@ from logos.ports import AppSettings, McpServerEntry
 from logos.ports.retrieval import Citation, RetrievalService
 from logos.tools.ksfs_list import list_ksfs_entries
 
-from .guarded_registry import GuardedToolRegistry, V01_SG_TOOL_WHITELIST
-from .path_sandbox import (
-    PathSandboxViolationError,
-    resolve_path_under_root,
-    write_draft_under_workspace,
+from .builtin_tool_schemas import (
+    READ_KSFS_PARAMETERS,
+    RETRIEVE_PARAMETERS,
+    WRITE_DRAFT_PARAMETERS,
 )
+from .guarded_registry import GuardedToolRegistry, V01_SG_TOOL_WHITELIST
+from .path_sandbox import read_text_under_root, write_draft_under_workspace
 
 _log = logging.getLogger(__name__)
 
@@ -131,16 +132,12 @@ def build_v01_guarded_tool_registry(
         return json.dumps(payload, ensure_ascii=False)
 
     def _read_ksfs(path: str) -> str:
-        try:
-            target = resolve_path_under_root(ksfs_root, path)
-        except PathSandboxViolationError as exc:
-            return f"error: read_ksfs 被拒绝 — {exc}"
-        if not target.is_file():
-            return f"error: 未找到文件（相对 KSFS 根）{path!r}"
-        try:
-            return target.read_text(encoding="utf-8")
-        except OSError as exc:
-            return f"error: 读取失败 — {exc}"
+        return read_text_under_root(
+            ksfs_root,
+            path,
+            context_label="KSFS 根",
+            denied_operation="read_ksfs",
+        )
 
     def _list_ksfs(
         path: str = "",
@@ -160,33 +157,13 @@ def build_v01_guarded_tool_registry(
     reg.register(
         "retrieve",
         description="按查询文本检索知识库，返回 path/snippet/score 列表（JSON 数组字符串）。",
-        parameters={
-            "type": "object",
-            "properties": {
-                "text": {"type": "string", "description": "检索查询"},
-                "top_k": {
-                    "type": "integer",
-                    "description": "返回条数上限，默认 8",
-                    "default": 8,
-                },
-            },
-            "required": ["text"],
-        },
+        parameters=RETRIEVE_PARAMETERS,
         handler=_retrieve,
     )
     reg.register(
         "read_ksfs",
         description="只读打开 KSFS 根（paths.ksfs_root）下的相对路径 Markdown/文本（禁止绝对路径与 ..）。",
-        parameters={
-            "type": "object",
-            "properties": {
-                "path": {
-                    "type": "string",
-                    "description": "相对于 KSFS 根的路径，如 Test/note.md",
-                },
-            },
-            "required": ["path"],
-        },
+        parameters=READ_KSFS_PARAMETERS,
         handler=_read_ksfs,
     )
     reg.register(
@@ -218,17 +195,7 @@ def build_v01_guarded_tool_registry(
     reg.register(
         "write_draft",
         description="将完整草稿内容写入 workspace 下的相对路径（禁止写出 workspace 外）。",
-        parameters={
-            "type": "object",
-            "properties": {
-                "path": {
-                    "type": "string",
-                    "description": "相对于 workspace 根的路径，例如 notes/ch1.md",
-                },
-                "content": {"type": "string", "description": "文件完整文本"},
-            },
-            "required": ["path", "content"],
-        },
+        parameters=WRITE_DRAFT_PARAMETERS,
         handler=_write_draft,
     )
     for t, cmd, child_env in mcp_handlers:

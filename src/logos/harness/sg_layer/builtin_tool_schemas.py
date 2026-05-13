@@ -19,12 +19,12 @@ RETRIEVE_PARAMETERS: JsonDict = {
     "required": ["text"],
 }
 
-READ_LKC_PARAMETERS: JsonDict = {
+READ_KSFS_PARAMETERS: JsonDict = {
     "type": "object",
     "properties": {
         "path": {
             "type": "string",
-            "description": "相对于 LKC 根的路径，如 entities/10001/profile.md",
+            "description": "相对于 KSFS 根的路径，如 Test/note.md",
         },
     },
     "required": ["path"],
