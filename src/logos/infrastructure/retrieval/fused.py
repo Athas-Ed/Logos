@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
+from pathlib import Path
 
 from logos.ports.embedding import TextEmbedder
 from logos.ports.metadata import MetadataIndex, MetadataRecord
@@ -43,6 +45,9 @@ def _hsi_keyword_score(query: str, rec: MetadataRecord) -> float:
     return 0.0
 
 
+_log = logging.getLogger("logos.retrieval.fused")
+
+
 @dataclass
 class FusedRetrievalService:
     """Fuses HSI (`MetadataIndex`) path/title matches with SVS (`SemanticStore`) similarity."""
@@ -50,10 +55,26 @@ class FusedRetrievalService:
     metadata_index: MetadataIndex
     semantic_store: SemanticStore
     embedder: TextEmbedder
+    #: 若二者均非空，则在首次（及进程内去重后的）``query`` 前执行 ``ensure_ksfs_hsi_registered``（懒登记）。
+    lazy_hsi_ksfs_root: Path | None = None
+    lazy_hsi_db_path: Path | None = None
 
     def query(self, *, text: str, top_k: int = 8) -> list[Citation]:
         if top_k <= 0:
             return []
+        root = self.lazy_hsi_ksfs_root
+        dbp = self.lazy_hsi_db_path
+        if root is not None and dbp is not None:
+            from logos.persistence.registration import ensure_ksfs_hsi_registered
+
+            report = ensure_ksfs_hsi_registered(ksfs_root=root, hsi_db=dbp)
+            if report is not None:
+                _log.info(
+                    "HSI 懒登记完成：扫描 %s 条，写入 %s 条，跳过 %s 条",
+                    report.documents_scanned,
+                    report.hsi_upserted,
+                    report.hsi_skipped_unchanged,
+                )
         q = text.strip()
         by_path: dict[str, tuple[float, str]] = {}
 

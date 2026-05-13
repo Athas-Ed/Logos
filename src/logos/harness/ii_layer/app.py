@@ -11,6 +11,7 @@ from .paths import default_gui_dist_dir
 
 @asynccontextmanager
 async def _app_lifespan(app) -> AsyncIterator[None]:  # noqa: ANN001
+    """可选：``paths.sync_hsi_on_startup`` 为真时在启动阶段登记 HSI（默认由检索懒登记）。"""
     ports: AppPorts = app.state.ports
     if ports.settings.sync_hsi_on_startup:
         from logos.persistence.registration import ensure_ksfs_hsi_registered

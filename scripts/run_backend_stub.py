@@ -3,7 +3,8 @@
 - 若在 ``config/local.yaml`` 中配置了 ``llm.api_key``（及可选 ``base_url`` / ``model``），
   则使用 **OpenAI 兼容** HTTP 客户端调用远程模型（如 DeepSeek）。
 - 否则 LLM 为内存桩。
-- **检索**：从 ``paths.ksfs_root`` 同步 **HSI**（SQLite），并装配 ``FusedRetrievalService``。
+- **检索**：装配 ``FusedRetrievalService``；**HSI**（SQLite）默认在 **首次 ``retrieve``/融合检索** 前懒登记
+  （发号、回写 ``id:``）；若 ``paths.sync_hsi_on_startup: true`` 则改为进程启动时 lifespan 登记。
   若已安装 ``chromadb`` 且 ``embeddings.model_path`` 下存在 BGE 权重，则启动时尝试 **重建 Chroma 单块索引**
   （每 Markdown 文件一块；失败则仅 HSI 关键词检索，并在日志中提示）。
 
@@ -48,7 +49,6 @@ def main() -> None:
     from logos.persistence import SqliteMetadataIndex
     from logos.persistence.chroma_bootstrap import reindex_ksfs_to_semantic_store
     from logos.persistence.ksfs_filesystem import FilesystemKnowledgeSource
-    from logos.persistence.registration import ensure_ksfs_hsi_registered
 
     class _StubLLM:
         def complete(self, messages, *, json_mode: bool = False) -> str:
@@ -88,7 +88,7 @@ def main() -> None:
     llm = build_chat_llm_from_settings(settings) or _StubLLM()
 
     _log.info(
-        "正在准备检索索引（KSFS→HSI，以及可选的 Chroma 重建）；"
+        "正在准备检索索引（可选 Chroma 重建；HSI 默认在首次检索时懒登记）；"
         "此时尚未监听 http://127.0.0.1:8000 。"
         "若 Vite 已开，/api 代理可能出现 ECONNREFUSED，属正常，请待本进程打出 Uvicorn 启动日志后再刷新前端。"
     )
@@ -96,17 +96,6 @@ def main() -> None:
     ksfs_root = Path(settings.ksfs_root).resolve()
     hsi_db = Path(settings.hsi_sqlite_path).resolve()
     metadata = SqliteMetadataIndex(hsi_db)
-    try:
-        report = ensure_ksfs_hsi_registered(ksfs_root=ksfs_root, hsi_db=hsi_db)
-        if report is not None:
-            _log.info(
-                "HSI 已同步：扫描 %s 条，写入 %s 条，跳过 %s 条",
-                report.documents_scanned,
-                report.hsi_upserted,
-                report.hsi_skipped_unchanged,
-            )
-    except OSError:
-        _log.exception("sync_ksfs_hsi 失败（检查 ksfs_root / 权限）")
 
     semantic_store = _StubSemanticStore()
     embedder: object = _StubEmbedder512()
@@ -146,6 +135,8 @@ def main() -> None:
         metadata_index=metadata,
         semantic_store=semantic_store,
         embedder=embedder,
+        lazy_hsi_ksfs_root=ksfs_root,
+        lazy_hsi_db_path=hsi_db,
     )
     knowledge_source = FilesystemKnowledgeSource(ksfs_root)
 
