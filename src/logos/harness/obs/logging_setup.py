@@ -30,7 +30,7 @@ def configure_logging(
     *,
     config_dir: Path | str | None = None,
     environ: Mapping[str, str] | None = None,
-    level: int = logging.INFO,
+    level: int | None = None,
     log_file_name: str | None = None,
     log_format: str | None = None,
 ) -> AppSettings:
@@ -40,6 +40,7 @@ def configure_logging(
     若省略 *settings*，则从上述合并结果构造 :class:`~logos.ports.AppSettings`。
 
     *log_file_name* / *log_format* 非 ``None`` 时覆盖 YAML（取值 ``text`` / ``json``）。
+    *level* 非 ``None`` 时覆盖由 ``obs.log_profile`` 推导的根级别。
 
     幂等：会先移除 ``logos`` 上已有 handler 再挂载新的。
     返回实际使用的 :class:`~logos.ports.AppSettings`。
@@ -48,6 +49,16 @@ def configure_logging(
     resolved = merged_dict_to_app_settings(merged) if settings is None else settings
 
     log_cfg = merged.get("logging") if isinstance(merged.get("logging"), dict) else {}
+    if level is None:
+        profile = str(resolved.obs_log_profile or "standard").strip().lower()
+        if profile == "minimal":
+            handler_level = logging.WARNING
+        elif profile in ("verbose", "audit"):
+            handler_level = logging.DEBUG
+        else:
+            handler_level = logging.INFO
+    else:
+        handler_level = level
     eff_file = (
         log_file_name
         if log_file_name is not None
@@ -64,19 +75,19 @@ def configure_logging(
     formatter = make_formatter(eff_format)
 
     logos_logger = logging.getLogger("logos")
-    logos_logger.setLevel(level)
+    logos_logger.setLevel(handler_level)
     logos_logger.propagate = False
 
     for h in list(logos_logger.handlers):
         logos_logger.removeHandler(h)
 
     stream = logging.StreamHandler()
-    stream.setLevel(level)
+    stream.setLevel(handler_level)
     stream.setFormatter(formatter)
     logos_logger.addHandler(stream)
 
     file_handler = logging.FileHandler(file_path, encoding="utf-8")
-    file_handler.setLevel(level)
+    file_handler.setLevel(handler_level)
     file_handler.setFormatter(formatter)
     logos_logger.addHandler(file_handler)
 

@@ -119,6 +119,17 @@ def test_api_v1_health(tmp_path: Path) -> None:
         assert r.json() == {"status": "ok"}
 
 
+def test_api_v1_bootstrap(tmp_path: Path) -> None:
+    app = create_app(_make_ports(tmp_path))
+    with TestClient(app) as client:
+        r = client.get("/api/v1/bootstrap")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["default_presentation"] == "work"
+    assert body["log_profile"] == "standard"
+    assert "operating_mode" in body
+
+
 def test_api_v1_chat_sse_delta_and_done(tmp_path: Path) -> None:
     app = create_app(_make_ports(tmp_path))
     with TestClient(app) as client:
@@ -130,7 +141,7 @@ def test_api_v1_chat_sse_delta_and_done(tmp_path: Path) -> None:
         ) as stream:
             assert stream.status_code == 200
             raw = stream.read().decode("utf-8")
-    assert "event: reasoning_delta" in raw
+    assert "event: reasoning_summary" in raw
     assert "event: delta" in raw
     assert "data:" in raw
     assert "event: done" in raw
@@ -146,7 +157,7 @@ def test_api_v1_chat_sse_citations_when_requested(tmp_path: Path) -> None:
             json={"messages": [{"role": "user", "content": "请引用"}]},
         ) as stream:
             raw = stream.read().decode("utf-8")
-    assert "event: citations" in raw
+    assert "event: citations_partial" in raw
     assert "demo.md" in raw
 
 

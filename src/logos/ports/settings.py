@@ -39,6 +39,10 @@ class AppSettings:
     llm_http_proxy: str = ""
     llm_https_proxy: str = ""
     llm_no_proxy: str = ""
+    #: ``ui.default_presentation``：work | developer
+    ui_default_presentation: str = "work"
+    #: ``obs.log_profile``：minimal | standard | verbose | audit
+    obs_log_profile: str = "standard"
     #: 为 true 时 GUI 可展示开发者控件并允许 PUT 切换 prompt 回显
     developer_show_dev_tools_ui: bool = False
     #: 启动初值；运行时可由 :class:`~logos.harness.ii_layer.developer.DeveloperToggles` 改写

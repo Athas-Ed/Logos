@@ -11,13 +11,21 @@
 - **Base URL**：由部署决定（本地开发常见 `http://127.0.0.1:8000`）。
 - **JSON**：请求/响应体为 UTF-8 JSON；SSE 的 `data:` 行为 **单行 JSON**（见上文第 3 节）。
 - **客户端健壮性**：应 **忽略未知 `event:` 名** 的帧，以便后端在不破版本 URL 的前提下扩展 SSE。
-- **尚未实现（计划中）**：`GET /api/v1/bootstrap`（见 `SPEC-DISPLAY-AND-LOGGING-V0.1.md`）；**不在** V0.2 实现范围内，本文不描述其行为。
+- **`GET /api/v1/bootstrap`**：已实现（见下文 §2.1）；返回默认展示档位与日志 profile，供 GUI 首屏使用。
 
 ---
 
 ## 2. `GET /api/v1/health`
 
 - **200**：`{"status": "ok"}`
+
+### 2.1 `GET /api/v1/bootstrap`
+
+- **200**：JSON 对象，字段至少包含：
+  - `default_presentation`：`"work"` \| `"developer"`（来自 `ui.default_presentation`）
+  - `log_profile`：`"minimal"` \| `"standard"` \| `"verbose"` \| `"audit"`（来自 `obs.log_profile`）
+  - `operating_mode`：字符串（与配置 `operating_mode` 一致）
+- 与 `SPEC-DISPLAY-AND-LOGGING-V0.1.md` 正交：会话内切换展示档位 **不** 通过本接口写回配置。
 
 ---
 
@@ -45,6 +53,7 @@ V0.2 **强制**采用 **Server-Sent Events** 流式返回；**不提供**同路�
 |------|------|------|
 | `messages` | 数组 | 每项 `role` ∈ `system` \| `user` \| `assistant`，`content` 为字符串。 |
 | `operating_mode` | 字符串 | 可选，默认 **`author`**。服务端按小写比较；内置 **`screenwriter`**（编剧）与 **`author`**（作者）两种提示后缀，其余值按 **author** 处理。 |
+| `presentation` | 字符串 | 可选。`work` \| `developer`（及别名 `dev`）；省略则使用服务端 `ui.default_presentation`。影响 chat SSE 中推理与引用等事件的**档位**（摘要 vs 全文），见 §3.5。 |
 
 ### 3.2 消息拆分（与实现对齐）
 
@@ -79,17 +88,23 @@ data: <单行 JSON>
 
 ### 3.5 事件表（`event` + `data` 最小字段）
 
+展示档位由请求体可选字段 `presentation`（及配置 `ui.default_presentation`）决定 **`work`**（面向作者、摘要化）与 **`developer`**（更完整上下文）两类行为；下列事件中 **推理**、**引用**、**工具轨迹** 的事件名随档位变化。
+
 | `event` 名 | `data` JSON（最小字段） | 说明 |
 |------------|-------------------------|------|
-| `reasoning_delta` | `{"text": "..."}` | ReAct 循环中模型流式输出片段（多为 JSON 模式下的 token 拼接语义）；**可出现 0～多次**；仅在未启用 Prompt 回显时出现。 |
-| `citations` | `{"items": [{"path":"…","snippet":"…","score":0.0}]}` | **可选**；至多一批。优先使用工具调用阶段收集的引用；若无且检索命中，则服务端在答复前用 `retrieval.query` 填充。`score` 为浮点。 |
+| `reasoning_summary` | `{"text": "..."}` | **`work`** 档：ReAct 流式推理的**滚动摘要**（截断预览，可多次）。 |
+| `reasoning_full` | `{"text": "..."}` | **`developer`** 档：推理片段**全文**流式输出（可多次）。 |
+| `tool_trace_summary` | `{"tool":"…","status":"ok"\|"error","detail":"…"}` | **`work`** 档：单次工具调用的摘要状态。 |
+| `tool_trace_full` | `{"tool":"…","arguments":{},"result":"…","error":…}` | **`developer`** 档：工具入参/出参/错误详情。 |
+| `citations_partial` | `{"items":[{"path","snippet","score"}]}` | **`work`** 档：引用列表（条目与片段可能截断）。 |
+| `citations_full` | `{"items":[…]}` | **`developer`** 档：引用全文。 |
 | `delta` | `{"text": "..."}` | **最终答复**正文增量；因分块可 **多次** 发送。 |
-| `done` | `{}` | 正常结束。当前实现为 **空对象**；未来可扩展 `usage` 等字段（可选）。 |
-| `error` | `{"code":"…","message":"…"}` | 业务或不可恢复错误；发送后流结束。见上文第 3.6 节。 |
+| `done` | `{}` | 正常结束。 |
+| `error` | `{"code":"…","message":"…"}` | 业务或不可恢复错误；发送后流结束。见 §3.6。 |
 
-**典型成功顺序**（非回显模式）：零段或多段 `reasoning_delta` → 可选 `citations` → 一段或多段 `delta` → `done`。
+**典型成功顺序**（非 Prompt 回显）：零段或多段 `reasoning_*` → 可选 `citations_*` → 一段或多段 `delta` → `done`。
 
-**Prompt 回显模式**（`developer.prompt_echo` 为真）：**不调用 LLM**，不产生 `reasoning_delta`；直接产生 `delta`（内容为格式化后的 messages 回显文本，含固定标题「【Prompt 回显模式】」）与 `done`。见上文第 4 节。
+**Prompt 回显模式**（`developer.prompt_echo` 为真）：**不调用 LLM**；直接产生 `delta`（内容为格式化后的 messages 回显文本，含固定标题「【Prompt 回显模式】」）与 `done`。见 §4。
 
 ### 3.6 `error` 事件的 `code`（已知值）
 
