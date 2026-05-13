@@ -1,5 +1,6 @@
-# Harness / Obs 默认（可经 local.yaml 或 LOGOS_* 覆盖）。勿写密钥。
+# Harness / Obs：可经 local.yaml 或 LOGOS_LOGGING__FORMAT 等覆盖。
+# 日常：logs_root/daily/YYYY-MM/YYYY-MM-DD.log（仅 >= INFO，与 obs.log_profile 解耦）
+# 维护：logs_root/maint/<子系统>.log（级别随 obs.log_profile；子系统见 path_handlers.MaintSubsystemFileHandler）
 logging:
-  # text：经典行格式；json：每行一条 JSON（结构化）
   format: json
-  file_name: logos.log
+  # file_name 已废弃（旧版单文件 logos.log），保留键不报错亦无效果

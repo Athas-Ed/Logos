@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -196,9 +197,15 @@ def test_configure_logging_writes_file(
     configure_logging(settings)
     log = get_obs_logger("test")
     log.info("hello_stream1")
-    assert (log_root / "logos.log").is_file()
-    text = (log_root / "logos.log").read_text(encoding="utf-8")
+    day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    ym = datetime.now(timezone.utc).strftime("%Y-%m")
+    daily = log_root / "daily" / ym / f"{day}.log"
+    assert daily.is_file()
+    text = daily.read_text(encoding="utf-8")
     assert "hello_stream1" in text
+    maint = log_root / "maint" / "core.log"
+    assert maint.is_file()
+    assert "hello_stream1" in maint.read_text(encoding="utf-8")
 
 
 def test_configure_logging_json_lines(
@@ -212,7 +219,7 @@ def test_configure_logging_json_lines(
         encoding="utf-8",
     )
     (cfg / "logging.yaml").write_text(
-        "logging:\n  format: json\n  file_name: app.log\n",
+        "logging:\n  format: json\n",
         encoding="utf-8",
     )
     monkeypatch.chdir(tmp_path)
@@ -220,7 +227,7 @@ def test_configure_logging_json_lines(
 
     configure_logging(log_format="json")
     get_obs_logger("api").info("json_event")
-    log_path = log_root / "app.log"
+    log_path = log_root / "maint" / "api.log"
     assert log_path.is_file()
     line = log_path.read_text(encoding="utf-8").strip().splitlines()[-1]
     payload = json.loads(line)

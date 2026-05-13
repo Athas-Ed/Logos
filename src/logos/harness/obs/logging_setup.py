@@ -3,19 +3,19 @@ from __future__ import annotations
 import logging
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Final
 
 from logos.harness.config import load_merged_config_dict, merged_dict_to_app_settings
+from logos.harness.obs.path_handlers import DailyDirectoryFileHandler, MaintSubsystemFileHandler
 from logos.harness.obs.structured_formatter import make_formatter
 from logos.ports import AppSettings
 
-_FILE_NAME: Final[str] = "logos.log"
-
 
 def ensure_logs_directory(settings: AppSettings) -> Path:
-    """若不存在则创建 ``settings.logs_root``（含父目录），返回解析后的路径。"""
+    """若不存在则创建 ``settings.logs_root`` 及 ``daily/``、``maint/`` 占位，返回解析后的路径。"""
     root = Path(settings.logs_root)
     root.mkdir(parents=True, exist_ok=True)
+    (root / "daily").mkdir(parents=True, exist_ok=True)
+    (root / "maint").mkdir(parents=True, exist_ok=True)
     return root
 
 
@@ -34,17 +34,17 @@ def configure_logging(
     log_file_name: str | None = None,
     log_format: str | None = None,
 ) -> AppSettings:
-    """配置 ``logos`` 根记录器：控制台 + 写入 ``settings.logs_root`` 下的日志文件。
+    """配置 ``logos`` 根记录器：控制台 + 日常/维护分轨落盘。
 
-    会加载合并后的 YAML（含可选 ``logging.yaml``）以决定格式与文件名；
-    若省略 *settings*，则从上述合并结果构造 :class:`~logos.ports.AppSettings`。
+    * **日常**：``<logs_root>/daily/YYYY-MM/YYYY-MM-DD.log``，固定 ``>= INFO``，与 ``obs.log_profile`` 解耦。
+    * **维护**：``<logs_root>/maint/<子系统>.log``（api / mcp / agent / retrieval / llm / persistence / harness / core），级别随 ``obs.log_profile``（或 *level* 覆盖）。
 
-    *log_file_name* / *log_format* 非 ``None`` 时覆盖 YAML（取值 ``text`` / ``json``）。
-    *level* 非 ``None`` 时覆盖由 ``obs.log_profile`` 推导的根级别。
+    合并 YAML 中的 ``logging.format``（``text`` / ``json``）；``logging.file_name`` 已废弃，保留键不影响落盘路径。
 
     幂等：会先移除 ``logos`` 上已有 handler 再挂载新的。
     返回实际使用的 :class:`~logos.ports.AppSettings`。
     """
+    _ = log_file_name  # 旧单文件参数，已废弃；保留签名兼容调用方
     merged = load_merged_config_dict(config_dir, environ=environ)
     resolved = merged_dict_to_app_settings(merged) if settings is None else settings
 
@@ -52,43 +52,51 @@ def configure_logging(
     if level is None:
         profile = str(resolved.obs_log_profile or "standard").strip().lower()
         if profile == "minimal":
-            handler_level = logging.WARNING
+            maint_handler_level = logging.WARNING
+            stream_level = logging.WARNING
         elif profile in ("verbose", "audit"):
-            handler_level = logging.DEBUG
+            maint_handler_level = logging.DEBUG
+            stream_level = logging.DEBUG
         else:
-            handler_level = logging.INFO
+            maint_handler_level = logging.INFO
+            stream_level = logging.INFO
     else:
-        handler_level = level
-    eff_file = (
-        log_file_name
-        if log_file_name is not None
-        else str(log_cfg.get("file_name") or _FILE_NAME)
-    )
+        maint_handler_level = level
+        stream_level = level
+
     eff_format = (
         log_format
         if log_format is not None
         else str(log_cfg.get("format") or "text")
     )
 
-    log_dir = ensure_logs_directory(resolved)
-    file_path = log_dir / eff_file
+    log_root = ensure_logs_directory(resolved)
     formatter = make_formatter(eff_format)
 
     logos_logger = logging.getLogger("logos")
-    logos_logger.setLevel(handler_level)
+    # 子 logger 的 DEBUG 需能到达维护 Handler；由各级 Handler 再过滤
+    logos_logger.setLevel(logging.DEBUG)
     logos_logger.propagate = False
 
     for h in list(logos_logger.handlers):
         logos_logger.removeHandler(h)
+        try:
+            h.close()
+        except Exception:
+            pass
 
     stream = logging.StreamHandler()
-    stream.setLevel(handler_level)
+    stream.setLevel(stream_level)
     stream.setFormatter(formatter)
     logos_logger.addHandler(stream)
 
-    file_handler = logging.FileHandler(file_path, encoding="utf-8")
-    file_handler.setLevel(handler_level)
-    file_handler.setFormatter(formatter)
-    logos_logger.addHandler(file_handler)
+    daily_handler = DailyDirectoryFileHandler(log_root)
+    daily_handler.setFormatter(formatter)
+    logos_logger.addHandler(daily_handler)
+
+    maint_handler = MaintSubsystemFileHandler(log_root)
+    maint_handler.setLevel(maint_handler_level)
+    maint_handler.setFormatter(formatter)
+    logos_logger.addHandler(maint_handler)
 
     return resolved
