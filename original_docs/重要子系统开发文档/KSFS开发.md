@@ -2,7 +2,7 @@
 
 > **地位**：**KSFS 及与之相关的 HDL / Retrieval 边界** 的现行权威说明。若与 [`../已完成文档/SPEC-V0.1.md`](../已完成文档/SPEC-V0.1.md)（归档）中 KSS/LKC、`workspace` 为事实源等表述冲突，**以本文与 `ARCHITECTURE.md` / `GLOSSARY.md` / `DECISIONS.md` 为准**。  
 > **状态**：架构已定案；实现分期落地，**以代码与测试为准**对齐本文。  
-> **实现进度（摘要）**：已移除 LKC 产品路径；**`sync_ksfs_hsi`**（`logos.persistence` / `ksfs.py`）自 **`ksfs_root`** 扫描 **`*.md`**（**跳过各层 `README.md`**），以 **仅正文 body** 的哈希 + **mtime** 增量写 HSI；**`read_ksfs`** 只读 KSFS。E2E：**`tests/test_ksfs_pipeline_e2e.py`**。**定案**：KSFS **仅 `.md`** 入核心扫描；**`.docx`/PDF 不纳入 HDL 核心**（可选 Skill，见 **§3.0**、[`../DECISIONS.md`](../DECISIONS.md) §12）。**待落地**：HSI 发号回写 `id`、进程级自动登记钩子、SVS chunk。**设定导入**语义见 **§7.3**；Skill 全链封存与恢复见 [**`设定导入Skill开发.md`**](设定导入Skill开发.md)（排期见 [`../下一阶段开发计划.md`](../下一阶段开发计划.md)）。
+> **实现进度（摘要）**：已移除 LKC 产品路径；**`sync_ksfs_hsi`**（`logos.persistence`）自 **`ksfs_root`** 扫描 **`*.md`**（**跳过各层 `README.md`**），以 **仅正文 body** 的哈希 + **mtime** 增量写 HSI；**已实现** HSI **纯数字 id 发号**、front matter **`id:` 回写**、**§3.4** 声明 id 与 HSI **冲突时重发号并回写**；**`ensure_ksfs_hsi_registered`** 提供**进程内至多一次** KSFS→HSI 登记（默认在 **`FusedRetrievalService.query`** 首次调用前懒登记，可选 **`paths.sync_hsi_on_startup`** 于 FastAPI lifespan 启动即登记）。**`read_ksfs`** 只读 KSFS；上述同步与登记行为由 **`tests/test_stream2_persistence.py`** 覆盖。**定案**：KSFS **仅 `.md`** 入核心扫描；**`.docx`/PDF 不纳入 HDL 核心**（可选 Skill，见 **§3.0**、[`../DECISIONS.md`](../DECISIONS.md) §12）。**仍待落地**：**SVS chunk**（§5）。**设定导入**语义见 **§7.3**；Skill 全链封存与恢复见 [**`设定导入Skill开发.md`**](设定导入Skill开发.md)（排期见 [`../下一阶段开发计划.md`](../下一阶段开发计划.md)）。
 
 ---
 
