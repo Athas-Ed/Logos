@@ -94,12 +94,22 @@ obs:
 
 ---
 
-## 6. 与 API / 流式交互的衔接（方向性）
+## 6. 与 API / 流式交互的衔接（与实现对齐，V0.2）
 
-- 当前 `POST /api/v1/chat` 以 SSE 为主；扩展时建议 **新增事件类型** 或 **版本化载荷**，例如：`delta` 仍承载面向 WM 的正文；`reasoning_summary` / `reasoning_full`、`citations_partial` / `retrieval_debug`、`tool_trace_summary` / `tool_trace_full` 等 **分事件** 下发，由前端按当前会话档位 **订阅或忽略**。
-- **禁止**：为省事把「仅开发者可见」的全量对象塞进 WM 默认解析路径；默认路径应只解析 WM 所需字段。
+- `POST /api/v1/chat` 以 SSE 为主；**展示档位**由请求体 `presentation`（及 `ui.default_presentation`）决定 **`work`** 与 **`developer`** 两套事件名（与 `DECISIONS.md` / WM·开发者档位一致）。
+- **已实现的事件名与载荷**（单行 JSON `data:`）见 **`重要子系统开发文档/API-V0.2.md`** §3.5；摘要如下：
 
-（具体 JSON 形状与事件名以实现阶段 PR 为准，并回填本文件 §6。）
+| 语义 | `work`（WM） | `developer` |
+|------|----------------|-------------|
+| 推理流 | `reasoning_summary` `{text}` | `reasoning_full` `{text}` |
+| 引用 | `citations_partial` `{items:[{path,snippet,score}]}` | `citations_full` 同上 |
+| 工具轨迹 | `tool_trace_summary` `{tool,status,detail}` | `tool_trace_full` `{tool,arguments,result,error?}` |
+| 答复正文 | `delta` | `delta` |
+| 结束 / 错误 | `done` / `error` | 同左 |
+
+- **`GET /api/v1/bootstrap`**：返回 `default_presentation`、`log_profile`（`obs.log_profile`）、`operating_mode`，供 GUI 首屏与会话态初始化；**禁止**把「仅开发者可见」的全量对象塞进 WM 默认解析路径。
+
+（具体 JSON 形状与事件名以 `src/logos/harness/ii_layer/api_v1.py`、`tests/test_sse_chat_contract.py` 为权威实现对照。）
 
 ---
 
@@ -116,3 +126,4 @@ obs:
 | 日期 | 说明 |
 |------|------|
 | 2026-05-10 | 初稿：WM / 开发者展示 / 日志正交、config 与 GUI 职责、Obs 边界。 |
+| 2026-05-13 | §6：回填与 `API-V0.2` 一致的 SSE 事件表与 `bootstrap` 指向。 |

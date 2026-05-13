@@ -1,6 +1,6 @@
 """``POST /api/v1/chat`` 的 SSE 契约常量与载荷校验。
 
-与 ``original_docs/重要子系统开发文档/API-V0.1.md``、GUI ``sseChat.ts`` 对齐；
+与 ``original_docs/重要子系统开发文档/API-V0.2.md``、GUI ``sseChat.ts`` 对齐；
 契约单测见 ``tests/test_sse_chat_contract.py``。
 """
 

@@ -232,6 +232,39 @@
   border: 1px solid var(--border);
 }
 
+.inlineCode {
+  font-family: ui-monospace, "Cascadia Code", monospace;
+  font-size: 0.82em;
+  padding: 0.05rem 0.25rem;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--muted) 8%, var(--surface));
+}
+
+.toolTraceFold {
+  margin-top: 0.45rem;
+  font-size: 0.78rem;
+  border-radius: calc(var(--radius) - 2px);
+  border: 1px dashed color-mix(in srgb, var(--accent) 28%, var(--border));
+  padding: 0.35rem 0.5rem;
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
+}
+
+.toolTracePre {
+  margin: 0.35rem 0 0;
+  padding: 0.45rem 0.5rem;
+  overflow: auto;
+  max-height: 12rem;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--bg);
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  font-family: ui-monospace, "Cascadia Code", monospace;
+}
+
 .composer {
   border-top: 1px solid var(--border);
   padding: 0.75rem;

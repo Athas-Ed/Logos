@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+from dataclasses import replace
 import json
 from pathlib import Path
 
@@ -128,6 +129,33 @@ def test_api_v1_bootstrap(tmp_path: Path) -> None:
     assert body["default_presentation"] == "work"
     assert body["log_profile"] == "standard"
     assert "operating_mode" in body
+
+
+def test_api_v1_bootstrap_reflects_settings(tmp_path: Path) -> None:
+    ports = _make_ports(tmp_path)
+    ports = AppPorts(
+        settings=replace(
+            ports.settings,
+            ui_default_presentation="developer",
+            obs_log_profile="verbose",
+            operating_mode="screenwriter",
+        ),
+        llm=ports.llm,
+        retrieval=ports.retrieval,
+        knowledge_source=ports.knowledge_source,
+        metadata_index=ports.metadata_index,
+        semantic_store=ports.semantic_store,
+        text_embedder=ports.text_embedder,
+        developer=ports.developer,
+    )
+    app = create_app(ports)
+    with TestClient(app) as client:
+        r = client.get("/api/v1/bootstrap")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["default_presentation"] == "developer"
+    assert body["log_profile"] == "verbose"
+    assert body["operating_mode"] == "screenwriter"
 
 
 def test_api_v1_chat_sse_delta_and_done(tmp_path: Path) -> None:

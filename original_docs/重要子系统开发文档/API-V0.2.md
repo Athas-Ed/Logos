@@ -1,8 +1,8 @@
 # HTTP API 契约 — V0.2
 
-> **地位**：**现行权威**（2026-05-13 收口）。由 **I&I（Stream 5）** 在 `src/logos/harness/ii_layer/api_v1.py` 实现；变更请同步 **GUI（Stream 6）**、`tests/test_stream5_api.py` 与 `SPEC-V0.1.md` / 展示规格中涉及 HTTP 的段落。  
+> **地位**：**现行权威**（2026-05-13 收口）。由 **I&I（Stream 5）** 在 `src/logos/harness/ii_layer/api_v1.py` 实现；变更请同步 **GUI（Stream 6）**、`tests/test_stream5_api.py` 与 `SPEC-DISPLAY-AND-LOGGING-V0.1.md` / 展示规格中涉及 HTTP 的段落。  
 > **版本说明**：URL 仍为 **`/api/v1/*`**（未改为 `/api/v2`）；**文档版本 V0.2** 表示相对 **`API-V0.1.md`（归档）** 的契约增量。  
-> **沿革**：V0.1 仅含 health + chat 的四种 SSE；V0.2 增补 **`reasoning_delta`**、**开发者只读/调试端点**，并固化 **请求体消息拆分** 与 **`operating_mode`** 语义。
+> **沿革**：V0.1 仅含 health + chat 的四种 SSE；V0.2 增补 **按展示档位分事件**（`reasoning_summary` / `reasoning_full`、`citations_*`、`tool_trace_*`）、**`GET /api/v1/bootstrap`**、**开发者只读/调试端点**，并固化 **请求体消息拆分** 与 **`operating_mode`** / **`presentation`** 语义。
 
 ---
 
@@ -181,8 +181,10 @@ data: <单行 JSON>
 | 资源 | 说明 |
 |------|------|
 | `src/logos/harness/ii_layer/api_v1.py` | 路由与 SSE 帧实现。 |
-| `tests/test_stream5_api.py` | 契约回归：`health`、`chat`（含 `reasoning_delta` / `citations`）、`developer/*`。 |
-| `src/gui/src/api/sseChat.ts` | 解析 `delta`、`reasoning_delta`、`citations`、`done`、`error`。 |
+| `tests/test_stream5_api.py` | 契约回归：`health`、`bootstrap`、`chat`（含分档位 SSE）、`developer/*`。 |
+| `tests/test_sse_chat_contract.py` | SSE 载荷与事件名结构校验。 |
+| `src/gui/src/api/sseChat.ts` | 解析 `delta`、`reasoning_summary` / `reasoning_full`、`citations_partial` / `citations_full`、`tool_trace_*`、`done`、`error`；请求体可选 `presentation`。 |
+| `src/gui/src/api/bootstrap.ts` | 首屏 `GET /api/v1/bootstrap`。 |
 | `src/gui/src/api/developer.ts` | 开发者 UI 与 `prompt-echo`。 |
 
 ---
@@ -191,4 +193,4 @@ data: <单行 JSON>
 
 | 日期 | 说明 |
 |------|------|
-| 2026-05-13 | 新建 V0.2：从实现与单测收口；取代此前散失的 V0.2 草稿；`API-V0.1.md` 改为归档对照。 |
+| 2026-05-13 | 对齐 A3：沿革与 GUI 表改为分档位 SSE 事件名；补充 `bootstrap.ts` / `test_sse_chat_contract` 引用。 |

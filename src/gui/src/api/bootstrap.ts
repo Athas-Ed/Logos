@@ -1,8 +1,8 @@
-import type { PresentationMode } from "../types/chat";
+import type { LogProfile, PresentationMode } from "../types/chat";
 
 export type BootstrapPayload = {
   default_presentation: PresentationMode;
-  log_profile: string;
+  log_profile: LogProfile;
   operating_mode: string;
 };
 
