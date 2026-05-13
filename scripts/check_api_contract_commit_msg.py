@@ -18,6 +18,7 @@ CONTRACT_PATHS: frozenset[str] = frozenset(
         "original_docs/重要子系统开发文档/API-V0.2.md",
         "tests/test_stream5_api.py",
         "src/gui/src/api/sseChat.ts",
+        "src/gui/src/api/bootstrap.ts",
         "src/gui/src/api/developer.ts",
     }
 )
@@ -93,7 +94,7 @@ def main() -> int:
 
     print(
         "【API 契约钩子】本次提交包含以下一类或多类文件的暂存变更：\n"
-        "  api_v1 / ii_layer deps / API-V0.2.md / test_stream5_api / sseChat / developer\n"
+        "  api_v1 / ii_layer deps / API-V0.2.md / test_stream5_api / sseChat / bootstrap / developer\n"
         "请在提交说明中单独写一行（与《API终极文档》第 4.1 节一致）：\n"
         "  契约：无变更\n"
         "或\n"

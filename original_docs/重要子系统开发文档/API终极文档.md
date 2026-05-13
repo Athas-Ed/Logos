@@ -41,7 +41,7 @@
 1. **无终端用户鉴权**：`127.0.0.1` 或等价信任边界由操作系统与防火墙负责。  
 2. **URL 仍为 `/api/v1`**：语义演进靠 **文档版本（V0.2 及后续）** 与变更记录，不强行上 `/v2` URL，除非未来真有对外发布需求。  
 3. **部分错误走 HTTP 200 + SSE `error` 事件**：流式对话常见做法；非流式客户端若出现再单独约定。  
-4. **`bootstrap` 等未实现能力**：已在 V0.2 标明；不阻塞当前个人闭环。
+4. **部署链与阶段收口**：`GET /api/v1/bootstrap`、分档 SSE 与配置键已在主路径实现并与 V0.2 对齐；**真实后端 + GUI 一条会话联合冒烟、启动链文档化** 仍以 **`original_docs/第二阶段收尾计划.md` 之 A8b** 为正式收口条件，完成前本文不将「对外可复现部署形态」写入个人使用基线。
 
 ---
 
@@ -60,7 +60,7 @@
 | 1 | 改实现 | `src/logos/harness/ii_layer/api_v1.py`；若牵涉依赖注入再改 `deps.py` 等 |
 | 2 | 改权威契约 | `original_docs/重要子系统开发文档/API-V0.2.md`（事件表、请求体、错误 code、开发者端点） |
 | 3 | 锁回归 | `tests/test_stream5_api.py`（新事件或语义变化须有新断言或改现有断言） |
-| 4 | 对齐全站类型与解析 | 若前端可见：至少 `src/gui/src/api/sseChat.ts`、`src/gui/src/api/developer.ts`，以及 `src/gui/src/types/` 下与 chat / citation 相关的类型 |
+| 4 | 对齐全站类型与解析 | 若前端可见：至少 `src/gui/src/api/sseChat.ts`、`src/gui/src/api/bootstrap.ts`、`src/gui/src/api/developer.ts`，以及 `src/gui/src/types/` 下与 chat / citation 相关的类型 |
 
 **提交说明（或 PR 描述）固定加一行**，便于检索与对照「HTTP/SSE 变更须同步文档与 GUI」的协作要求：
 
@@ -71,7 +71,7 @@
 
 仓库已配置 Cursor 规则 **`.cursor/rules/logos-api-contract.mdc`**，编辑 `api_v1` / `API-V0.2` / 相关单测与 GUI API 时会提示本清单。
 
-**Git 钩子 `commit-msg`**：路径列表见 **`scripts/check_api_contract_commit_msg.py`** 内常量（含 `api_v1`、`deps`、`API-V0.2.md`、`test_stream5_api.py`、`sseChat.ts`、`developer.ts`）。若本次暂存命中其中**任一**路径，而提交说明中**没有**以 `契约：`（或 `契约:`）开头的单独一行，则 **`git commit` 被拒绝**（以 `Merge ` / `Revert ` 开头的说明会自动跳过检查）。
+**Git 钩子 `commit-msg`**：路径列表见 **`scripts/check_api_contract_commit_msg.py`** 内常量（含 `api_v1`、`deps`、`API-V0.2.md`、`test_stream5_api.py`、`sseChat.ts`、`bootstrap.ts`、`developer.ts`）。若本次暂存命中其中**任一**路径，而提交说明中**没有**以 `契约：`（或 `契约:`）开头的单独一行，则 **`git commit` 被拒绝**（以 `Merge ` / `Revert ` 开头的说明会自动跳过检查）。
 
 ```bash
 # 在仓库根执行一次（写入本仓库 .git/config）
@@ -80,16 +80,17 @@ git config core.hooksPath .githooks
 
 实现脚本：**`scripts/check_api_contract_commit_msg.py`**（由 `.githooks/commit-msg` 调用）。
 
-**更严一档（`pre-commit`）**：若暂存区包含 **`api_v1.py`**、**`ii_layer/deps.py`**、**`sseChat.ts`**、**`developer.ts`** 中任一路径的变更，则**必须同时暂存** **`API-V0.2.md`** 与 **`tests/test_stream5_api.py`**（允许与上一提交相比仅为修订记录、注释或断言微调，但二者须出现在本提交的暂存集合中）。由 **`scripts/check_api_contract_staged_bundle.py`**（`.githooks/pre-commit`）执行。
+**更严一档（`pre-commit`）**：若暂存区包含 **`api_v1.py`**、**`ii_layer/deps.py`**、**`sseChat.ts`**、**`bootstrap.ts`**、**`developer.ts`** 中任一路径的变更，则**必须同时暂存** **`API-V0.2.md`** 与 **`tests/test_stream5_api.py`**（允许与上一提交相比仅为修订记录、注释或断言微调，但二者须出现在本提交的暂存集合中）。由 **`scripts/check_api_contract_staged_bundle.py`**（`.githooks/pre-commit`）执行。
 
 上述两钩与 `commit-msg` 的检查路径列表，与 **`.cursor/rules/logos-api-contract.mdc`** 保持一致。确需跳过：`git commit --no-verify`。
 
 此项不依赖第三阶段计划即可执行。
 
-### 4.2 配置与首屏（与 A3 重叠）
+### 4.2 配置与首屏（A3 已实现；GUI 全链待 A8b）
 
-- **`GET /api/v1/bootstrap`**（及 `ui.default_presentation` / `obs.log_profile` 等）在展示规格中已讨论；**个人使用**下可继续「写死在 GUI 或 local 配置」直到第三阶段排期。  
-- 若第三阶段计划纳入 A3，在计划文档中**单列 API 与配置键**即可，无需在本文展开实现细节。
+- **已实现**（与 **`API-V0.2.md`**、**`SPEC-DISPLAY-AND-LOGGING-V0.1.md`** §6 一致）：`GET /api/v1/bootstrap`；`config/defaults.yaml`（及合并链）中的 `ui.default_presentation`、`obs.log_profile`；GUI 首屏消费 bootstrap（`src/gui/src/api/bootstrap.ts`）；`POST /api/v1/chat` 按 `presentation` 输出分档 SSE。权威对照：`src/logos/harness/ii_layer/api_v1.py`、`tests/test_stream5_api.py`、`tests/test_sse_chat_contract.py`。  
+- **仍待 A8b**：开发态下一键或文档化步骤的 **真实后端 + GUI** 全链、API 基址与首屏联合冒烟——见 **`original_docs/第二阶段收尾计划.md`** §6 行 A8b；该步完成后再把「第二阶段 GUI 侧正式收尾」记入 DEVLOG/CHANGELOG 即可。  
+- **个人使用**：无后端时 GUI 仍可本地兜底，但**默认策略**不再依赖「把 bootstrap 默认值写死在 GUI」替代服务端契约。
 
 ### 4.3 机器可读契约（可选）
 
@@ -104,7 +105,8 @@ git config core.hooksPath .githooks
 
 ## 5. 与「第三阶段开发计划」的衔接
 
-- **本文第 4 节**中已标为「与 A3 重叠」「可选」的条目，适合在**第三阶段开发计划**出台后，由你指定**哪些写入计划、哪些继续搁置**。  
+- **A3（展示 / 日志 / bootstrap / 分档 SSE）** 已在主路径落地；**第二阶段**在 GUI 侧的**正式收口**以收尾计划 **A8b** 为准（见 **`original_docs/第二阶段收尾计划.md`**）。  
+- **本文第 4 节**其余标为「可选」的条目，仍适合在**第三阶段开发计划**出台后，由你指定**哪些写入计划、哪些继续搁置**。  
 - **纯文案或表格微调**（例如 V0.2 修订记录措辞、README 表格顺序）不必记入阶段计划，随契约 PR 顺带即可。
 
 ---
@@ -115,3 +117,4 @@ git config core.hooksPath .githooks
 |------|------|
 | 2026-05-13 | 初版：个人使用标准下的足够性判断、风险接受范围、改进优先级与阶段计划衔接说明。 |
 | 2026-05-13 | 第 1.1 节：API 契约治理与 S&G 分层结论；第 4.1 节：`pre-commit` 捆绑 `API-V0.2` + `test_stream5_api`（`check_api_contract_staged_bundle.py`、`.githooks/pre-commit`）及单测 `tests/test_api_contract_staged_bundle.py`。 |
+| 2026-05-13 | 第 3 节风险第 4 条、第 4.2 节、第 5 节：与实现对齐——`bootstrap` 与 A3 已落地；**GUI↔真实后端联合冒烟** 明确归 A8b 收口。 |
