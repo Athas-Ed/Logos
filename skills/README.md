@@ -11,7 +11,7 @@
 
 ## 仓库内示例
 
-- **`example-stdio-mcp/`**：最小 stdio 子进程占位（生命周期测试，**非**完整 MCP）。
-- **`amap-weather-mcp/`**：完整 MCP（FastMCP + stdio），工具 **`query_weather`**；密钥见应用 `config` 中 `skills.amap_weather`（详见该目录 `README.md`）。
+- **`example-stdio-mcp/`**：真实 MCP（FastMCP + stdio），工具 **`echo`**；另含 **`echo_worker.py`** 供非 MCP 子进程生命周期测试。
+- **`amap-weather-mcp/`**：完整 MCP（FastMCP + stdio），工具 **`query_weather`**；在 `config/local.yaml` 的 **`skills.mcp_servers`** 中启用并配置 `env.AMAP_WEB_KEY`（详见该目录 `README.md`）。
 
 权威分层：`original_docs/ARCHITECTURE.md` §2.4–2.5；KSFS 与导入细则：`original_docs/重要子系统开发文档/KSFS开发.md` §7.3。

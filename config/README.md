@@ -18,10 +18,9 @@
 
 ## 可选 MCP 技能（`skills`）
 
-- **`skills.amap_weather`**：挂载 `skills/amap-weather-mcp`（高德实况天气）。`defaults.yaml` 默认 `enabled: false`；在 **`local.yaml`** 填写 `web_api_key` 并置 `enabled: true`。
-- **环境变量**：`LOGOS_SKILLS__AMAP_WEATHER__ENABLED`、`LOGOS_SKILLS__AMAP_WEATHER__WEB_API_KEY`。
-- **说明**：后端将 Key 注入 MCP 子进程的环境变量 `AMAP_WEB_KEY`；勿把真实 Key 写入可提交 Git 的 YAML。细节见 `skills/amap-weather-mcp/README.md`。
-- **MCP 与仓库路径**：若 Agent 对话里看不到 `query_weather`，请确认本机 `skills/amap-weather-mcp/server.py` 存在；从非仓库 cwd 启动或包在 site-packages 时，设置 **`LOGOS_REPO_ROOT`** 指向仓库根（`scripts/run_backend_stub.py` 已默认 `setdefault`）。
+- **`skills.mcp_servers`**：声明式挂载多个 stdio MCP（`id`、`enabled`、`entrypoint`、`strip_http_proxy`、`env`）。权威说明见 **`original_docs/重要子系统开发文档/MCP开发.md`**；`defaults.yaml` 中默认为空列表。
+- **高德实况天气**：仓库内 **`skills/amap-weather-mcp/`**（工具 `query_weather`）；**不写入** `defaults.yaml`，在 **`local.yaml`** 的 `mcp_servers` 中自行增加一条，并在 `env` 中提供 **`AMAP_WEB_KEY`**（勿提交真实 Key）。细节见 `skills/amap-weather-mcp/README.md`。
+- **MCP 与仓库路径**：若看不到某 MCP 工具，请确认 `entrypoint` 路径存在；从非仓库 cwd 启动或包在 site-packages 时，设置 **`LOGOS_REPO_ROOT`** 指向仓库根（`scripts/run_backend_stub.py` 已默认 `setdefault`）。
 
 ## 日志目录（`logs/`）
 

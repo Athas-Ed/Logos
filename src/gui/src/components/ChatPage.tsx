@@ -151,7 +151,7 @@ export function ChatPage() {
         <div className={styles.titleBlock}>
           <h1 className={styles.title}>Logos 对话</h1>
           <p className={styles.subtitle}>
-            V0.1 · POST /api/v1/chat（SSE）· operating_mode 随请求体发送
+            V0.2 · POST /api/v1/chat（SSE）· operating_mode 随请求体发送
           </p>
         </div>
         <div className={styles.headerActions}>

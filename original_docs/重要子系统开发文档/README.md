@@ -11,8 +11,11 @@
 | 文件 | 内容 |
 |------|------|
 | [**`KSFS开发.md`**](KSFS开发.md) | KSFS 目录、**仅 `.md` 核心**、HSI/SVS、chunk、知识流、**设定导入 §7.3**、**`entity_template`** |
-| [**`API-V0.1.md`**](API-V0.1.md) | HTTP 契约（chat / health 等）、SSE 事件 |
+| [**`API-V0.2.md`**](API-V0.2.md) | **现行** HTTP 契约（`/api/v1/*`）、SSE 事件（含 `reasoning_delta`）、开发者端点 |
+| [**`API终极文档.md`**](API终极文档.md) | **个人使用**场景下的 API 原则、可接受风险、改进优先级；不替代 V0.2 字段表 |
+| [**`API-V0.1.md`**](API-V0.1.md) | V0.1 **归档**（对照用）；权威以 `API-V0.2.md` 为准 |
 | [**`设定导入Skill开发.md`**](设定导入Skill开发.md) | 设定导入 Skill **封存规格**与恢复清单；与 `KSFS开发.md` §7.3、`DECISIONS.md` §12 配合 |
+| [**`MCP开发.md`**](MCP开发.md) | stdio MCP 多技能配置、渐进式披露与 Obs、进程测试分级、resources/prompts 与被动读取的定案建议 |
 | [**`../SPEC-DISPLAY-AND-LOGGING-V0.1.md`](../SPEC-DISPLAY-AND-LOGGING-V0.1.md)** | 展示与日志补充规格 |
 
 ---
@@ -28,4 +31,4 @@
 
 ---
 
-*最后更新：2026-05-12*
+*最后更新：2026-05-13*

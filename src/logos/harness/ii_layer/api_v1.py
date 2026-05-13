@@ -1,4 +1,7 @@
-"""V0.1 契约路由：``/api/v1/health`` 与 ``POST /api/v1/chat``（SSE）。"""
+"""V0.2 契约路由（路径前缀 ``/api/v1``）：health、chat（SSE）、developer 端点。
+
+权威文档：``original_docs/重要子系统开发文档/API-V0.2.md``。
+"""
 
 from __future__ import annotations
 
@@ -14,6 +17,7 @@ from pydantic import BaseModel, Field
 from logos.agent.react import ReActStreamDone, ReActStreamReasoning
 from logos.agent.shell import AgentShell
 from logos.harness.sg_layer import build_v01_guarded_tool_registry
+from logos.harness.sg_layer.guarded_registry import V01_SG_TOOL_WHITELIST
 from logos.ports.llm import ChatMessage
 from logos.ports.retrieval import Citation
 
@@ -127,11 +131,12 @@ def build_v1_router() -> Any:
                 extra = _operating_mode_suffix(body.operating_mode)
                 if client_sys:
                     extra = f"{extra}\n\n【来自前端的 system 补充】\n{client_sys}"
-                if ports.settings.skills_amap_weather_enabled:
+                mcp_tool_names = frozenset(tools.names()) - V01_SG_TOOL_WHITELIST
+                if mcp_tool_names:
+                    listed = ", ".join(sorted(mcp_tool_names))
                     extra += (
-                        "\n\n【工具】高德实况天气已启用：用户询问气温、天气、降雨、带伞建议等时，"
-                        "应调用工具 query_weather，参数 city 为中文城市/区县名或 6 位 adcode；"
-                        "该查询不需要先 retrieve。"
+                        f"\n\n【工具】以下 MCP 暴露的工具已启用：{listed}。"
+                        "按用户意图在恰当时机调用；与 KSFS 无关的查询不必先 retrieve。"
                     )
                 for item in shell.iter_run_task(
                     ut,
@@ -221,25 +226,29 @@ def build_v1_router() -> Any:
                 status_code=403,
                 detail="配置 developer.show_dev_tools_ui 为 false，禁止查看。",
             )
-        from pathlib import Path
+        from logos.harness.mcp_stdio import resolve_repo_root
 
-        from logos.harness.mcp_stdio import amap_weather_mcp_command, resolve_repo_root
-
-        cmd = amap_weather_mcp_command()
-        script = Path(cmd[1])
+        repo = resolve_repo_root()
         reg = build_v01_guarded_tool_registry(
             ports.settings,
             retrieval=retrieval,
         )
+        mcp_status: list[dict[str, Any]] = []
+        for e in ports.settings.mcp_servers:
+            script = (repo / e.entrypoint).resolve()
+            mcp_status.append(
+                {
+                    "id": e.id,
+                    "enabled": e.enabled,
+                    "entrypoint": e.entrypoint,
+                    "entrypoint_exists": script.is_file(),
+                    "strip_http_proxy": e.strip_http_proxy,
+                }
+            )
         return {
             "tools": sorted(reg.names()),
-            "skills_amap_weather_enabled": ports.settings.skills_amap_weather_enabled,
-            "amap_weather_script": str(script),
-            "amap_weather_script_exists": script.is_file(),
-            "repo_root_resolved": str(resolve_repo_root()),
-            "web_api_key_configured": bool(
-                (ports.settings.skills_amap_weather_web_api_key or "").strip()
-            ),
+            "mcp_servers": mcp_status,
+            "repo_root_resolved": str(repo),
         }
 
     return router

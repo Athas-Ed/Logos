@@ -6,7 +6,7 @@ from typing import Any, Mapping
 
 import yaml
 
-from logos.ports import AppSettings
+from logos.ports import AppSettings, McpServerEntry
 
 _ENV_PREFIX = "LOGOS_"
 
@@ -138,6 +138,41 @@ def _str_opt(raw: Any) -> str:
     return str(raw).strip()
 
 
+def _parse_mcp_servers(skills: Mapping[str, Any]) -> tuple[McpServerEntry, ...]:
+    raw = skills.get("mcp_servers")
+    if raw is None:
+        return ()
+    if not isinstance(raw, list):
+        return ()
+    out: list[McpServerEntry] = []
+    for item in raw:
+        if not isinstance(item, Mapping):
+            continue
+        sid = _str_opt(item.get("id"))
+        if not sid:
+            continue
+        entrypoint = _str_opt(item.get("entrypoint"))
+        if not entrypoint:
+            continue
+        env_raw = item.get("env") or {}
+        env_pairs: list[tuple[str, str]] = []
+        if isinstance(env_raw, Mapping):
+            for k, v in env_raw.items():
+                env_pairs.append((str(k), "" if v is None else str(v)))
+        out.append(
+            McpServerEntry(
+                id=sid,
+                enabled=_coerce_truthy(item.get("enabled"), default=False),
+                entrypoint=entrypoint,
+                strip_http_proxy=_coerce_truthy(
+                    item.get("strip_http_proxy"), default=False
+                ),
+                env=frozenset(env_pairs),
+            )
+        )
+    return tuple(out)
+
+
 def merged_dict_to_app_settings(data: Mapping[str, Any]) -> AppSettings:
     paths = data.get("paths") or {}
     emb = data.get("embeddings") or {}
@@ -145,7 +180,7 @@ def merged_dict_to_app_settings(data: Mapping[str, Any]) -> AppSettings:
     llm = data.get("llm") or {}
     dev = data.get("developer") or {}
     skills = data.get("skills") or {}
-    amap_w = skills.get("amap_weather") or {}
+    mcp_servers = _parse_mcp_servers(skills)
     return AppSettings(
         workspace_root=str(paths.get("workspace_root", "./workspace")),
         example_ksfs_root=str(paths.get("example_ksfs_root", "./example_ksfs")),
@@ -174,10 +209,7 @@ def merged_dict_to_app_settings(data: Mapping[str, Any]) -> AppSettings:
             dev.get("show_dev_tools_ui"), default=False
         ),
         developer_prompt_echo=_coerce_truthy(dev.get("prompt_echo"), default=False),
-        skills_amap_weather_enabled=_coerce_truthy(
-            amap_w.get("enabled"), default=False
-        ),
-        skills_amap_weather_web_api_key=_str_opt(amap_w.get("web_api_key")),
+        mcp_servers=mcp_servers,
     )
 
 

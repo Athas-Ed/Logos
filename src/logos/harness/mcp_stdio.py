@@ -52,14 +52,22 @@ def require_mcp_sdk_installed() -> None:
 
 
 def _marker_skill_server(repo: Path) -> Path:
-    return repo / "skills" / "amap-weather-mcp" / "server.py"
+    """用于定位仓库根：优先示例 MCP，其次高德（便于仅检出部分目录时的回退）。"""
+    for rel in (
+        Path("skills") / "example-stdio-mcp" / "server.py",
+        Path("skills") / "amap-weather-mcp" / "server.py",
+    ):
+        p = repo / rel
+        if p.is_file():
+            return p
+    return repo / "skills" / "example-stdio-mcp" / "server.py"
 
 
 def resolve_repo_root() -> Path:
     """定位含 ``skills/`` 的仓库根。
 
-    1. 环境变量 ``LOGOS_REPO_ROOT``（若指向的目录下存在高德 skill 的 ``server.py``）。
-    2. 自 ``logos`` 包路径向上查找含 ``skills/amap-weather-mcp/server.py`` 的目录。
+    1. 环境变量 ``LOGOS_REPO_ROOT``（若指向的目录下存在标记用 ``server.py``）。
+    2. 自 ``logos`` 包路径向上查找含 ``skills/example-stdio-mcp/server.py`` 或 ``skills/amap-weather-mcp/server.py`` 的目录。
     3. 回退：``<repo>/src/logos`` 的上两级（兼容可编辑安装时的旧约定）。
 
     非 ``pip install -e .`` 时 ``logos`` 可能在 site-packages，必须用 1 或 2 才能找到 ``skills/``。
@@ -72,7 +80,7 @@ def resolve_repo_root() -> Path:
         if _marker_skill_server(p).is_file():
             return p
         _log.warning(
-            "LOGOS_REPO_ROOT=%s 下未找到 skills/amap-weather-mcp/server.py，将忽略该环境变量",
+            "LOGOS_REPO_ROOT=%s 下未找到 skills/*/server.py（MCP 标记），将忽略该环境变量",
             env_root,
         )
 
@@ -83,15 +91,15 @@ def resolve_repo_root() -> Path:
 
     fallback = start.parent.parent
     _log.debug(
-        "未在目录链上发现 skills/amap-weather-mcp/server.py，回退为 %s（MCP 可能无法挂载）",
+        "未在目录链上发现 MCP 标记脚本，回退为 %s（MCP 可能无法挂载）",
         fallback,
     )
     return fallback
 
 
-def amap_weather_mcp_command() -> list[str]:
-    """启动 ``skills/amap-weather-mcp`` 的 argv（当前解释器 + server.py）。"""
-    script = _marker_skill_server(resolve_repo_root())
+def mcp_server_argv(repo: Path, entrypoint: str) -> list[str]:
+    """``[sys.executable, <resolved server.py>]``；*entrypoint* 为相对 *repo* 的正斜杠或系统路径均可。"""
+    script = (repo / Path(entrypoint)).resolve()
     return [sys.executable, str(script)]
 
 

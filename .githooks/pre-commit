@@ -1,0 +1,4 @@
+#!/bin/sh
+# Logos：API 契约同批暂存检查。安装：git config core.hooksPath .githooks
+ROOT="$(git rev-parse --show-toplevel)"
+python "$ROOT/scripts/check_api_contract_staged_bundle.py" || exit 1

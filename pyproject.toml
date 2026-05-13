@@ -21,6 +21,7 @@ dev = [
     "uvicorn[standard]>=0.30",
     "chromadb>=0.5",
     "sentence-transformers>=2.2",
+    "psutil>=6.0",
 ]
 
 [tool.setuptools.packages.find]

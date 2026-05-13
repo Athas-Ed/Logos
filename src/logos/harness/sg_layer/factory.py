@@ -9,11 +9,12 @@ from pathlib import Path
 from typing import Any
 
 from logos.harness.mcp_stdio import (
-    amap_weather_mcp_command,
     discover_mcp_tools_sync,
     make_stdio_mcp_tool_handler,
+    mcp_server_argv,
+    resolve_repo_root,
 )
-from logos.ports import AppSettings
+from logos.ports import AppSettings, McpServerEntry
 from logos.ports.retrieval import Citation, RetrievalService
 from logos.tools.ksfs_list import list_ksfs_entries
 
@@ -26,8 +27,7 @@ from .path_sandbox import (
 
 _log = logging.getLogger(__name__)
 
-# MCP 子进程不应继承宿主为 LLM 配的 HTTP 代理去访问高德（易被 CONNECT/证书 干扰）
-_AMAP_MCP_STRIP_PROXY_KEYS: frozenset[str] = frozenset(
+_STRIP_HTTP_PROXY_KEYS: frozenset[str] = frozenset(
     {
         "HTTP_PROXY",
         "HTTPS_PROXY",
@@ -39,13 +39,13 @@ _AMAP_MCP_STRIP_PROXY_KEYS: frozenset[str] = frozenset(
 )
 
 
-def _amap_mcp_child_env(settings: AppSettings) -> dict[str, str]:
+def _mcp_child_env(entry: McpServerEntry) -> dict[str, str]:
     env = {k: str(v) for k, v in os.environ.items() if isinstance(v, str)}
-    for k in _AMAP_MCP_STRIP_PROXY_KEYS:
-        env.pop(k, None)
-    key = (settings.skills_amap_weather_web_api_key or "").strip()
-    if key:
-        env["AMAP_WEB_KEY"] = key
+    if entry.strip_http_proxy:
+        for k in _STRIP_HTTP_PROXY_KEYS:
+            env.pop(k, None)
+    for k, v in entry.env:
+        env[k] = v
     return env
 
 
@@ -61,46 +61,55 @@ def build_v01_guarded_tool_registry(
     citation_sink: list[Citation] | None = None,
     max_output_chars: int = 100_000,
 ) -> GuardedToolRegistry:
-    """注册 ``retrieve`` / ``read_ksfs`` / ``list_ksfs`` / ``write_draft``；可选挂载高德天气 MCP 工具。"""
+    """注册 ``retrieve`` / ``read_ksfs`` / ``list_ksfs`` / ``write_draft``；按配置挂载 MCP 工具。"""
     mcp_tool_specs: list[Any] = []
-    amap_cmd: list[str] | None = None
-    amap_env: dict[str, str] | None = None
-    if settings.skills_amap_weather_enabled:
-        cmd = amap_weather_mcp_command()
-        script = Path(cmd[1])
+    mcp_handlers: list[tuple[Any, list[str], dict[str, str]]] = []
+    seen_mcp_tool_names: set[str] = set()
+
+    repo = resolve_repo_root()
+    for entry in settings.mcp_servers:
+        if not entry.enabled:
+            continue
+        script = (repo / Path(entry.entrypoint)).resolve()
         if not script.is_file():
             _log.warning(
-                "高德天气 MCP 脚本不存在，已跳过：%s。"
-                "若 logos 安装在 site-packages，请设置环境变量 LOGOS_REPO_ROOT 指向本仓库根，"
-                "或使用 pip install -e .",
+                "MCP 技能 %s 的 entrypoint 不存在，已跳过：%s（可设置 LOGOS_REPO_ROOT）",
+                entry.id,
                 script,
             )
+            continue
+        cmd = mcp_server_argv(repo, entry.entrypoint)
+        child_env = _mcp_child_env(entry)
+        try:
+            discovered = discover_mcp_tools_sync(cmd, child_env)
+        except ImportError as exc:
+            _log.error("MCP 技能 %s 未挂载（缺少 Python 包 mcp 等）：%s", entry.id, exc)
+        except Exception:  # noqa: BLE001
+            _log.exception("MCP tools/list 失败（技能 id=%s）", entry.id)
         else:
-            amap_cmd, amap_env = cmd, _amap_mcp_child_env(settings)
-            try:
-                discovered = discover_mcp_tools_sync(amap_cmd, amap_env)
-            except ImportError as exc:
-                _log.error(
-                    "高德天气 MCP 未挂载（缺少 Python 包 mcp 或依赖不完整）：%s",
-                    exc,
-                )
-            except Exception:  # noqa: BLE001
-                _log.exception("MCP tools/list 失败（高德天气）")
-            else:
-                for t in discovered:
-                    if t.name in V01_SG_TOOL_WHITELIST:
-                        _log.warning("忽略与内置工具同名的 MCP 工具：%s", t.name)
-                        continue
-                    mcp_tool_specs.append(t)
-                if mcp_tool_specs:
-                    _log.info(
-                        "已挂载高德天气 MCP 工具：%s",
-                        ", ".join(t.name for t in mcp_tool_specs),
-                    )
-                elif not mcp_tool_specs:
+            for t in discovered:
+                if t.name in V01_SG_TOOL_WHITELIST:
                     _log.warning(
-                        "skills.amap_weather.enabled 为 true 但 MCP 未注册任何工具（tools/list 为空或均被过滤）"
+                        "忽略与内置工具同名的 MCP 工具：%s（来自 %s）",
+                        t.name,
+                        entry.id,
                     )
+                    continue
+                if t.name in seen_mcp_tool_names:
+                    _log.warning(
+                        "忽略重名 MCP 工具：%s（来自 %s，已先由其它技能注册）",
+                        t.name,
+                        entry.id,
+                    )
+                    continue
+                seen_mcp_tool_names.add(t.name)
+                mcp_tool_specs.append(t)
+                mcp_handlers.append((t, cmd, child_env))
+            if not discovered:
+                _log.warning(
+                    "MCP 技能 %s 已启用但 tools/list 为空",
+                    entry.id,
+                )
 
     extra_names = frozenset(t.name for t in mcp_tool_specs)
     allowed = V01_SG_TOOL_WHITELIST | extra_names
@@ -225,17 +234,16 @@ def build_v01_guarded_tool_registry(
         },
         handler=_write_draft,
     )
-    if mcp_tool_specs and amap_cmd is not None and amap_env is not None:
-        for t in mcp_tool_specs:
-            params: dict[str, Any]
-            if isinstance(t.inputSchema, dict):
-                params = t.inputSchema
-            else:
-                params = {"type": "object", "properties": {}}
-            reg.register(
-                t.name,
-                description=t.description or f"MCP 工具 {t.name}",
-                parameters=params,
-                handler=make_stdio_mcp_tool_handler(amap_cmd, amap_env, t.name),
-            )
+    for t, cmd, child_env in mcp_handlers:
+        params: dict[str, Any]
+        if isinstance(t.inputSchema, dict):
+            params = t.inputSchema
+        else:
+            params = {"type": "object", "properties": {}}
+        reg.register(
+            t.name,
+            description=t.description or f"MCP 工具 {t.name}",
+            parameters=params,
+            handler=make_stdio_mcp_tool_handler(cmd, child_env, t.name),
+        )
     return reg

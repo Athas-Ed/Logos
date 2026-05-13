@@ -11,7 +11,7 @@
 
     python scripts/run_backend_stub.py
 
-若 ``config`` 中启用了 ``skills.amap_weather``，请确认当前解释器已安装 ``mcp``（``pip install "mcp>=1.2.0"`` 或 ``pip install -e .``）；否则启动时会在终端提示且无法挂载天气 MCP。
+若 ``config`` 中 ``skills.mcp_servers`` 有 ``enabled: true`` 的项，请确认当前解释器已安装 ``mcp``（``pip install "mcp>=1.2.0"`` 或 ``pip install -e .``）；否则 MCP 无法挂载。
 """
 
 from __future__ import annotations
@@ -74,10 +74,11 @@ def main() -> None:
             return [[0.0] * 512 for _ in texts]
 
     settings = load_app_settings(config_dir=_REPO_ROOT / "config")
-    if settings.skills_amap_weather_enabled and importlib.util.find_spec("mcp") is None:
+    if any(s.enabled for s in settings.mcp_servers) and importlib.util.find_spec(
+        "mcp"
+    ) is None:
         print(
-            "\n[Logos] 配置 skills.amap_weather.enabled=true，但当前解释器未安装 Python 包 mcp，"
-            "高德 MCP 无法挂载。\n"
+            "\n[Logos] 已启用至少一个 MCP 技能（skills.mcp_servers），但当前解释器未安装 Python 包 mcp。\n"
             f'  请执行: "{sys.executable}" -m pip install "mcp>=1.2.0"\n'
             "  或在仓库根: pip install -e .\n"
             "  安装后请重新启动本脚本。\n",
