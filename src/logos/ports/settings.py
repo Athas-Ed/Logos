@@ -1,6 +1,17 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+
+
+@dataclass(frozen=True, slots=True)
+class McpServerEntry:
+    """声明式 MCP stdio 插件（相对仓库根的 ``entrypoint`` 脚本）。"""
+
+    id: str
+    enabled: bool
+    entrypoint: str
+    strip_http_proxy: bool = False
+    env: frozenset[tuple[str, str]] = field(default_factory=frozenset)
 
 
 @dataclass(frozen=True, slots=True)
@@ -32,6 +43,5 @@ class AppSettings:
     developer_show_dev_tools_ui: bool = False
     #: 启动初值；运行时可由 :class:`~logos.harness.ii_layer.developer.DeveloperToggles` 改写
     developer_prompt_echo: bool = False
-    #: 高德天气 MCP（``skills/amap-weather-mcp``）；密钥走 ``skills.amap_weather.web_api_key`` 或环境变量
-    skills_amap_weather_enabled: bool = False
-    skills_amap_weather_web_api_key: str = ""
+    #: MCP stdio 技能列表（``config`` 中 ``skills.mcp_servers``）；见 ``重要子系统开发文档/MCP开发.md``
+    mcp_servers: tuple[McpServerEntry, ...] = field(default_factory=tuple)

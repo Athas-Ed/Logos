@@ -1,0 +1,23 @@
+---
+description: 修改 I&I HTTP/SSE 时同步契约文档、单测与 GUI（与 API终极文档 4.1 一致）
+globs:
+  - "src/logos/harness/ii_layer/api_v1.py"
+  - "src/logos/harness/ii_layer/deps.py"
+  - "original_docs/重要子系统开发文档/API-V0.2.md"
+  - "tests/test_stream5_api.py"
+  - "src/gui/src/api/sseChat.ts"
+  - "src/gui/src/api/developer.ts"
+---
+
+# Logos：`/api/v1` 契约同步
+
+凡编辑上述 glob 内文件、或新增/改名 **SSE `event:`**、**JSON 字段**、**路由路径** 时：
+
+1. **同一变更**内完成：`api_v1.py`（及直接相关的 `deps`）→ **`API-V0.2.md`** → **`tests/test_stream5_api.py`** → 若对前端可见则 **`sseChat.ts` / `developer.ts`**（及 `src/gui/src/types/` 中与 chat 相关的类型）。
+2. **提交说明**中单列一行：  
+   - `契约：无变更`（对外事件名与 JSON 形状不变），或  
+   - `契约：已更新 API-V0.2（摘要：……）`。
+
+细则与背景见 **`original_docs/重要子系统开发文档/API终极文档.md`** 第 4.1 节。
+
+**提交校验**：启用 `git config core.hooksPath .githooks` 后，由 **`scripts/check_api_contract_commit_msg.py`**（`commit-msg`）强制提交说明含 `契约：` 行；由 **`scripts/check_api_contract_staged_bundle.py`**（`pre-commit`）在暂存命中 `api_v1` / `deps` / `sseChat` / `developer` 时强制同批暂存 **`API-V0.2.md`** 与 **`tests/test_stream5_api.py`**。

@@ -28,10 +28,9 @@ developer:
   show_dev_tools_ui: false
   prompt_echo: false
 
+# MCP stdio 技能（高德、示例 echo 等）：见 original_docs/重要子系统开发文档/MCP开发.md
 skills:
-  amap_weather:
-    enabled: false
-    web_api_key: ""
+  mcp_servers: []
 
 llm:
   base_url: "https://api.deepseek.com/v1"

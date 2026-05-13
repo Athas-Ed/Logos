@@ -75,7 +75,7 @@ export interface StreamChatOptions {
 }
 
 /**
- * POST /api/v1/chat：V0.1 仅 SSE；用 fetch + ReadableStream 消费。
+ * POST /api/v1/chat：SSE；契约见 original_docs/重要子系统开发文档/API-V0.2.md。
  */
 export async function streamChat({
   messages,

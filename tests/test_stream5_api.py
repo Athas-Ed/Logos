@@ -15,7 +15,7 @@ from fastapi.testclient import TestClient
 from logos.harness.ii_layer.app import create_app
 from logos.harness.ii_layer.container import AppPorts
 from logos.harness.ii_layer.developer import DeveloperToggles
-from logos.ports import AppSettings
+from logos.ports import AppSettings, McpServerEntry
 from logos.ports.knowledge_source import SourceDocument
 from logos.ports.retrieval import Citation
 
@@ -82,8 +82,7 @@ def _make_ports(
     *,
     developer_show_ui: bool = False,
     developer_prompt_echo: bool = False,
-    skills_amap_weather_enabled: bool = False,
-    skills_amap_weather_web_api_key: str = "",
+    mcp_servers: tuple[McpServerEntry, ...] = (),
 ) -> AppPorts:
     settings = AppSettings(
         workspace_root=str(tmp_path / "workspace"),
@@ -98,8 +97,7 @@ def _make_ports(
         embedding_model_path="stub",
         developer_show_dev_tools_ui=developer_show_ui,
         developer_prompt_echo=developer_prompt_echo,
-        skills_amap_weather_enabled=skills_amap_weather_enabled,
-        skills_amap_weather_web_api_key=skills_amap_weather_web_api_key,
+        mcp_servers=mcp_servers,
     )
     return AppPorts(
         settings=settings,
@@ -200,11 +198,20 @@ def test_api_v1_developer_agent_tools_forbidden(tmp_path: Path) -> None:
 
 
 def test_api_v1_developer_agent_tools_includes_mcp(tmp_path: Path) -> None:
+    mcp = (
+        McpServerEntry(
+            id="amap_weather",
+            enabled=True,
+            entrypoint="skills/amap-weather-mcp/server.py",
+            strip_http_proxy=True,
+            env=frozenset(),
+        ),
+    )
     app = create_app(
         _make_ports(
             tmp_path,
             developer_show_ui=True,
-            skills_amap_weather_enabled=True,
+            mcp_servers=mcp,
         )
     )
     with TestClient(app) as client:
@@ -212,8 +219,10 @@ def test_api_v1_developer_agent_tools_includes_mcp(tmp_path: Path) -> None:
     assert r.status_code == 200
     data = r.json()
     assert "query_weather" in data["tools"]
-    assert data["skills_amap_weather_enabled"] is True
-    assert data["amap_weather_script_exists"] is True
+    assert any(
+        x.get("id") == "amap_weather" and x.get("enabled") is True
+        for x in data["mcp_servers"]
+    )
 
 
 def test_api_v1_developer_put_prompt_echo_forbidden(tmp_path: Path) -> None:

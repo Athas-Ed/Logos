@@ -1,0 +1,4 @@
+#!/bin/sh
+# Logos：API 契约提交说明检查。安装：git config core.hooksPath .githooks
+ROOT="$(git rev-parse --show-toplevel)"
+exec python "$ROOT/scripts/check_api_contract_commit_msg.py" "$1"

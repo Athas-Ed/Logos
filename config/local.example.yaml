@@ -16,12 +16,20 @@
 #   https_proxy: "http://127.0.0.1:26561"
 #   no_proxy: "127.0.0.1,localhost"
 
-# 可选：高德天气 MCP（skills/amap-weather-mcp）；需在高德开放平台申请 Web服务 Key
+# 可选：MCP stdio 技能（见 original_docs/重要子系统开发文档/MCP开发.md）
 # skills:
-#   amap_weather:
-#     enabled: true
-#     web_api_key: "你的高德Web服务Key"
-# 等价环境变量：LOGOS_SKILLS__AMAP_WEATHER__ENABLED=true LOGOS_SKILLS__AMAP_WEATHER__WEB_API_KEY=...
+#   mcp_servers:
+#     - id: amap_weather
+#       enabled: true
+#       entrypoint: skills/amap-weather-mcp/server.py
+#       strip_http_proxy: true
+#       env:
+#         AMAP_WEB_KEY: "你的高德Web服务Key"
+#     - id: example_echo
+#       enabled: true
+#       entrypoint: skills/example-stdio-mcp/server.py
+#       strip_http_proxy: false
+#       env: {}
 
 # 可选：覆盖路径类
 # paths:

@@ -58,6 +58,34 @@ def test_load_merged_from_repo_config() -> None:
     assert data.get("logging", {}).get("format") == "json"
     s = merged_dict_to_app_settings(data)
     assert s.logs_root == "./logs"
+    assert isinstance(s.mcp_servers, tuple)
+
+
+def test_mcp_servers_from_yaml(tmp_path: Path) -> None:
+    cfg = tmp_path / "config"
+    cfg.mkdir()
+    (cfg / "defaults.yaml").write_text(
+        "paths:\n  logs_root: ./logs\n  workspace_root: ./w\n"
+        "  example_ksfs_root: ./e\n  ksfs_root: ./k\n  index_root: ./i\n"
+        "  hsi_sqlite_path: ./h\n"
+        "skills:\n"
+        "  mcp_servers:\n"
+        "    - id: a\n"
+        "      enabled: true\n"
+        "      entrypoint: skills/x/server.py\n"
+        "      strip_http_proxy: true\n"
+        "      env:\n"
+        "        FOO: bar\n",
+        encoding="utf-8",
+    )
+    s = load_app_settings(cfg)
+    assert len(s.mcp_servers) == 1
+    e = s.mcp_servers[0]
+    assert e.id == "a"
+    assert e.enabled is True
+    assert e.entrypoint == "skills/x/server.py"
+    assert e.strip_http_proxy is True
+    assert ("FOO", "bar") in e.env
 
 
 def test_logging_yaml_layer_merges(tmp_path: Path) -> None:

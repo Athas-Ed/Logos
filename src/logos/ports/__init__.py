@@ -5,11 +5,12 @@ from logos.ports.knowledge_source import KnowledgeSource, SourceDocument
 from logos.ports.llm import ChatMessage, LLMClient
 from logos.ports.metadata import MetadataIndex, MetadataRecord
 from logos.ports.retrieval import Citation, RetrievalService
-from logos.ports.settings import AppSettings
+from logos.ports.settings import AppSettings, McpServerEntry
 from logos.ports.vector import SemanticStore, VectorQueryHit
 
 __all__ = [
     "AppSettings",
+    "McpServerEntry",
     "ChatMessage",
     "Citation",
     "KnowledgeSource",

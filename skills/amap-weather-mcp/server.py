@@ -27,8 +27,9 @@ async def query_weather(city: str) -> str:
     key = _read_web_key()
     if not key:
         return (
-            "error: 未配置高德 Web服务 Key。请在 Logos 的 config/local.yaml 中填写 "
-            "skills.amap_weather.web_api_key，并设置 skills.amap_weather.enabled: true；"
+            "error: 未配置高德 Web服务 Key。请在 Logos 的 ``config/local.yaml`` 中于 "
+            "``skills.mcp_servers`` 下为本技能配置 ``env.AMAP_WEB_KEY``（或等价环境变量）；"
+            "并设置对应条目的 ``enabled: true``；"
             "或自行以环境变量 AMAP_WEB_KEY 启动本进程后重试。"
         )
     city_q = (city or "").strip()

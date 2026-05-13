@@ -6,7 +6,7 @@ from typing import Protocol, runtime_checkable
 
 @dataclass(frozen=True, slots=True)
 class Citation:
-    """与 ``API-V0.1.md`` 中 SSE ``citations.items`` 字段对齐（path / snippet / score）。"""
+    """与 ``API-V0.2.md`` 中 SSE ``citations.items`` 字段对齐（path / snippet / score）。"""
 
     path: str
     snippet: str

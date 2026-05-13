@@ -4,7 +4,9 @@
 
 ## 配置放哪里（密钥）
 
-**推荐：走 Logos 应用配置（`config/local.yaml`）**，由宿主在拉起子进程时注入环境变量 `AMAP_WEB_KEY`。理由：密钥与运行环境一致、不入库、可统一用 `LOGOS_SKILLS__AMAP_WEATHER__WEB_API_KEY` 覆盖；Skill 包保持可移植、不包含私密文件。
+**推荐：走 Logos 应用配置（`config/local.yaml`）**，在 **`skills.mcp_servers`** 中为高德条目设置 `env.AMAP_WEB_KEY`，并由宿主在拉起子进程时注入。理由：密钥与运行环境一致、不入库；Skill 包保持可移植、不包含私密文件。
+
+若将 Key 只写在 Skill 目录内的文件（选项 b），容易出现误提交、多环境重复配置，且与「S&G 统一治理」分叉。
 
 若将 Key 只写在 Skill 目录内的文件（选项 b），容易出现误提交、多环境重复配置，且与「S&G 统一治理」分叉。
 
@@ -19,9 +21,13 @@
 
 ```yaml
 skills:
-  amap_weather:
-    enabled: true
-    web_api_key: "你的Key"
+  mcp_servers:
+    - id: amap_weather
+      enabled: true
+      entrypoint: skills/amap-weather-mcp/server.py
+      strip_http_proxy: true
+      env:
+        AMAP_WEB_KEY: "你的Key"
 ```
 
 3. 重启后端；对话中模型可选用 `query_weather`，参数 `city` 为城市名或 6 位 `adcode`。
