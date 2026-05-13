@@ -227,6 +227,9 @@ def merged_dict_to_app_settings(data: Mapping[str, Any]) -> AppSettings:
             dev.get("show_dev_tools_ui"), default=False
         ),
         developer_prompt_echo=_coerce_truthy(dev.get("prompt_echo"), default=False),
+        sync_hsi_on_startup=_coerce_truthy(
+            paths.get("sync_hsi_on_startup"), default=False
+        ),
         mcp_servers=mcp_servers,
     )
 

@@ -6,6 +6,7 @@ from ._hash import content_hash_hex, normalize_text_for_storage
 from .hdl_sync import HdlSyncReport, default_hsi_db_path, sync_ksfs_hsi
 from .hsi_sqlite import SqliteMetadataIndex
 from .ksfs_filesystem import FilesystemKnowledgeSource, document_rel_posix
+from .registration import ensure_ksfs_hsi_registered
 
 __all__ = [
     "FilesystemKnowledgeSource",
@@ -14,6 +15,7 @@ __all__ = [
     "content_hash_hex",
     "default_hsi_db_path",
     "document_rel_posix",
+    "ensure_ksfs_hsi_registered",
     "normalize_text_for_storage",
     "sync_ksfs_hsi",
 ]
