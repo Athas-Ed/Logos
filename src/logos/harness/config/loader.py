@@ -162,7 +162,8 @@ def _parse_mcp_servers(skills: Mapping[str, Any]) -> tuple[McpServerEntry, ...]:
         out.append(
             McpServerEntry(
                 id=sid,
-                enabled=_coerce_truthy(item.get("enabled"), default=False),
+                # 已声明 id + entrypoint 即视为要挂载；省略 enabled 时默认开启，避免 silent skip
+                enabled=_coerce_truthy(item.get("enabled"), default=True),
                 entrypoint=entrypoint,
                 strip_http_proxy=_coerce_truthy(
                     item.get("strip_http_proxy"), default=False

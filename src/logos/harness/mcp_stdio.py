@@ -140,6 +140,8 @@ async def _with_stdio_session(
     command: list[str],
     env: Mapping[str, str] | None,
     work: Callable[..., Any],
+    *,
+    cwd: str | Path | None = None,
 ) -> Any:
     require_mcp_sdk_installed()
     assert ClientSession is not None
@@ -153,6 +155,7 @@ async def _with_stdio_session(
         command=command[0],
         args=command[1:],
         env=dict(env) if env is not None else None,
+        cwd=cwd,
     )
     async with stdio_client(params) as (read, write):
         async with ClientSession(read, write) as session:
@@ -168,11 +171,13 @@ async def _discover(session: Any) -> list[Any]:
 def discover_mcp_tools_sync(
     command: list[str],
     env: Mapping[str, str] | None = None,
+    *,
+    cwd: str | Path | None = None,
 ) -> list[Any]:
     """连接 MCP Server，执行 ``tools/list`` 后断开。"""
 
     async def _run() -> list[Any]:
-        return await _with_stdio_session(command, env, _discover)
+        return await _with_stdio_session(command, env, _discover, cwd=cwd)
 
     return _run_coroutine_in_worker_thread(lambda: _run())
 
@@ -192,6 +197,8 @@ def call_mcp_tool_sync(
     env: Mapping[str, str] | None,
     tool_name: str,
     arguments: Mapping[str, Any] | None,
+    *,
+    cwd: str | Path | None = None,
 ) -> str:
     """单次 ``tools/call``（每次调用启停子进程）。"""
 
@@ -199,7 +206,7 @@ def call_mcp_tool_sync(
         return await _call_named_tool(session, tool_name, arguments or {})
 
     return _run_coroutine_in_worker_thread(
-        lambda: _with_stdio_session(command, env, _work)
+        lambda: _with_stdio_session(command, env, _work, cwd=cwd)
     )
 
 
@@ -207,12 +214,14 @@ def make_stdio_mcp_tool_handler(
     command: list[str],
     env: Mapping[str, str] | None,
     tool_name: str,
+    *,
+    cwd: str | Path | None = None,
 ) -> Callable[..., str]:
     """返回可注册到 :class:`~logos.agent.tool_registry.ToolRegistry` 的同步 handler。"""
 
     def _handler(**kwargs: Any) -> str:
         try:
-            return call_mcp_tool_sync(command, env, tool_name, kwargs)
+            return call_mcp_tool_sync(command, env, tool_name, kwargs, cwd=cwd)
         except Exception as exc:  # noqa: BLE001 — 工具观测需可读
             _log.exception("MCP tools/call 失败 tool=%s", tool_name)
             return f"error: MCP 调用失败 — {type(exc).__name__}: {exc}"

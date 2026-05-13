@@ -88,6 +88,24 @@ def test_mcp_servers_from_yaml(tmp_path: Path) -> None:
     assert ("FOO", "bar") in e.env
 
 
+def test_mcp_servers_enabled_defaults_true_when_omitted(tmp_path: Path) -> None:
+    cfg = tmp_path / "config"
+    cfg.mkdir()
+    (cfg / "defaults.yaml").write_text(
+        "paths:\n  logs_root: ./logs\n  workspace_root: ./w\n"
+        "  example_ksfs_root: ./e\n  ksfs_root: ./k\n  index_root: ./i\n"
+        "  hsi_sqlite_path: ./h\n"
+        "skills:\n"
+        "  mcp_servers:\n"
+        "    - id: no_enabled_key\n"
+        "      entrypoint: skills/x/server.py\n",
+        encoding="utf-8",
+    )
+    s = load_app_settings(cfg)
+    assert len(s.mcp_servers) == 1
+    assert s.mcp_servers[0].enabled is True
+
+
 def test_logging_yaml_layer_merges(tmp_path: Path) -> None:
     cfg = tmp_path / "config"
     cfg.mkdir()

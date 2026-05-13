@@ -82,7 +82,7 @@ def build_v01_guarded_tool_registry(
         cmd = mcp_server_argv(repo, entry.entrypoint)
         child_env = _mcp_child_env(entry)
         try:
-            discovered = discover_mcp_tools_sync(cmd, child_env)
+            discovered = discover_mcp_tools_sync(cmd, child_env, cwd=repo)
         except ImportError as exc:
             _log.error("MCP 技能 %s 未挂载（缺少 Python 包 mcp 等）：%s", entry.id, exc)
         except Exception:  # noqa: BLE001
@@ -208,6 +208,6 @@ def build_v01_guarded_tool_registry(
             t.name,
             description=t.description or f"MCP 工具 {t.name}",
             parameters=params,
-            handler=make_stdio_mcp_tool_handler(cmd, child_env, t.name),
+            handler=make_stdio_mcp_tool_handler(cmd, child_env, t.name, cwd=repo),
         )
     return reg
