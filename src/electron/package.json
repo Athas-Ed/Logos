@@ -2,16 +2,55 @@
   "name": "logos-electron",
   "private": true,
   "version": "0.1.0",
-  "description": "Logos Electron 桌面壳（第三阶段 P0）",
+  "description": "Logos Electron 桌面壳（第三阶段 P0 已交付；迭代见第四阶段计划）",
+  "author": "Logos",
   "main": "dist/main.js",
   "scripts": {
     "build": "tsc -p tsconfig.main.json && tsc -p tsconfig.preload.json",
     "electron:dev": "npm run build && electron .",
+    "gui:build": "npm --prefix ../gui run build",
+    "package:win": "npm run gui:build && npm run build && electron-builder --win portable dir",
+    "package:win:with-mirror": "npm run gui:build && npm run build && node package-electron-builder-with-mirror.cjs",
     "install:with-mirror": "node install-with-electron-mirror.cjs"
+  },
+  "build": {
+    "appId": "dev.logos.desktop",
+    "productName": "Logos",
+    "compression": "normal",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../gui/dist",
+        "to": "gui"
+      }
+    ],
+    "nsis": {
+      "warningsAsErrors": false
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-portable.${ext}"
+    },
+    "win": {
+      "target": [
+        "portable",
+        "dir"
+      ],
+      "signAndEditExecutable": false
+    }
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
     "electron": "^33.4.11",
+    "electron-builder": "^26.8.1",
     "typescript": "~5.6.3"
+  },
+  "overrides": {
+    "tar": "^7.5.15"
   }
 }

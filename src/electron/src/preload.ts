@@ -8,9 +8,12 @@ export type LogosBackendIpcStatus = {
 };
 
 /**
- * 窄 IPC：与 `GUI开发文档.md` §2.3、第三阶段步 6 对齐；Renderer 仅订阅 Main 推送的状态。
+ * 窄 IPC：与 `GUI开发文档.md` §2.3、§3 对齐；Renderer 通过 `getApiBase`（打包态）与 `onBackendStatus` 与 Main 协同。
  */
 contextBridge.exposeInMainWorld("logosElectron", {
+  getApiBase(): Promise<string> {
+    return ipcRenderer.invoke("logos:get-api-base");
+  },
   onBackendStatus(cb: (status: LogosBackendIpcStatus) => void): () => void {
     const channel = "logos:backend-status";
     const handler = (_evt: unknown, payload: LogosBackendIpcStatus) => {

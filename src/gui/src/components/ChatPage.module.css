@@ -7,6 +7,27 @@
   padding: 1rem 1.25rem 1.5rem;
 }
 
+.shellBannerWarn,
+.shellBannerErr {
+  margin-bottom: 0.75rem;
+  padding: 0.55rem 0.85rem;
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.shellBannerWarn {
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  color: var(--text);
+}
+
+.shellBannerErr {
+  border: 1px solid color-mix(in srgb, var(--err) 55%, var(--border));
+  background: color-mix(in srgb, var(--err) 12%, var(--surface));
+  color: var(--text);
+}
+
 .header {
   display: flex;
   flex-wrap: wrap;

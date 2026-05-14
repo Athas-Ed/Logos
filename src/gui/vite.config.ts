@@ -7,6 +7,7 @@ export default defineConfig(({ mode }) => {
     env.VITE_DEV_API_PROXY_TARGET?.trim() || "http://127.0.0.1:8000";
 
   return {
+    base: "./",
     plugins: [react()],
     server: {
       port: 5173,

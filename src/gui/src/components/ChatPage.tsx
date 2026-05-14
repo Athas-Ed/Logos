@@ -65,6 +65,10 @@ function normalizeLogProfile(raw: string): LogProfile | null {
 }
 
 export function ChatPage() {
+  const [shellBackendHint, setShellBackendHint] = useState<string | null>(null);
+  const [shellBackendTone, setShellBackendTone] = useState<"warn" | "err">(
+    "warn",
+  );
   const [healthOk, setHealthOk] = useState<boolean | null>(null);
   const [operatingMode, setOperatingMode] =
     useState<OperatingMode>("author");
@@ -88,6 +92,30 @@ export function ChatPage() {
   const refreshHealth = useCallback(async () => {
     setHealthOk(await fetchHealth());
   }, []);
+
+  useEffect(() => {
+    const bridge = window.logosElectron?.onBackendStatus;
+    if (!bridge) {
+      return;
+    }
+    return bridge((s) => {
+      if (s.state === "ready") {
+        setShellBackendHint(null);
+        void refreshHealth();
+        void (async () => {
+          const b = await fetchBootstrap();
+          if (b) {
+            const lp = normalizeLogProfile(b.log_profile);
+            if (lp) setLogProfile(lp);
+            setOperatingMode(normalizeOperatingFromServer(b.operating_mode));
+          }
+        })();
+        return;
+      }
+      setShellBackendTone(s.state === "failed" ? "err" : "warn");
+      setShellBackendHint(s.message ?? (s.state === "failed" ? "后端不可用" : "后端恢复中"));
+    });
+  }, [refreshHealth]);
 
   useEffect(() => {
     void refreshHealth();
@@ -241,6 +269,18 @@ export function ChatPage() {
 
   return (
     <div className={styles.layout}>
+      {shellBackendHint ? (
+        <div
+          className={
+            shellBackendTone === "err"
+              ? styles.shellBannerErr
+              : styles.shellBannerWarn
+          }
+          role="status"
+        >
+          {shellBackendHint}
+        </div>
+      ) : null}
       <header className={styles.header}>
         <div className={styles.titleBlock}>
           <h1 className={styles.title}>Logos 对话</h1>
@@ -325,6 +365,10 @@ export function ChatPage() {
           </button>
           <div
             className={styles.health}
+            data-testid="health-indicator"
+            data-health={
+              healthOk === null ? "unknown" : healthOk ? "ok" : "bad"
+            }
             title={healthOk === null ? "未检测" : healthOk ? "后端正常" : "后端不可用"}
           >
             <span

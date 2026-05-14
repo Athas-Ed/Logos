@@ -5,7 +5,7 @@
 > - **展示档位、日志 profile、`bootstrap` 语义** → 以 **SPEC** 与 **`API-V0.2.md`** 为准；  
 > - **产品形态（侧边栏优先、Electron 壳）** → 以 **`DECISIONS.md` §10** 为准；  
 > - **进程模型、安全边界、目录约定、Cursor 协作** → **以本文为准**。  
-> **更新**：随 Electron 落地与 CI 策略迭代；与 **`第三阶段开发计划.md`** 范围同步。
+> **更新**：随 Electron 落地与 CI 策略迭代；**第三阶段 P0** 已结案（见 **`已完成/第三阶段开发计划.md`**）；**第四阶段**主排期已定案（见 **`第四阶段开发计划.md`**）；Electron **安装/签名/自动更新** 路线图见 **`产品化文档.md`**。
 
 ---
 
@@ -15,8 +15,8 @@
 |------|------|
 | **Web GUI** | `src/gui/`：Vite + React + TypeScript；开发服务器默认端口 **5173**。 |
 | **开发态 API** | `vite.config.ts` 将 **`/api` 代理**到 `VITE_DEV_API_PROXY_TARGET`（默认 `http://127.0.0.1:8000`）。 |
-| **HTTP 客户端** | `src/gui/src/api/`：`health.ts`、`bootstrap.ts`、`sseChat.ts`、`developer.ts`；类型见 `src/gui/src/types/`。 |
-| **Electron** | **物理路径已定案：`src/electron/`**（Main、preload、壳层专用 `package.json` / tsconfig 等）；与 `src/gui`、`src/logos` 并列，见 §6.1。**开发态启动**：先 `cd src/gui && npm run dev`，再 `cd src/electron && npm install && npm run electron:dev`（Main 先展示内嵌加载页，再轮询 **`GET /api/v1/health`** 就绪后 `loadURL` 至默认 `http://127.0.0.1:5173/`；若 5173 未监听则 Main 内警告对话框 + stderr 提示）。**Main 默认**在仓库根 `spawn` **`scripts/run_backend_stub.py`**（`LOGOS_REPO_ROOT`、优先 `.venv` 下 Python，与 `README` 一致）；若后端已在外部启动，设 **`LOGOS_ELECTRON_SKIP_BACKEND=1`**（`scripts/start_logos.*` 已设；此时**跳过**健康门）。可选覆盖：`LOGOS_GUI_DEV_HOST`、`LOGOS_GUI_DEV_PORT`、`LOGOS_PYTHON`、`LOGOS_BACKEND_USE_UV`、`LOGOS_ELECTRON_BACKEND_STDIO`、`LOGOS_BACKEND_HEALTH_URL` 或 `LOGOS_BACKEND_API_ORIGIN`、`LOGOS_ELECTRON_BACKEND_READY_TIMEOUT_MS`（默认 120000，**0** 表示仅探测一次）、`LOGOS_ELECTRON_BACKEND_HEALTH_POLL_MS`（默认 400）。若安装 Electron 时出现 **`read ECONNRESET`**，在 `src/electron` 使用 **`npm run install:with-mirror`**（见 **`README.md`**）。**退出清理**：`before-quit` 与 `will-quit` 均会尝试终止后端；非 macOS 在 **`window-all-closed`** 于 `app.quit()` 前再终止一次；Windows 使用 **`taskkill /PID <pid> /T /F`** 结束进程树，Unix 对子进程发 **`SIGTERM`**（重复调用容错）。 |
+| **HTTP 客户端** | `src/gui/src/api/`：`apiBase.ts`（`initApiBase` / `apiUrl`，与 Electron `getApiBase` 对齐）、`health.ts`、`bootstrap.ts`、`sseChat.ts`、`developer.ts`；类型见 `src/gui/src/types/`。 |
+| **Electron** | **物理路径已定案：`src/electron/`**（Main、preload、壳层专用 `package.json` / tsconfig 等）；与 `src/gui`、`src/logos` 并列，见 §6.1。**开发态启动**：先 `cd src/gui && npm run dev`，再 `cd src/electron && npm install && npm run electron:dev`（Main 先展示内嵌加载页，再轮询 **`GET /api/v1/health`** 就绪后 `loadURL` 至默认 `http://127.0.0.1:5173/`；若 5173 未监听则 Main 内警告对话框 + stderr 提示）。**Main 默认**在仓库根 `spawn` **`scripts/run_backend_stub.py`**（`LOGOS_REPO_ROOT`、优先 `.venv` 下 Python，与 `README` 一致）；若后端已在外部启动，设 **`LOGOS_ELECTRON_SKIP_BACKEND=1`**（`scripts/start_logos.*` 已设；此时**跳过**健康门）。可选覆盖：`LOGOS_GUI_DEV_HOST`、`LOGOS_GUI_DEV_PORT`、`LOGOS_PYTHON`、`LOGOS_BACKEND_USE_UV`、`LOGOS_ELECTRON_BACKEND_STDIO`、`LOGOS_BACKEND_HEALTH_URL` 或 `LOGOS_BACKEND_API_ORIGIN`、`LOGOS_ELECTRON_BACKEND_READY_TIMEOUT_MS`（默认 120000，**0** 表示仅探测一次）、`LOGOS_ELECTRON_BACKEND_HEALTH_POLL_MS`（默认 400）。**打包态**：`npm run package:win` 产出 Windows portable，`loadFile` 加载随包 `gui`；`preload` 暴露 **`getApiBase`**（与 health 对齐的 API origin；开发态 Electron 返回空串以继续走 Vite 代理）与 **`onBackendStatus`**；生产默认门控 **DevTools**（`LOGOS_ELECTRON_ALLOW_DEVTOOLS=1` 可开）。若安装 Electron 时出现 **`read ECONNRESET`**，在 `src/electron` 使用 **`npm run install:with-mirror`**（见 **`README.md`**）。**退出清理**：`before-quit` 与 `will-quit` 均会尝试终止后端；非 macOS 在 **`window-all-closed`** 于 `app.quit()` 前再终止一次；Windows 使用 **`taskkill /PID <pid> /T /F`** 结束进程树，Unix 对子进程发 **`SIGTERM`**（重复调用容错）。 |
 
 ---
 
@@ -130,7 +130,7 @@
 ### 8.1 单会话 = 单意图 = 单分支
 
 - **每个 Cursor 会话**绑定：**一条 git 分支** + **一个清晰目标**（例如「仅 Electron Main 拉起后端」或「仅 SSE 断线重连 UI」）。  
-- 在会话首条消息粘贴 **`第三阶段开发计划.md`** 或本文件中的对应小节，并写明：**禁止修改** `src/logos/persistence/` 等无关目录（除非任务本身需要）。
+- 在会话首条消息粘贴 **`第四阶段开发计划.md`**（或 **`已完成/第三阶段开发计划.md`** 中仅涉壳层/P0 的对照小节）或本文件中的对应小节，并写明：**禁止修改** `src/logos/persistence/` 等无关目录（除非任务本身需要）。
 
 ### 8.2 契约轨与界面轨分离
 
@@ -160,7 +160,7 @@
 
 ---
 
-## 9. 测试与 CI 期望（第三阶段对齐）
+## 9. 测试与 CI 期望（第三阶段 P0 已对齐；扩展见第四阶段）
 
 | 层级 | 目标 |
 |------|------|
@@ -172,12 +172,12 @@
 
 ## 10. 与阶段计划的对应关系
 
-| 第三阶段内容 | 本文锚点 |
+| 阶段与内容 | 本文锚点 |
 |----------------|----------|
-| P0 Electron HA | §2、§3、§4、§9 |
-| P0 打包 | §2.2、§9 |
-| P1 契约工程升级 | §7、**`API终极文档.md`** §4.3 |
-| P1 A7 / MCP | 以后端与 CLI 为主；GUI 仅在需要暴露按钮或路径时遵循 §6 |
+| **第三阶段 P0**（已结案）Electron HA | §2、§3、§4、§9 |
+| **第三阶段 P0** 打包 | §2.2、§9 |
+| **第四阶段** P1 契约工程升级 | **顺延下阶段**；跟踪 **`API终极文档.md`** §4.3、§6 |
+| **第四阶段** P1 A7 / MCP | 以后端与 CLI 为主；GUI 仅在需要暴露按钮或路径时遵循 §6；排期见 **`第四阶段开发计划.md`** |
 
 ---
 
@@ -185,7 +185,9 @@
 
 | 日期 | 说明 |
 |------|------|
-| 2026-05-13 | 初版：与 **`第三阶段开发计划.md`**（已定案 P0+P1）对齐；Electron 定案 + Cursor 工作法 + 契约纪律。 |
+| 2026-05-13 | 初版：与 **`第三阶段开发计划.md`**（已定案 P0+P1；后 P1 迁至第四阶段）对齐；Electron 定案 + Cursor 工作法 + 契约纪律。 |
 | 2026-05-13 | **§6.1**：定案 Electron 物理路径为 **`src/electron/`**；§1 表与 §6 路径表同步。 |
-| 2026-05-13 | §1：补充 **Electron 开发态启动命令** 与 `LOGOS_GUI_DEV_*` 环境变量，对齐 **`第三阶段开发计划.md`** M-A（步 1～2）。 |
+| 2026-05-13 | §1：补充 **Electron 开发态启动命令** 与 `LOGOS_GUI_DEV_*` 环境变量，对齐 **`已完成/第三阶段开发计划.md`** M-A（步 1～2）。 |
 | 2026-05-13 | §1：Electron 依赖安装改为 **`npm run install:with-mirror`**（`ELECTRON_MIRROR`），避免 npm 10+ 对项目级 `electron_mirror` 的警告；与 `README.md` 互链。 |
+| 2026-05-14 | §1：补充 **`apiBase` / `apiUrl`**、打包 **`loadFile` + `getApiBase`**、DevTools 门控与 **`package:win`**；与第三阶段步 8～11 对齐。 |
+| 2026-05-14 | 阶段索引：第四阶段主排期**已定案**（A7→MCP→Obs）；契约/产品化大块顺延；互链 **`产品化文档.md`**。 |

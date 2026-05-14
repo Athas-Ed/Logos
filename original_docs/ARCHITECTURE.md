@@ -110,6 +110,7 @@ Logos/
 ## 4. 一键启动与 GitHub
 
 - **应提交**：`scripts/`、README 启动说明、**`config/local.example.yaml`**。
+- **启动拓扑（开发 / 打包）**：桩后端默认 `:8000`（`scripts/run_backend_stub.py`）；浏览器或 Electron 开发态下 GUI 由 Vite `:5173` 提供，HTTP 以相对路径 `/api/v1/...` 经 Vite 代理至后端；Electron 打包态从 `file://` 加载随包 `gui` 静态资源，由 preload `getApiBase` 提供绝对 API origin 直连后端；Electron Main 负责子进程 spawn、健康门、有限次崩溃重启、退出清理与单实例。细节以 **`重要子系统开发文档/GUI开发文档.md`** §1、§4 与根 **`README.md`** 为准。
 - **可不提交**：大二进制、`config/local.yaml`、`.index/`、**`logs/**/*.log`**（运行时落盘）、默认 **`workspace/`** 用户内容（例外见 `.gitignore` 与 `workspace/README.md`）；**`logs/`** 下说明与占位目录见 **`logs/README.md`**。
 
 ---
@@ -120,4 +121,4 @@ Logos/
 
 ---
 
-*最后更新：2026-05-13 — 对齐 `logs/daily` 与 `logs/maint` 落盘约定、占位目录与 .gitignore。*
+*最后更新：2026-05-14 — 补充启动拓扑（Vite 代理 / Electron 打包 API 基址）。*
