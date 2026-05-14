@@ -173,6 +173,20 @@ class OpenAICompatibleChatClient:
                             piece = str(piece)
                         if piece:
                             yield piece
+        except httpx.ConnectError as exc:
+            _log.exception("无法连接到 LLM 服务端（流式）")
+            hint = (
+                f"无法连接到 LLM 服务（{url}）。常见原因：网络不可达、"
+                "`config/local.yaml` 中 `llm.base_url` 主机或端口错误、对端未监听、或被防火墙/代理拦截。"
+                "Windows 下 `WinError 10061` 表示「连接被拒绝」（该地址上没有服务在监听）。"
+                "若你只想用本地桩模型，请去掉或清空 `llm.api_key`，或改回可访问的 base_url。"
+            )
+            raise RuntimeError(f"{hint} 原始错误: {exc!s}") from exc
+        except httpx.TimeoutException as exc:
+            _log.exception("LLM 请求超时（流式）")
+            raise RuntimeError(
+                f"连接 LLM 服务超时（{url}）。可适当增大超时配置或检查网络。原始错误: {exc!s}"
+            ) from exc
         except FileNotFoundError as exc:
             _log.exception(
                 "LLM HTTPS 请求出现 FileNotFoundError（常见：ca_bundle / SSL_CERT_FILE / "
@@ -206,6 +220,20 @@ class OpenAICompatibleChatClient:
         try:
             with httpx.Client(**self._httpx_client_kwargs()) as client:
                 response = client.post(url, json=payload, headers=headers)
+        except httpx.ConnectError as exc:
+            _log.exception("无法连接到 LLM 服务端")
+            hint = (
+                f"无法连接到 LLM 服务（{url}）。常见原因：网络不可达、"
+                "`config/local.yaml` 中 `llm.base_url` 主机或端口错误、对端未监听、或被防火墙/代理拦截。"
+                "Windows 下 `WinError 10061` 表示「连接被拒绝」。"
+                "若只想使用本地桩模型，请去掉或清空 `llm.api_key`。"
+            )
+            raise RuntimeError(f"{hint} 原始错误: {exc!s}") from exc
+        except httpx.TimeoutException as exc:
+            _log.exception("LLM 请求超时")
+            raise RuntimeError(
+                f"连接 LLM 服务超时（{url}）。可适当增大超时配置或检查网络。原始错误: {exc!s}"
+            ) from exc
         except FileNotFoundError as exc:
             fn = getattr(exc, "filename", None)
             _log.exception(

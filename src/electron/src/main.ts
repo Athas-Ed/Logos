@@ -1,6 +1,6 @@
 import { appendFileSync, existsSync, mkdirSync } from "fs";
 import { spawn, spawnSync, type ChildProcess } from "child_process";
-import { app, BrowserWindow, dialog } from "electron";
+import { app, BrowserWindow, dialog, ipcMain } from "electron";
 import * as net from "net";
 import * as path from "path";
 
@@ -46,6 +46,23 @@ function readBackendHealthUrl(): string {
     return `${origin.replace(/\/$/, "")}/api/v1/health`;
   }
   return DEFAULT_BACKEND_HEALTH_URL;
+}
+
+function deriveApiOriginFromHealthUrl(healthUrl: string): string {
+  try {
+    return new URL(healthUrl).origin;
+  } catch {
+    return "http://127.0.0.1:8000";
+  }
+}
+
+/** Renderer 直连 API 的 origin（打包态 `file://` 下不可用相对路径 `/api`）。 */
+function resolveRendererApiBase(): string {
+  const explicit = process.env.LOGOS_BACKEND_API_ORIGIN?.trim();
+  if (explicit) {
+    return explicit.replace(/\/$/, "");
+  }
+  return deriveApiOriginFromHealthUrl(readBackendHealthUrl());
 }
 
 function readBackendReadyTimeoutMs(): number {
@@ -119,7 +136,57 @@ async function waitForBackendHealth(healthUrl: string): Promise<boolean> {
   return false;
 }
 
+/** 自 ``startDir`` 起沿父目录查找含 ``scripts/run_backend_stub.py`` 的仓库根。 */
+function findRepoRootContainingStub(startDir: string): string | null {
+  let dir = path.resolve(startDir);
+  for (let i = 0; i < 20; i++) {
+    const marker = path.join(dir, "scripts", "run_backend_stub.py");
+    if (existsSync(marker)) {
+      return dir;
+    }
+    const parent = path.dirname(dir);
+    if (parent === dir) {
+      break;
+    }
+    dir = parent;
+  }
+  return null;
+}
+
+/** 便携版运行时由 electron-builder 注入，见 https://www.electron.build/nsis.html#portable */
+function packagedRepoSearchAnchorDirs(): string[] {
+  const dirs: string[] = [];
+  const portableDir = process.env.PORTABLE_EXECUTABLE_DIR?.trim();
+  if (portableDir) {
+    dirs.push(portableDir);
+  }
+  dirs.push(path.dirname(process.execPath));
+  dirs.push(path.resolve(process.resourcesPath, ".."));
+  return dirs;
+}
+
 function resolveRepoRoot(): string {
+  const envRoot = process.env.LOGOS_REPO_ROOT?.trim();
+  if (envRoot) {
+    const resolved = path.resolve(envRoot);
+    const marker = path.join(resolved, "scripts", "run_backend_stub.py");
+    if (existsSync(marker)) {
+      return resolved;
+    }
+    console.error(
+      `[logos-electron] LOGOS_REPO_ROOT=${JSON.stringify(resolved)} 下未找到 scripts/run_backend_stub.py，将尝试自动推断仓库根。`,
+    );
+  }
+  if (app.isPackaged) {
+    for (const start of packagedRepoSearchAnchorDirs()) {
+      const found = findRepoRootContainingStub(start);
+      if (found) {
+        return found;
+      }
+    }
+    // 与旧行为一致的最后回退（常指向 win-unpacked，未必含 scripts）
+    return path.resolve(app.getAppPath(), "..", "..");
+  }
   // `electron .` 时 `app.getAppPath()` 为 `.../src/electron`（含 package.json 的目录）
   return path.resolve(app.getAppPath(), "..", "..");
 }
@@ -286,6 +353,7 @@ async function recoverBackendAfterCrashBody(repoRoot: string): Promise<void> {
   }
   notifyRendererBackendStatus({ state: "ready", message: "后端已通过健康检查并恢复。" });
   appendShellMaintLog(`restart attempt ${attempt}: health OK`);
+  backendCrashRestartCount = 0;
 }
 
 
@@ -301,6 +369,24 @@ function startPythonBackend(repoRoot: string): void {
   }
 
   const script = path.join(repoRoot, "scripts", "run_backend_stub.py");
+  if (!existsSync(script)) {
+    const detail = [
+      `解析到的目录：${repoRoot}`,
+      "",
+      "请任选其一：",
+      "· 将应用（便携 exe 或 win-unpacked）放在完整克隆的仓库目录树内，使向上若干级能到达含 scripts/run_backend_stub.py 的仓库根；或",
+      "· 在启动前设置环境变量 LOGOS_REPO_ROOT 指向该仓库根；或",
+      "· 仅使用外部后端时设置 LOGOS_ELECTRON_SKIP_BACKEND=1。",
+    ].join("\n");
+    console.error(`[logos-electron] Backend script not found: ${script}`);
+    void dialog.showMessageBox({
+      type: "error",
+      title: "Logos",
+      message: "未找到 scripts/run_backend_stub.py",
+      detail,
+    });
+    return;
+  }
   const env = { ...process.env, LOGOS_REPO_ROOT: repoRoot };
   const logMode = process.env.LOGOS_ELECTRON_BACKEND_STDIO ?? "prefix";
 
@@ -456,6 +542,12 @@ function createMainWindow(): BrowserWindow {
     },
   });
 
+  win.webContents.on("devtools-opened", () => {
+    if (app.isPackaged && process.env.LOGOS_ELECTRON_ALLOW_DEVTOOLS !== "1") {
+      win.webContents.closeDevTools();
+    }
+  });
+
   primaryWindow = win;
   win.on("closed", () => {
     if (primaryWindow === win) {
@@ -505,17 +597,47 @@ function createMainWindow(): BrowserWindow {
       console.error("[logos-electron] Backend health OK.");
     }
 
-    await warnIfDevServerMissing(host, port);
-    try {
-      await win.loadURL(devUrl);
-    } catch (err) {
-      console.error("[logos-electron] loadURL failed:", err);
-      await dialog.showMessageBox(win, {
-        type: "error",
-        title: "Logos",
-        message: "无法加载开发态 GUI",
-        detail: String(err),
-      });
+    if (app.isPackaged) {
+      const guiIndex = path.join(process.resourcesPath, "gui", "index.html");
+      if (!existsSync(guiIndex)) {
+        const detail = [
+          `期望路径：${guiIndex}`,
+          "",
+          "请确认已先执行 npm run gui:build，且 electron-builder 的 extraResources 已把 ../gui/dist 拷入 resources/gui。",
+        ].join("\n");
+        console.error("[logos-electron] Packaged GUI index.html missing:", guiIndex);
+        await dialog.showMessageBox(win, {
+          type: "error",
+          title: "Logos",
+          message: "打包 GUI 缺失（index.html 不存在）",
+          detail,
+        });
+        return;
+      }
+      try {
+        await win.loadFile(guiIndex);
+      } catch (err) {
+        console.error("[logos-electron] loadFile (packaged GUI) failed:", err);
+        await dialog.showMessageBox(win, {
+          type: "error",
+          title: "Logos",
+          message: "无法加载打包 GUI",
+          detail: String(err),
+        });
+      }
+    } else {
+      await warnIfDevServerMissing(host, port);
+      try {
+        await win.loadURL(devUrl);
+      } catch (err) {
+        console.error("[logos-electron] loadURL failed:", err);
+        await dialog.showMessageBox(win, {
+          type: "error",
+          title: "Logos",
+          message: "无法加载开发态 GUI",
+          detail: String(err),
+        });
+      }
     }
   })();
 
@@ -527,6 +649,18 @@ const hasSingleInstanceLock = app.requestSingleInstanceLock();
 if (!hasSingleInstanceLock) {
   app.quit();
 } else {
+  if (process.platform === "win32") {
+    app.setAppUserModelId("dev.logos.desktop");
+  }
+
+  ipcMain.handle("logos:get-api-base", () => {
+    // 开发态 Renderer 仍挂 5173：相对 `/api` 走 Vite 代理，避免直连 8000 触发 CORS。
+    if (!app.isPackaged) {
+      return "";
+    }
+    return resolveRendererApiBase();
+  });
+
   app.on("second-instance", () => {
     focusPrimaryWindow();
   });

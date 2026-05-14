@@ -20,6 +20,13 @@ models/tooling/
 # Electron 壳（构建产物与依赖）
 src/electron/dist/
 src/electron/node_modules/
+src/electron/release/
+
+# GUI（构建产物、依赖、Playwright 输出）
+src/gui/node_modules/
+src/gui/dist/
+src/gui/playwright-report/
+src/gui/test-results/
 
 # Python
 __pycache__/

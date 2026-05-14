@@ -4,6 +4,8 @@ import type {
   OperatingMode,
   PresentationMode,
 } from "../types/chat";
+import { apiUrl } from "./apiBase";
+import { connectBackoffMs, delayWithSignal } from "./streamRetry";
 
 const CHAT_PATH = "/api/v1/chat";
 
@@ -145,22 +147,77 @@ export async function streamChat({
     body.presentation = presentation;
   }
 
-  const res = await fetch(CHAT_PATH, {
-    method: "POST",
-    headers: {
-      Accept: "text/event-stream",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-    signal,
-  });
+  const url = apiUrl(CHAT_PATH);
+  const maxConnectAttempts = 4;
+  let res: Response | undefined;
+  for (let attempt = 0; attempt < maxConnectAttempts; attempt++) {
+    if (attempt > 0) {
+      try {
+        await delayWithSignal(connectBackoffMs(attempt - 1), signal);
+      } catch {
+        onEvent({
+          kind: "error",
+          code: "aborted",
+          message: "已中断",
+        });
+        return;
+      }
+    }
+    try {
+      res = await fetch(url, {
+        method: "POST",
+        headers: {
+          Accept: "text/event-stream",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+        signal,
+      });
+    } catch (e) {
+      if (signal?.aborted) {
+        onEvent({
+          kind: "error",
+          code: "aborted",
+          message: "已中断",
+        });
+        return;
+      }
+      if (attempt === maxConnectAttempts - 1) {
+        onEvent({
+          kind: "error",
+          code: "network",
+          message: e instanceof Error ? e.message : String(e),
+        });
+        return;
+      }
+      continue;
+    }
 
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
+    if (!res.ok) {
+      const retryable =
+        res.status >= 502 &&
+        res.status <= 504 &&
+        attempt < maxConnectAttempts - 1;
+      if (retryable) {
+        await res.text().catch(() => "");
+        continue;
+      }
+      const text = await res.text().catch(() => "");
+      onEvent({
+        kind: "error",
+        code: `http_${res.status}`,
+        message: text || res.statusText || String(res.status),
+      });
+      return;
+    }
+    break;
+  }
+
+  if (!res || !res.ok) {
     onEvent({
       kind: "error",
-      code: `http_${res.status}`,
-      message: text || res.statusText || String(res.status),
+      code: "no_response",
+      message: "无法建立聊天连接",
     });
     return;
   }
@@ -181,7 +238,21 @@ export async function streamChat({
 
   try {
     while (true) {
-      const { done, value } = await reader.read();
+      let chunk: ReadableStreamReadResult<Uint8Array>;
+      try {
+        chunk = await reader.read();
+      } catch (readErr) {
+        onEvent({
+          kind: "error",
+          code: "sse_read",
+          message:
+            readErr instanceof Error
+              ? readErr.message
+              : "SSE 流传输中断，请稍后重试或检查后端",
+        });
+        return;
+      }
+      const { done, value } = chunk;
       if (done) break;
       buffer += decoder.decode(value, { stream: true });
 
