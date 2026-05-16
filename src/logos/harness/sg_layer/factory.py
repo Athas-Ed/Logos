@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -28,6 +29,12 @@ from .path_sandbox import read_text_under_root, write_draft_under_workspace
 
 _log = logging.getLogger(__name__)
 
+_mcp_discovery_cache: dict[
+    tuple[Any, ...],
+    tuple[tuple[Any, ...], tuple[tuple[Any, list[str], dict[str, str]], ...]],
+] = {}
+_mcp_discovery_lock = threading.Lock()
+
 _STRIP_HTTP_PROXY_KEYS: frozenset[str] = frozenset(
     {
         "HTTP_PROXY",
@@ -50,6 +57,46 @@ def _mcp_child_env(entry: McpServerEntry) -> dict[str, str]:
     return env
 
 
+def clear_mcp_discovery_cache() -> None:
+    """清空 MCP ``tools/list`` 结果缓存（供测试或显式重载配置后调用；生产一般不需要）。"""
+
+    with _mcp_discovery_lock:
+        _mcp_discovery_cache.clear()
+
+
+def _mcp_discovery_cache_key(settings: AppSettings) -> tuple[Any, ...]:
+    """缓存键：仓库根、各启用项路径存在性 / mtime，避免 entrypoint 从缺失变为存在仍命中空结果。"""
+
+    repo = resolve_repo_root().resolve()
+    parts: list[Any] = [str(repo)]
+    for e in settings.mcp_servers:
+        if not e.enabled:
+            parts.append(("disabled", e.id))
+            continue
+        script = (repo / Path(e.entrypoint)).resolve()
+        if script.is_file():
+            parts.append(
+                (
+                    e.id,
+                    e.entrypoint,
+                    e.strip_http_proxy,
+                    tuple(sorted(e.env)),
+                    int(script.stat().st_mtime_ns),
+                )
+            )
+        else:
+            parts.append(
+                (
+                    e.id,
+                    e.entrypoint,
+                    e.strip_http_proxy,
+                    tuple(sorted(e.env)),
+                    f"missing:{script}",
+                )
+            )
+    return tuple(parts)
+
+
 class _EmptyRetrieval:
     def query(self, *, text: str, top_k: int = 8) -> list[Citation]:
         return []
@@ -63,54 +110,67 @@ def build_v01_guarded_tool_registry(
     extra_allowed_tools: frozenset[str] | None = None,
 ) -> GuardedToolRegistry:
     """注册 ``retrieve`` / ``read_ksfs`` / ``list_ksfs`` / ``write_draft``；按配置挂载 MCP 工具。"""
-    mcp_tool_specs: list[Any] = []
-    mcp_handlers: list[tuple[Any, list[str], dict[str, str]]] = []
     seen_mcp_tool_names: set[str] = set()
-
     repo = resolve_repo_root()
-    for entry in settings.mcp_servers:
-        if not entry.enabled:
-            continue
-        script = (repo / Path(entry.entrypoint)).resolve()
-        if not script.is_file():
-            _log.warning(
-                "MCP 技能 %s 的 entrypoint 不存在，已跳过：%s（可设置 LOGOS_REPO_ROOT）",
-                entry.id,
-                script,
-            )
-            continue
-        cmd = mcp_server_argv(repo, entry.entrypoint)
-        child_env = _mcp_child_env(entry)
-        try:
-            discovered = discover_mcp_tools_sync(cmd, child_env, cwd=repo)
-        except ImportError as exc:
-            _log.error("MCP 技能 %s 未挂载（缺少 Python 包 mcp 等）：%s", entry.id, exc)
-        except Exception:  # noqa: BLE001
-            _log.exception("MCP tools/list 失败（技能 id=%s）", entry.id)
-        else:
-            for t in discovered:
-                if t.name in V01_SG_TOOL_WHITELIST:
-                    _log.warning(
-                        "忽略与内置工具同名的 MCP 工具：%s（来自 %s）",
-                        t.name,
-                        entry.id,
-                    )
-                    continue
-                if t.name in seen_mcp_tool_names:
-                    _log.warning(
-                        "忽略重名 MCP 工具：%s（来自 %s，已先由其它技能注册）",
-                        t.name,
-                        entry.id,
-                    )
-                    continue
-                seen_mcp_tool_names.add(t.name)
-                mcp_tool_specs.append(t)
-                mcp_handlers.append((t, cmd, child_env))
-            if not discovered:
+
+    cache_key = _mcp_discovery_cache_key(settings)
+    with _mcp_discovery_lock:
+        cached = _mcp_discovery_cache.get(cache_key)
+    if cached is not None:
+        mcp_tool_specs = list(cached[0])
+        mcp_handlers = list(cached[1])
+    else:
+        mcp_tool_specs: list[Any] = []
+        mcp_handlers: list[tuple[Any, list[str], dict[str, str]]] = []
+        for entry in settings.mcp_servers:
+            if not entry.enabled:
+                continue
+            script = (repo / Path(entry.entrypoint)).resolve()
+            if not script.is_file():
                 _log.warning(
-                    "MCP 技能 %s 已启用但 tools/list 为空",
+                    "MCP 技能 %s 的 entrypoint 不存在，已跳过：%s（可设置 LOGOS_REPO_ROOT）",
                     entry.id,
+                    script,
                 )
+                continue
+            cmd = mcp_server_argv(repo, entry.entrypoint)
+            child_env = _mcp_child_env(entry)
+            try:
+                discovered = discover_mcp_tools_sync(cmd, child_env, cwd=repo)
+            except ImportError as exc:
+                _log.error("MCP 技能 %s 未挂载（缺少 Python 包 mcp 等）：%s", entry.id, exc)
+            except Exception:  # noqa: BLE001
+                _log.exception("MCP tools/list 失败（技能 id=%s）", entry.id)
+            else:
+                for t in discovered:
+                    if t.name in V01_SG_TOOL_WHITELIST:
+                        _log.warning(
+                            "忽略与内置工具同名的 MCP 工具：%s（来自 %s）",
+                            t.name,
+                            entry.id,
+                        )
+                        continue
+                    if t.name in seen_mcp_tool_names:
+                        _log.warning(
+                            "忽略重名 MCP 工具：%s（来自 %s，已先由其它技能注册）",
+                            t.name,
+                            entry.id,
+                        )
+                        continue
+                    seen_mcp_tool_names.add(t.name)
+                    mcp_tool_specs.append(t)
+                    mcp_handlers.append((t, cmd, child_env))
+                if not discovered:
+                    _log.warning(
+                        "MCP 技能 %s 已启用但 tools/list 为空",
+                        entry.id,
+                    )
+
+        with _mcp_discovery_lock:
+            _mcp_discovery_cache[cache_key] = (
+                tuple(mcp_tool_specs),
+                tuple(tuple(h) for h in mcp_handlers),
+            )
 
     extra_names = frozenset(t.name for t in mcp_tool_specs)
     allowed = V01_SG_TOOL_WHITELIST | extra_names | (extra_allowed_tools or frozenset())

@@ -89,14 +89,14 @@ git config core.hooksPath .githooks
 ### 4.2 配置与首屏（A3 已实现；壳层与韧性见第三阶段 P0 结案）
 
 - **已实现**（与 **`API-V0.2.md`**、**`SPEC-DISPLAY-AND-LOGGING-V0.1.md`** §6 一致）：`GET /api/v1/bootstrap`；`config/defaults.yaml`（及合并链）中的 `ui.default_presentation`、`obs.log_profile`；GUI 首屏消费 bootstrap（`src/gui/src/api/bootstrap.ts`）；`POST /api/v1/chat` 按 `presentation` 输出分档 SSE。权威对照：`src/logos/harness/ii_layer/api_v1.py`、`tests/test_stream5_api.py`、`tests/test_sse_chat_contract.py`。  
-- **持续工程化**：开发/打包态下 **真实后端 + GUI** 全链、API 基址、首屏冒烟与 **断线重连 / 子进程托管** 等，以 **`original_docs/已完成/第三阶段开发计划.md`** §2（P0）为结案对照；后续壳层与 GUI 产品化迭代见 **`original_docs/第四阶段开发计划.md`**（第二阶段收尾已收口，不再单列 A8b 为阻塞项）。  
+- **持续工程化**：开发/打包态下 **真实后端 + GUI** 全链、API 基址、首屏冒烟与 **断线重连 / 子进程托管** 等，以 **`original_docs/已完成/第三阶段开发计划.md`** §2（P0）为结案对照；后续壳层与 GUI 产品化迭代见 **`original_docs/已完成/第四阶段开发计划.md`**（第二阶段收尾已收口，不再单列 A8b 为阻塞项）。  
 - **个人使用**：无后端时 GUI 仍可本地兜底，但**默认策略**不再依赖「把 bootstrap 默认值写死在 GUI」替代服务端契约。
 
 ### 4.3 机器可读契约（可选）
 
 - 若 GUI 与后端分叉变多，可考虑 **OpenAPI** 或从 Pydantic 模型导出 schema，减少手写 TS 与后端的漂移。  
 - **个人使用、单仓库**：维持「V0.2 + 手写类型」仍可接受；此项列为**弹性增强**。  
-- **阶段排期（2026-05-14）**：**OpenAPI / schema 导出** 已随 **`第四阶段开发计划.md`** 决议**顺延至下阶段**；不在第四阶段设验收项；定案时仍须不弱化现有契约测与 githooks 精神。
+- **阶段排期（2026-05-14）**：**OpenAPI / schema 导出** 已随 **`../已完成/第四阶段开发计划.md`** 决议**顺延至下阶段**；不在第四阶段设验收项；定案时仍须不弱化现有契约测与 githooks 精神。
 
 ### 4.4 若未来脱离「仅个人」
 
@@ -120,4 +120,4 @@ git config core.hooksPath .githooks
 | 2026-05-13 | 初版：个人使用标准下的足够性判断、风险接受范围、改进优先级与阶段计划衔接说明。 |
 | 2026-05-13 | 第 1.1 节：API 契约治理与 S&G 分层结论；第 4.1 节：`pre-commit` 捆绑 `API-V0.2` + `test_stream5_api`（`check_api_contract_staged_bundle.py`、`.githooks/pre-commit`）及单测 `tests/test_api_contract_staged_bundle.py`。 |
 | 2026-05-13 | 第 3 节风险第 4 条、第 4.2 节、第 5 节：与实现对齐——`bootstrap` 与 A3 已落地；**GUI↔真实后端联合冒烟** 明确归 A8b 收口。 |
-| 2026-05-14 | 第 4.3 节：与 **`第四阶段开发计划.md`** 对齐——OpenAPI/schema **顺延下阶段**；§4.3 增加阶段说明一句。 |
+| 2026-05-14 | 第 4.3 节：与 **`../已完成/第四阶段开发计划.md`** 对齐——OpenAPI/schema **顺延下阶段**；§4.3 增加阶段说明一句。 |

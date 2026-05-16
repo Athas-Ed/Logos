@@ -25,6 +25,8 @@
   - `default_presentation`：`"work"` \| `"developer"`（来自 `ui.default_presentation`）
   - `log_profile`：`"minimal"` \| `"standard"` \| `"verbose"` \| `"audit"`（来自 `obs.log_profile`）
   - `operating_mode`：字符串（与配置 `operating_mode` 一致）
+  - `obs_show_log_root_in_gui`：布尔（来自 `obs.show_log_root_in_gui`，默认 **false**；Obs O4 与 **`GUI开发文档.md`** §6.2 对齐）
+  - `obs_logs_root`：字符串或 **`null`**；仅当 `obs_show_log_root_in_gui === true` 时为 **已解析的绝对路径**（`paths.logs_root` 展开），否则为 **`null`**（不向 GUI 暴露日志根）
 - 与 `SPEC-DISPLAY-AND-LOGGING-V0.1.md` 正交：会话内切换展示档位 **不** 通过本接口写回配置。
 
 ---
@@ -194,3 +196,4 @@ data: <单行 JSON>
 | 日期 | 说明 |
 |------|------|
 | 2026-05-13 | 对齐 A3：沿革与 GUI 表改为分档位 SSE 事件名；补充 `bootstrap.ts` / `test_sse_chat_contract` 引用。 |
+| 2026-05-14 | **§2.1 `bootstrap`**：增补 **`obs_show_log_root_in_gui`**、**`obs_logs_root`**（Obs O4，默认不向 GUI 暴露日志根）。 |

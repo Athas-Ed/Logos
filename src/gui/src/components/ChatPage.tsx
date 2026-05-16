@@ -6,6 +6,7 @@ import {
 } from "../api/developer";
 import { fetchHealth } from "../api/health";
 import { streamChat } from "../api/sseChat";
+import { SettingsDrawer } from "./SettingsDrawer";
 import {
   OPERATING_MODES,
   type ChatMessage,
@@ -86,6 +87,9 @@ export function ChatPage() {
     promptEcho: boolean;
   } | null>(null);
   const [devToggleBusy, setDevToggleBusy] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [obsShowLogRootInGui, setObsShowLogRootInGui] = useState(false);
+  const [obsLogsRoot, setObsLogsRoot] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const listEndRef = useRef<HTMLDivElement | null>(null);
 
@@ -108,6 +112,14 @@ export function ChatPage() {
             const lp = normalizeLogProfile(b.log_profile);
             if (lp) setLogProfile(lp);
             setOperatingMode(normalizeOperatingFromServer(b.operating_mode));
+            setObsShowLogRootInGui(Boolean(b.obs_show_log_root_in_gui));
+            setObsLogsRoot(
+              b.obs_show_log_root_in_gui &&
+                typeof b.obs_logs_root === "string" &&
+                b.obs_logs_root.length > 0
+                ? b.obs_logs_root
+                : null,
+            );
           }
         })();
         return;
@@ -132,6 +144,14 @@ export function ChatPage() {
         if (lp) setLogProfile(lp);
         setOperatingMode(normalizeOperatingFromServer(b.operating_mode));
         setPresentation(stored ?? b.default_presentation);
+        setObsShowLogRootInGui(Boolean(b.obs_show_log_root_in_gui));
+        setObsLogsRoot(
+          b.obs_show_log_root_in_gui &&
+            typeof b.obs_logs_root === "string" &&
+            b.obs_logs_root.length > 0
+            ? b.obs_logs_root
+            : null,
+        );
       } else if (stored) {
         setPresentation(stored);
       }
@@ -269,6 +289,18 @@ export function ChatPage() {
 
   return (
     <div className={styles.layout}>
+      <a href="#logos-main-content" className={styles.skipLink}>
+        跳到主内容
+      </a>
+      <SettingsDrawer
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        healthOk={healthOk}
+        onRefreshHealth={refreshHealth}
+        logProfile={logProfile}
+        obsShowLogRootInGui={obsShowLogRootInGui}
+        obsLogsRoot={obsLogsRoot}
+      />
       {shellBackendHint ? (
         <div
           className={
@@ -359,6 +391,13 @@ export function ChatPage() {
           <button
             type="button"
             className={styles.ghostBtn}
+            onClick={() => setSettingsOpen(true)}
+          >
+            设置
+          </button>
+          <button
+            type="button"
+            className={styles.ghostBtn}
             onClick={() => void refreshHealth()}
           >
             检查健康
@@ -387,7 +426,7 @@ export function ChatPage() {
         </div>
       </header>
 
-      <div className={styles.main}>
+      <div className={styles.main} id="logos-main-content">
         <section className={styles.chatPanel}>
           {streamError ? (
             <div className={styles.errorBanner} role="alert">

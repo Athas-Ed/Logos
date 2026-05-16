@@ -156,6 +156,12 @@ KSFS —(只读原语，索引/检索管线)—→ Retrieval —→ CB —→ LL
 
 CLI/GUI 共用窄端口，避免逻辑重复。
 
+**仓库实现（与 §3.2、§7.3.1 对齐）**
+
+- 端口与数据结构：**`src/logos/ports/draft_promotion.py`**（`DraftPromotionPort`、`PromotionItem`、`PromotionReport`）。
+- 默认磁盘实现：**`src/logos/tools/draft_promotion_fs.py`**（`FilesystemDraftPromotionPort`：晋升前 **mtime** 校验、目标已存在则**拒绝**、复制失败或 HSI 同步失败时**回滚**新建文件；成功后调用 **`sync_ksfs_hsi`**）。
+- 命令行入口：**`python -m logos.tools.promote_draft`**（`src/logos/tools/promote_draft.py`）；**`--dry-run`** / **`--apply`** 用法与排期见仓库根 **`README.md`**「草稿晋升至 KSFS」小节及 **`../已完成/第四阶段开发计划.md`** §9 **S1～S3**。
+
 ### 7.2 评审摘要
 
 层次清晰；检索为边界；人审晋升；全文需求用 Retrieval 受控读，不开放任意读盘。
@@ -215,7 +221,8 @@ CLI/GUI 共用窄端口，避免逻辑重复。
 ## 8. 与代码目录的映射
 
 - **`src/logos/persistence/`**：`ksfs_filesystem`、`hdl_sync.sync_ksfs_hsi`、`hsi_sqlite` 等。
-- **`src/logos/tools/`**：系统原语。
+- **`src/logos/tools/`**：系统原语；含 **`promote_draft`**（晋升 CLI）与 **`draft_promotion_fs`**（默认 `DraftPromotionPort` 实现）。
+- **`src/logos/ports/draft_promotion.py`**：**`DraftPromotionPort`**（§7.1）。
 - **`harness/sg_layer/factory.py`**：**`read_ksfs`** 等注册。
 
 ---
@@ -227,6 +234,7 @@ CLI/GUI 共用窄端口，避免逻辑重复。
 | 2026-05-10 | 初稿及多轮细化：HSI、chunk、mtime、知识流、CLI 端口。 |
 | 2026-05-11 | 核心仅 `.md`；§3.5；§7.3；**`resources/entity_template/`**；与 `DECISIONS.md` §12 对齐。 |
 | 2026-05-12 | **`workspace/setting_entry/`**、封存说明链至 **`设定导入Skill开发.md`**；本会话与仓库对齐重写本文。 |
+| 2026-05-14 | §7.1 / §8：落地 **`DraftPromotionPort`** 实现与 **`python -m logos.tools.promote_draft`**；互链仓库根 **`README.md`** 草稿晋升小节、**`../已完成/第四阶段开发计划.md`** §9。 |
 
 ---
 

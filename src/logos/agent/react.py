@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 from collections.abc import Iterator
 from dataclasses import dataclass
 
@@ -12,6 +13,13 @@ from logos.ports.llm import ChatMessage, LLMClient
 from logos.agent import cb, json_tools
 from logos.agent.prompt_echo import format_messages_for_prompt_echo
 from logos.agent.tool_registry import ToolRegistry
+from logos.harness.obs.tool_chain import (
+    classify_tool_observation,
+    current_obs_profile,
+    emit_tool_chain_v1,
+    next_react_tool_step_index,
+    param_digest_for_log,
+)
 
 _log = logging.getLogger("logos.agent.react")
 
@@ -99,9 +107,22 @@ def iter_react_loop(
                 args_json = json.dumps(args, ensure_ascii=False)
             except (TypeError, ValueError):
                 args_json = "{}"
+            prof = current_obs_profile()
+            digest = param_digest_for_log(prof, step.action_name, step.action_arguments)
+            step_ix = next_react_tool_step_index()
+            t0 = time.perf_counter()
             try:
                 obs = registry.execute(step.action_name, step.action_arguments)
             except Exception as exc:  # noqa: BLE001
+                elapsed_ms = int((time.perf_counter() - t0) * 1000)
+                emit_tool_chain_v1(
+                    step_index=step_ix,
+                    tool_name=step.action_name,
+                    elapsed_ms=elapsed_ms,
+                    status="error",
+                    param_digest=digest,
+                    error_class=type(exc).__name__,
+                )
                 yield ReActStreamToolTrace(
                     tool_name=step.action_name,
                     arguments_json=args_json,
@@ -109,6 +130,16 @@ def iter_react_loop(
                     error=f"{type(exc).__name__}: {exc}",
                 )
                 raise
+            elapsed_ms = int((time.perf_counter() - t0) * 1000)
+            st, err_cls = classify_tool_observation(obs)
+            emit_tool_chain_v1(
+                step_index=step_ix,
+                tool_name=step.action_name,
+                elapsed_ms=elapsed_ms,
+                status=st,
+                param_digest=digest,
+                error_class=err_cls,
+            )
             yield ReActStreamToolTrace(
                 tool_name=step.action_name,
                 arguments_json=args_json,

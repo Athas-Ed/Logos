@@ -43,6 +43,8 @@ class AppSettings:
     ui_default_presentation: str = "work"
     #: ``obs.log_profile``：minimal | standard | verbose | audit
     obs_log_profile: str = "standard"
+    #: ``obs.show_log_root_in_gui``：为 True 时 ``GET /api/v1/bootstrap`` 暴露 ``obs_logs_root``，供 GUI 展示日志根（Obs O4）；默认 False
+    obs_show_log_root_in_gui: bool = False
     #: 为 true 时 GUI 可展示开发者控件并允许 PUT 切换 prompt 回显
     developer_show_dev_tools_ui: bool = False
     #: 启动初值；运行时可由 :class:`~logos.harness.ii_layer.developer.DeveloperToggles` 改写
