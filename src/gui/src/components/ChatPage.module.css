@@ -1,4 +1,24 @@
+.skipLink {
+  position: absolute;
+  left: -9999px;
+  z-index: 100;
+  padding: 0.45rem 0.75rem;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.skipLink:focus {
+  left: 1rem;
+  top: 0.5rem;
+  outline: 2px solid color-mix(in srgb, #fff 70%, transparent);
+  outline-offset: 2px;
+}
+
 .layout {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100%;

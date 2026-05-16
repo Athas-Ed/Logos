@@ -195,7 +195,16 @@ def merged_dict_to_app_settings(data: Mapping[str, Any]) -> AppSettings:
     llm = data.get("llm") or {}
     dev = data.get("developer") or {}
     skills = data.get("skills") or {}
-    mcp_servers = _parse_mcp_servers(skills)
+    if isinstance(skills, Mapping):
+        raw_mcp = skills.get("mcp_servers")
+        if raw_mcp is not None and not isinstance(raw_mcp, list):
+            msg = (
+                "配置 skills.mcp_servers 必须为 YAML 列表（例如 `[]` 或 `- id: ...` 条目）。"
+                f"当前类型为 {type(raw_mcp).__name__}。"
+                "详见 original_docs/重要子系统开发文档/MCP开发.md。"
+            )
+            raise ValueError(msg)
+    mcp_servers = _parse_mcp_servers(skills if isinstance(skills, Mapping) else {})
     ui = data.get("ui") if isinstance(data.get("ui"), dict) else {}
     obs = data.get("obs") if isinstance(data.get("obs"), dict) else {}
     return AppSettings(
@@ -224,6 +233,9 @@ def merged_dict_to_app_settings(data: Mapping[str, Any]) -> AppSettings:
         llm_no_proxy=_str_opt(llm.get("no_proxy")),
         ui_default_presentation=_normalize_presentation(ui.get("default_presentation")),
         obs_log_profile=_normalize_log_profile(obs.get("log_profile")),
+        obs_show_log_root_in_gui=_coerce_truthy(
+            obs.get("show_log_root_in_gui"), default=False
+        ),
         developer_show_dev_tools_ui=_coerce_truthy(
             dev.get("show_dev_tools_ui"), default=False
         ),

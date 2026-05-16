@@ -41,7 +41,7 @@
 
 | 产出 | 验收 |
 |------|------|
-| 开发者菜单或设置页：**展示「日志根路径」**、**一键打开 `maint/`**（Electron `shell` 在 Main 中做 allowlist）、或「复制最近工具摘要」从内存态拼接（**不**要求 GUI 解析完整历史 log 文件）。 | 与 **`GUI开发文档.md`** §3 IPC 边界一致；无 renderer 直接 `fs`。 |
+| 开发者菜单或设置页：**展示「日志根路径」**、**一键打开 `maint/`**（Electron `shell` 在 Main 中做 allowlist）、或「复制最近工具摘要」从内存态拼接（**不**要求 GUI 解析完整历史 log 文件）。**是否向 GUI 暴露「解析后的日志根绝对路径」**由配置 **`obs.show_log_root_in_gui`** 控制（默认 **false**）；为 true 时 **`GET /api/v1/bootstrap`** 返回 **`obs_logs_root`**，GUI 据此展示；与 **`GUI开发文档.md`** §6.2 一致。 | 与 **`GUI开发文档.md`** §3 IPC 边界一致；无 renderer 直接 `fs`。 |
 
 ### O5 — 与 `verbose` / `audit` 档位回归
 
@@ -57,7 +57,7 @@
 
 1. **脱敏默认偏保守**：工具参数、检索片段可能含用户正文；`param_digest` 优先摘要化；全量仅出现在 `audit` 且文档提示风险。  
 2. **不要通过加日志「修复」展示 bug**：展示错误应改 I&I/SSE；Obs 只增加**可观测性**。  
-3. **性能（Obs 写盘侧）**：高频 DEBUG 在长会话下可能放大 IO；必要时 **异步写** 或 **采样**（若引入须在 SPEC 或 `defaults.yaml` 注释中说明）。**注意**：此处**不**指「模型写得好不好」；后者见 **`Harness Engineering文档.md`**；阶段计划中「性能」**默认**指软件整体性能（**`第四阶段开发计划.md`** §8 **A**）。  
+3. **性能（Obs 写盘侧）**：高频 DEBUG 在长会话下可能放大 IO；必要时 **异步写** 或 **采样**（若引入须在 SPEC 或 `defaults.yaml` 注释中说明）。**注意**：此处**不**指「模型写得好不好」；后者见 **`Harness Engineering文档.md`**；阶段计划中「性能」**默认**指软件整体性能（**`../已完成/第四阶段开发计划.md`** §8 **A**）。  
 4. **与第四阶段主线顺序**：Obs 与 **A7**、**MCP** 并行时，优先合入 **不改变 HTTP 契约** 的 Obs 改动；若必须暴露新 `bootstrap` 字段，走 **`API-V0.2.md`** 与 githooks 同步流程。  
 5. **Electron**：壳层审计 **`electron-shell.log`** 继续由 Main 写入；Obs Python 侧不强制解析该文件，仅文档互链。
 
@@ -70,7 +70,7 @@
 | **`SPEC-DISPLAY-AND-LOGGING-V0.1.md`** | `log_profile`、展示与日志正交 |
 | **`MCP开发.md`** §3 | 渐进式披露与 Obs P3 理想字段 |
 | **`logs/README.md`** | `daily/` vs `maint/`、Electron 共根 |
-| **`第四阶段开发计划.md`** | 本 Obs 路线在阶段内的优先级（§2） |
+| **`../已完成/第四阶段开发计划.md`** | 本 Obs 路线在阶段内的优先级（§2） |
 
 ---
 
@@ -78,4 +78,50 @@
 
 | 日期 | 说明 |
 |------|------|
-| 2026-05-14 | §3：区分 Obs 写盘「性能」与 **`第四阶段开发计划.md`** §8 默认语义；互链 **`Harness Engineering文档.md`**。 |
+| 2026-05-14 | §3：区分 Obs 写盘「性能」与 **`../已完成/第四阶段开发计划.md`** §8 默认语义；互链 **`Harness Engineering文档.md`**。 |
+| 2026-05-14 | **§6**：第四阶段 **S7～S10** 落地（O1 路由审计、O2 冻结字段、O3 ReAct 单点写链、O5 `log_profile` 表）；实现 **`src/logos/harness/obs/tool_chain.py`**；测 **`tests/test_obs_tool_chain.py`**。 |
+| 2026-05-14 | **O4 / 配置**：新增 **`obs.show_log_root_in_gui`**（默认 false）与 **`bootstrap.obs_logs_root`**；GUI 仅在该开关为 true 时展示日志根；详 **`GUI开发文档.md`** §6.2。 |
+
+---
+
+## 6. 第四阶段交付：工具调用链与 `log_profile`（S7～S10）
+
+### 6.1 O1 — 落点与路由审计（摘要）
+
+| 类别 | 路径 / 行为 |
+|------|-------------|
+| **日常轨** | ``<logs_root>/daily/YYYY-MM/YYYY-MM-DD.log``；**固定** ``>= INFO``；与 ``obs.log_profile`` **解耦**（``logging_setup.configure_logging``）。 |
+| **维护轨** | ``<logs_root>/maint/<子系统>.log``；路由见 ``path_handlers.MaintSubsystemFileHandler.ROUTES``（``logos.harness.mcp``→``mcp.log``；``logos.agent``→``agent.log``；``logos.api``→``api.log`` 等）。 |
+| **工具调用链** | 记录器 ``logos.agent.tool_chain`` → **``maint/agent.log``**（与 ``logos.agent.react`` 同文件聚合）。 |
+| **HTTP 对话** | ``POST /api/v1/chat`` 在流入口 ``prime_obs_log_profile_for_chat`` / ``reset_react_tool_steps``；``finally`` 中 ``clear_obs_log_profile_tls``（``api_v1.py``）。使用 **线程局部** 以兼容 Starlette 线程池迭代同步生成器。 |
+
+### 6.2 O2 — 冻结字段（``logos_tool_chain_v1``）
+
+实现：**``src/logos/harness/obs/tool_chain.py``**。``emit_tool_chain_v1`` 写入 JSON（作为 LogRecord ``消息`` 正文）须含：
+
+| 键 | 说明 |
+|----|------|
+| ``event`` | 固定 ``logos_tool_chain_v1`` |
+| ``step_index`` | 会话内自 1 递增 |
+| ``tool_name`` | 工具名 |
+| ``elapsed_ms`` | 毫秒 |
+| ``status`` | ``ok`` \| ``error`` \| ``denied`` |
+| ``param_digest`` | 脱敏 + 截断摘要 |
+| ``error_class`` | 失败时类名或约定字面；成功 ``null`` |
+
+### 6.3 O3 — 内置与 MCP 对齐
+
+**单点**：``logos.agent.react`` 在 ``registry.execute`` 前后计时并 ``emit_tool_chain_v1``；MCP 与内置工具共用同一路径。``param_digest_for_log`` 对 ``api_key`` 等后缀键名脱敏。
+
+### 6.4 O5 — 各 ``log_profile`` 与 ``tool_chain`` 可见性
+
+| ``obs.log_profile`` | maint handler 阈值 | ``tool_chain`` 级别 | 保证（解析 JSON ``消息`` 内对象） |
+|---------------------|-------------------|---------------------|-------------------------------------|
+| ``minimal`` | WARNING | **WARNING** | 冻结键全集；**maint** 可见 |
+| ``standard`` | INFO | INFO | 同上 |
+| ``verbose`` | DEBUG | INFO | 同上 |
+| ``audit`` | DEBUG | INFO | 同上；``param_digest`` 更长（见实现） |
+
+**日常轨**：``minimal`` 下 ``tool_chain`` 为 WARNING 时 **``daily/…``** 仍收录，便于检索。
+
+**单测**：**``tests/test_obs_tool_chain.py``**。

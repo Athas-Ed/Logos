@@ -129,6 +129,8 @@ def test_api_v1_bootstrap(tmp_path: Path) -> None:
     assert body["default_presentation"] == "work"
     assert body["log_profile"] == "standard"
     assert "operating_mode" in body
+    assert body.get("obs_show_log_root_in_gui") is False
+    assert body.get("obs_logs_root") is None
 
 
 def test_api_v1_bootstrap_reflects_settings(tmp_path: Path) -> None:
@@ -156,6 +158,34 @@ def test_api_v1_bootstrap_reflects_settings(tmp_path: Path) -> None:
     assert body["default_presentation"] == "developer"
     assert body["log_profile"] == "verbose"
     assert body["operating_mode"] == "screenwriter"
+    assert body.get("obs_show_log_root_in_gui") is False
+    assert body.get("obs_logs_root") is None
+
+
+def test_api_v1_bootstrap_obs_o4_exposes_logs_root_when_enabled(tmp_path: Path) -> None:
+    ports = _make_ports(tmp_path)
+    logs = tmp_path / "logs"
+    ports = AppPorts(
+        settings=replace(
+            ports.settings,
+            obs_show_log_root_in_gui=True,
+            logs_root=str(logs),
+        ),
+        llm=ports.llm,
+        retrieval=ports.retrieval,
+        knowledge_source=ports.knowledge_source,
+        metadata_index=ports.metadata_index,
+        semantic_store=ports.semantic_store,
+        text_embedder=ports.text_embedder,
+        developer=ports.developer,
+    )
+    app = create_app(ports)
+    with TestClient(app) as client:
+        r = client.get("/api/v1/bootstrap")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["obs_show_log_root_in_gui"] is True
+    assert body["obs_logs_root"] == str(logs.resolve())
 
 
 def test_api_v1_chat_sse_delta_and_done(tmp_path: Path) -> None:

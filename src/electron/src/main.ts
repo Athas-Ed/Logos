@@ -1,6 +1,6 @@
-import { appendFileSync, existsSync, mkdirSync } from "fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync } from "fs";
 import { spawn, spawnSync, type ChildProcess } from "child_process";
-import { app, BrowserWindow, dialog, ipcMain } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, session, shell } from "electron";
 import * as net from "net";
 import * as path from "path";
 
@@ -202,6 +202,169 @@ function defaultPythonExecutable(repoRoot: string): string {
     return venvPy;
   }
   return "python";
+}
+
+function readElectronPackageVersion(): string {
+  try {
+    const p = path.join(app.getAppPath(), "package.json");
+    const raw = readFileSync(p, "utf8");
+    const v = JSON.parse(raw) as { version?: string };
+    return typeof v.version === "string" ? v.version : "0.0.0";
+  } catch {
+    return "0.0.0";
+  }
+}
+
+function readGuiPackageVersionFromRepo(repoRoot: string): string {
+  try {
+    const p = path.join(repoRoot, "src", "gui", "package.json");
+    const raw = readFileSync(p, "utf8");
+    const v = JSON.parse(raw) as { version?: string };
+    return typeof v.version === "string" ? v.version : "0.0.0";
+  } catch {
+    return "0.0.0";
+  }
+}
+
+function isPathInsideOrEqualRepo(repoRoot: string, candidateRaw: string): boolean {
+  let root = path.resolve(repoRoot);
+  let candidate = path.resolve(candidateRaw);
+  if (process.platform === "win32") {
+    root = root.toLowerCase();
+    candidate = candidate.toLowerCase();
+  }
+  if (candidate === root) {
+    return true;
+  }
+  const rel = path.relative(root, candidate);
+  if (!rel) {
+    return true;
+  }
+  if (path.isAbsolute(rel)) {
+    return false;
+  }
+  const upper = rel.toUpperCase();
+  return !upper.startsWith("..\\") && !upper.startsWith("../");
+}
+
+function installPackagedGuiContentSecurityPolicy(): void {
+  if (!app.isPackaged) {
+    return;
+  }
+  const apiOrigin = resolveRendererApiBase();
+  const csp = [
+    "default-src 'self'",
+    "script-src 'self'",
+    "style-src 'self' 'unsafe-inline'",
+    `connect-src 'self' ${apiOrigin}`,
+    "img-src 'self' data:",
+    "font-src 'self' data:",
+    "base-uri 'self'",
+    "form-action 'self'",
+  ].join("; ");
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    const norm = details.url.replace(/\\/g, "/").toLowerCase();
+    if (!norm.startsWith("file:") || !norm.includes("/gui/")) {
+      callback({ responseHeaders: details.responseHeaders });
+      return;
+    }
+    const prev = details.responseHeaders ?? {};
+    const next = { ...prev, "Content-Security-Policy": [csp] } as Record<
+      string,
+      string | string[]
+    >;
+    callback({ responseHeaders: next });
+  });
+}
+
+type PromoteDryRunResult = {
+  ok: boolean;
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+  error?: string;
+};
+
+async function runPromoteDraftDryRunMain(
+  repoRoot: string,
+  workspace: string,
+  targetKsfs: string,
+): Promise<PromoteDryRunResult> {
+  const ws = workspace.trim();
+  const ks = targetKsfs.trim();
+  if (!ws || !ks) {
+    return {
+      ok: false,
+      exitCode: -1,
+      stdout: "",
+      stderr: "",
+      error: "workspace 与 targetKsfs 不能为空",
+    };
+  }
+  const absWs = path.resolve(ws);
+  const absKsfs = path.resolve(ks);
+  if (!isPathInsideOrEqualRepo(repoRoot, absWs) || !isPathInsideOrEqualRepo(repoRoot, absKsfs)) {
+    return {
+      ok: false,
+      exitCode: -1,
+      stdout: "",
+      stderr: "",
+      error: "为安全起见，路径必须位于解析后的仓库根（LOGOS_REPO_ROOT）之下。",
+    };
+  }
+  if (!existsSync(absWs) || !existsSync(absKsfs)) {
+    return {
+      ok: false,
+      exitCode: -1,
+      stdout: "",
+      stderr: "",
+      error: "目录不存在或不可访问。",
+    };
+  }
+  const py = defaultPythonExecutable(repoRoot);
+  const args = [
+    "-m",
+    "logos.tools.promote_draft",
+    "--workspace",
+    absWs,
+    "--target-ksfs",
+    absKsfs,
+    "--dry-run",
+  ];
+  return await new Promise((resolve) => {
+    const out: Buffer[] = [];
+    const err: Buffer[] = [];
+    const child = spawn(py, args, {
+      cwd: repoRoot,
+      env: { ...process.env, LOGOS_REPO_ROOT: repoRoot },
+      windowsHide: true,
+    });
+    const timer = setTimeout(() => {
+      child.kill("SIGTERM");
+    }, 120_000);
+    child.stdout?.on("data", (c) => out.push(c));
+    child.stderr?.on("data", (c) => err.push(c));
+    child.on("error", (e) => {
+      clearTimeout(timer);
+      resolve({
+        ok: false,
+        exitCode: -1,
+        stdout: Buffer.concat(out).toString("utf8"),
+        stderr: Buffer.concat(err).toString("utf8"),
+        error: String(e),
+      });
+    });
+    child.on("close", (code) => {
+      clearTimeout(timer);
+      const exitCode = typeof code === "number" ? code : -1;
+      resolve({
+        ok: exitCode === 0,
+        exitCode,
+        stdout: Buffer.concat(out).toString("utf8"),
+        stderr: Buffer.concat(err).toString("utf8"),
+      });
+    });
+  });
 }
 
 function wireBackendLogs(child: ChildProcess, mode: string): void {
@@ -661,11 +824,62 @@ if (!hasSingleInstanceLock) {
     return resolveRendererApiBase();
   });
 
+  ipcMain.handle("logos:get-debug-info", () => {
+    const repoRoot = resolveRepoRoot();
+    return {
+      logos_electron: readElectronPackageVersion(),
+      logos_gui: readGuiPackageVersionFromRepo(repoRoot),
+      electron: process.versions.electron,
+      chrome: process.versions.chrome,
+      node: process.versions.node,
+      packaged: app.isPackaged,
+      repo_root: repoRoot,
+      shell_maint_log: resolveShellMaintLogPath(),
+      api_base: app.isPackaged ? resolveRendererApiBase() : "",
+      backend_health_url: readBackendHealthUrl(),
+      platform: process.platform,
+    };
+  });
+
+  ipcMain.handle("logos:reveal-maint-logs-dir", () => {
+    const logPath = resolveShellMaintLogPath();
+    if (!logPath) {
+      return { ok: false as const, error: "尚未就绪，请稍后重试。" };
+    }
+    const dir = path.dirname(logPath);
+    try {
+      mkdirSync(dir, { recursive: true });
+    } catch {
+      /* ignore */
+    }
+    const msg = shell.openPath(dir);
+    return msg ? { ok: false as const, error: msg } : { ok: true as const };
+  });
+
+  ipcMain.handle("logos:open-repo-readme", () => {
+    const repoRoot = resolveRepoRoot();
+    const readme = path.join(repoRoot, "README.md");
+    if (!existsSync(readme)) {
+      return { ok: false as const, error: "未找到 README.md" };
+    }
+    const msg = shell.openPath(readme);
+    return msg ? { ok: false as const, error: msg } : { ok: true as const };
+  });
+
+  ipcMain.handle(
+    "logos:run-promote-draft-dry-run",
+    async (_evt, payload: { workspace: string; targetKsfs: string }) => {
+      const repoRoot = resolveRepoRoot();
+      return await runPromoteDraftDryRunMain(repoRoot, payload.workspace, payload.targetKsfs);
+    },
+  );
+
   app.on("second-instance", () => {
     focusPrimaryWindow();
   });
 
   app.whenReady().then(() => {
+    installPackagedGuiContentSecurityPolicy();
     const repoRoot = resolveRepoRoot();
     startPythonBackend(repoRoot);
     createMainWindow();

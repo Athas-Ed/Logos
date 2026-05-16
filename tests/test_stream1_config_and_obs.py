@@ -62,6 +62,20 @@ def test_load_merged_from_repo_config() -> None:
     assert isinstance(s.mcp_servers, tuple)
 
 
+def test_obs_show_log_root_in_gui_from_yaml(tmp_path: Path) -> None:
+    cfg = tmp_path / "config"
+    cfg.mkdir()
+    (cfg / "defaults.yaml").write_text(
+        "paths:\n  logs_root: ./logs\n  workspace_root: ./w\n"
+        "  example_ksfs_root: ./e\n  ksfs_root: ./k\n  index_root: ./i\n"
+        "  hsi_sqlite_path: ./h\n"
+        "obs:\n  show_log_root_in_gui: true\n",
+        encoding="utf-8",
+    )
+    s = load_app_settings(cfg)
+    assert s.obs_show_log_root_in_gui is True
+
+
 def test_mcp_servers_from_yaml(tmp_path: Path) -> None:
     cfg = tmp_path / "config"
     cfg.mkdir()
@@ -105,6 +119,20 @@ def test_mcp_servers_enabled_defaults_true_when_omitted(tmp_path: Path) -> None:
     s = load_app_settings(cfg)
     assert len(s.mcp_servers) == 1
     assert s.mcp_servers[0].enabled is True
+
+
+def test_mcp_servers_must_be_yaml_list(tmp_path: Path) -> None:
+    cfg = tmp_path / "config"
+    cfg.mkdir()
+    (cfg / "defaults.yaml").write_text(
+        "paths:\n  logs_root: ./logs\n  workspace_root: ./w\n"
+        "  example_ksfs_root: ./e\n  ksfs_root: ./k\n  index_root: ./i\n"
+        "  hsi_sqlite_path: ./h\n"
+        "skills:\n  mcp_servers: not_a_list\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="mcp_servers"):
+        load_app_settings(cfg)
 
 
 def test_logging_yaml_layer_merges(tmp_path: Path) -> None:

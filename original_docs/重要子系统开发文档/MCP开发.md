@@ -43,13 +43,39 @@
 
 | 项 | 说明 |
 |----|------|
-| **通用管线** | `skills.mcp_servers` → `build_v01_guarded_tool_registry` 遍历启用项 → `discover_mcp_tools_sync` → 按 `inputSchema` 注册；与内置工具同名则忽略；跨技能重名则先到先得并打日志。 |
+| **通用管线** | `skills.mcp_servers` → `build_v01_guarded_tool_registry` 遍历启用项 → `discover_mcp_tools_sync`（**进程内按配置缓存**，见 **§8.2**）→ 按 `inputSchema` 注册；与内置工具同名则忽略；跨技能重名则先到先得并打日志。 |
 | **子进程命令** | `mcp_server_argv(repo, entrypoint)`：`[sys.executable, <resolved script>]`。 |
 | **环境** | `strip_http_proxy: true` 时剥离常见 `HTTP(S)_PROXY`；`env` 为额外注入键值。 |
 | **示例技能** | `skills/example-stdio-mcp/server.py` 工具 **`echo`**。 |
 | **验证技能** | `skills/amap-weather-mcp/`（`query_weather`），**不写入** `defaults.yaml`，仅在 `local.yaml` 配置。 |
 
-**验收**：`pytest tests/test_mcp_*.py tests/test_mcp_stdio_process_leak.py` 通过；启用 `echo` 后对话或 registry 可调用。
+**验收**：`python -m pytest` 跑通下列文件（**勿**在 Windows `cmd` 里写 `tests/test_mcp_*.py`，shell 不展开 `*` 会导致 pytest 报 *file not found*）：`tests/test_mcp_amap_skill.py`、`tests/test_mcp_example_echo_skill.py`、`tests/test_mcp_stdio_integration.py`、`tests/test_mcp_stdio_process_leak.py`。PowerShell 可用：``python -m pytest (Get-ChildItem tests/test_mcp_*.py)``。启用 `echo` 后对话或 registry 可调用。
+
+---
+
+## 8. 第四阶段治理加固（S4～S6，2026-05-14）
+
+### 8.1 S4 — 现状审计（启动 / 停止 / 超时 / 异常 / Electron）
+
+| 路径 | 行为 |
+|------|------|
+| **HTTP 对话** | `POST /api/v1/chat`（`api_v1.py`）每次请求内调用 `build_v01_guarded_tool_registry`；**MCP `tools/list`** 结果按 **§8.3** 在进程内缓存，避免「每轮对话重复 discover」堆积短生命周期子进程。 |
+| **工具调用** | 注册表上的 MCP 工具走 `mcp_stdio.call_mcp_tool_sync`：**每次 `tools/call` 启停一次** stdio 子进程（与官方 `stdio_client` 上下文管理器一致）；会话内无长驻 MCP 句柄，**流式响应结束即无宿主侧 MCP 会话对象**（子进程须在单次调用内收干净）。 |
+| **同步 JSON-RPC 路径** | `mcp_stdio_sync.McpStdioJsonRpcSession`：测试或桥接用；`close()` 时先关 **stdin**，`wait` 最长 **8s**，超时 **`kill`**；stderr 为 **PIPE** 时由守护线程排空。 |
+| **异步桥接超时** | `mcp_stdio._run_coroutine_in_worker_thread` 默认 **120s**，防止 worker 线程无限挂起（嵌套事件循环场景）。 |
+| **discover / call 异常** | `factory.build_v01_guarded_tool_registry` 对单条技能的 `ImportError`（未装 `mcp` 包）与其它异常分别 **error / exception** 日志，该条跳过；**不**拖死整个注册表构建。 |
+| **Electron** | Main 进程 **仅** `spawn` **Python 后端**（`run_backend_stub`）；**MCP 子进程仅由后端 Python 在对话路径上拉起**，与 Electron 无直接父子关系；长会话前后端同驻时，MCP 泄漏应以后端 `psutil` / 任务管理器观测为准（与 **`GUI开发文档.md`** 退出时杀后端子树协同）。 |
+
+### 8.2 S5 — 泄漏与重复对话
+
+- **代码**：`sg_layer/factory.py` 内 **`_mcp_discovery_cache`**：键含 `LOGOS_REPO_ROOT` 解析结果、各启用项 **entrypoint 存在性 / `st_mtime_ns`**，命中则**不再**对该配置重复执行 `discover_mcp_tools_sync`。变更技能脚本或 `local.yaml` 中 MCP 条目后，键变化自动失效；亦可调用 **`clear_mcp_discovery_cache()`**（导出在 `logos.harness.sg_layer`）做显式清空。  
+- **测**：`tests/test_mcp_stdio_process_leak.py`（`psutil`，**dev** 依赖）对 **`call_mcp_tool_sync`** 重复压测；`tests/test_mcp_example_echo_skill.py::test_build_registry_reuses_mcp_discovery_cache` 断言 discover **仅一次**。  
+- **手动**：同机多次发起 GUI 对话后，观测后端进程子进程数应无持续增长（环境：Windows 11 + Python 3.14，与 L2 测一致即可）。
+
+### 8.3 S6 — 配置边界与 fail-fast
+
+- **热读**：`AppSettings` 在 **FastAPI `create_app` / 进程启动** 时从 `load_app_settings` 装入；**HTTP 请求路径不重新读盘** `local.yaml`。改配置须**重启后端**（与桩脚本、Electron 拉起方式一致）。  
+- **fail-fast**：若 YAML 中声明了 **`skills.mcp_servers`** 且值**不是列表**（例如误写成字符串 / 映射），`merged_dict_to_app_settings` 抛出 **`ValueError`**，并指向本文；避免静默当成「无 MCP」。单测见 **`tests/test_stream1_config_and_obs.py::test_mcp_servers_must_be_yaml_list`**。
 
 ---
 
@@ -126,3 +152,4 @@
 | 2026-05-12 | 初版：`mcp_servers` 通用管线、渐进式披露与 Obs、进程泄漏测试分级、resources/prompts 与被动读取的定案建议。 |
 | 2026-05-12 | **§1.3**：不面向其它 MCP 客户端打包资源服务；维持现状；E3 暂缓。下一阶段按 §3～§5 主队列推进。 |
 | 2026-05-13 | **§6**：`skills.mcp_servers` 条目省略 `enabled` 时默认 **挂载**（`loader._parse_mcp_servers`）；显式 `enabled: false` 关闭。宿主侧 `discover`/`call_tool` 对子进程设置 **cwd=仓库根**（与 `mcp_stdio_sync.stdio_params_for_example_skill` 一致）。 |
+| 2026-05-14 | **§8**：第四阶段 **S4～S6** 审计与治理（discover 缓存、`mcp_servers` 类型 fail-fast、与 Electron 边界）；互链 **`../已完成/第四阶段开发计划.md`** §9。 |

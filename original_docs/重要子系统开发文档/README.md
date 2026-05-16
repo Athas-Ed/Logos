@@ -15,11 +15,12 @@
 | [**`API终极文档.md`**](API终极文档.md) | **个人使用**场景下的 API 原则、可接受风险、改进优先级；不替代 V0.2 字段表 |
 | [**`API-V0.1.md`**](API-V0.1.md) | V0.1 **归档**（对照用）；权威以 `API-V0.2.md` 为准 |
 | [**`设定导入Skill开发.md`**](设定导入Skill开发.md) | 设定导入 Skill **封存规格**与恢复清单；与 `KSFS开发.md` §7.3、`DECISIONS.md` §12 配合 |
+| [**`会话保存Skill文档.md`**](会话保存Skill文档.md) | **持久化轨**占位：会话升格 KSFS/作品库（**当前不实现**）；与 `DECISIONS.md` §13 档 B 分工 |
 | [**`MCP开发.md`**](MCP开发.md) | stdio MCP 多技能配置、渐进式披露与 Obs、进程测试分级、resources/prompts 与被动读取的定案建议 |
 | [**`GUI开发文档.md`**](GUI开发文档.md) | GUI + Electron 壳权威；与 **`产品化文档.md`** 分工见该文 §1 |
 | [**`产品化文档.md`**](产品化文档.md) | Electron **下阶段**产品化：安装包、签名、`electron-updater`、真壳 E2E 等分步 A～F |
 | [**`Obs开发文档.md`**](Obs开发文档.md) | **第四阶段** Obs 主线：调用链落盘、与 MCP 对齐、GUI 薄消费；分步 O1～O5 与验收 |
-| [**`Harness Engineering文档.md`**](Harness%20Engineering文档.md) | **B 类**：LLM 输出质量、RAG、ReAct/CB/路由；与阶段主线解耦、持续迭代；**「性能」默认非指本文**（见 **`第四阶段开发计划.md`** §8） |
+| [**`Harness Engineering文档.md`**](Harness%20Engineering文档.md) | **B 类**：LLM 输出质量、RAG、ReAct/CB/路由；与阶段主线解耦、持续迭代；**「性能」默认非指本文**（见 **`../已完成/第四阶段开发计划.md`** §8） |
 | [**`../SPEC-DISPLAY-AND-LOGGING-V0.1.md`](../SPEC-DISPLAY-AND-LOGGING-V0.1.md)** | 展示与日志补充规格 |
 
 ---
@@ -35,4 +36,4 @@
 
 ---
 
-*最后更新：2026-05-14*
+*最后更新：2026-05-16*

@@ -10,12 +10,30 @@ from logos.harness.obs.structured_formatter import (
     log_record_to_payload,
     make_formatter,
 )
+from logos.harness.obs.tool_chain import (
+    TOOL_CHAIN_EVENT_V1,
+    classify_tool_observation,
+    clear_obs_log_profile_tls,
+    current_obs_profile,
+    emit_tool_chain_v1,
+    param_digest_for_log,
+    prime_obs_log_profile_for_chat,
+    reset_react_tool_steps,
+)
 
 __all__ = [
     "JsonLineFormatter",
+    "TOOL_CHAIN_EVENT_V1",
+    "classify_tool_observation",
+    "clear_obs_log_profile_tls",
     "configure_logging",
+    "current_obs_profile",
+    "emit_tool_chain_v1",
     "ensure_logs_directory",
     "get_obs_logger",
     "log_record_to_payload",
     "make_formatter",
+    "param_digest_for_log",
+    "prime_obs_log_profile_for_chat",
+    "reset_react_tool_steps",
 ]

@@ -15,11 +15,31 @@ interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
 
+export type LogosPromoteDryRunResult = {
+  ok: boolean;
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+  error?: string;
+};
+
+export type LogosSimpleIpcResult = { ok: boolean; error?: string };
+
 declare global {
+  // Vite `define` 注入；在模块文件中须通过 global 合并声明供 tsc 识别。
+  var __LOGOS_GUI_VERSION__: string;
+
   interface Window {
     logosElectron?: {
       getApiBase?: () => Promise<string>;
       onBackendStatus?: (cb: (status: LogosBackendIpcStatus) => void) => () => void;
+      getDebugInfo?: () => Promise<Record<string, unknown> | null>;
+      revealMaintLogsDir?: () => Promise<LogosSimpleIpcResult>;
+      openRepoReadme?: () => Promise<LogosSimpleIpcResult>;
+      runPromoteDraftDryRun?: (args: {
+        workspace: string;
+        targetKsfs: string;
+      }) => Promise<LogosPromoteDryRunResult>;
     };
   }
 }
