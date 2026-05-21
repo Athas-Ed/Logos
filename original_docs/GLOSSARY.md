@@ -10,7 +10,10 @@
 - **OM** — 运行模式（Operating Mode）。顶层角色：**AM（作家）**、**SM（编剧）** 等。
 - **Shell** — Agent 调度器：确定性路由、端口调用、任务边界。
 - **CB（Context Builder）** — 对话历史、Prompt 模板、上下文预算；资产默认 **`resources/prompts/`**。
-- **PR（Paradigm Router）** — Agent 范式路由（默认 ReAct）。
+- **PR（Paradigm Router）** — Agent 范式路由：Skill manifest **预绑定** `dialogue` / `react` / `plan` / `pipeline`；现行代码仅实现 **react**（见 **`范式路由与PR定案.md`**）。
+- **对话范式（`dialogue`）** — 自由文本 LLM，**非** ReAct JSON-only；语病、启发类 Skill。
+- **Plan 范式（`plan`）** — 先产出计划再分步执行（雏形）；与 ReAct **并列**。
+- **流水线范式（`pipeline`）** — 确定性阶段 + 局部 LLM；设定导入类；**不经** ReAct 循环。
 
 ---
 
@@ -38,6 +41,20 @@
 
 ---
 
+## GUI 与产品（第五阶段）
+
+- **任务（Task）** — 用户一次完整工作单元：选 Skill → 输入 → 执行 → 结束/归档；**对应**档 B 一个会话 JSON（`DECISIONS.md` §14）。
+- **产品 Skill（Product Skill）** — 用户可选的任务配方：manifest、`persistence_tier`、Prompt 运行时键、工具白名单；**不等于** MCP Server。
+- **工具 Skill（Tool Provider）** — 向注册表提供工具（`skills/*/server.py` 或 `logos.tools`）。
+- **持久化档位 P0/P1/P2** — 产品 Skill 按对 KSFS/workspace/纯对话的依赖分类；见 **`Skill形态与Prompt工程.md` §4**。
+- **Prompt Blueprint / Runtime Template** — L1 开发设计模板 vs L2 CB 拼装片段（L3 为 `messages[]`）。
+- **单任务模式** — 默认产品路径；bounded 向导；**非**万能 Agent 聊天。
+- **长对话 / 聊天启发** — 特殊 Skill（如 `chat_inspire`）；多轮但工具极少；启发语气。
+- **技能面板** — GUI 默认首页（`/`）；列出可用 Skill。
+- **档 B** — 任务本地缓存（`userData/conversations/*.json`）；`archived` / `disposed` 见 `DECISIONS.md` §13.7～§13.8。
+
+---
+
 ## 子系统
 
 - **Retrieval** — 统一检索；内部调度 HDL；属**基础设施层**。
@@ -55,4 +72,4 @@
 
 ---
 
-*最后更新：2026-05-12 — 对齐 KSFS/HDL 现行模型与本会话定案。*
+*最后更新：2026-05-16 — 增补任务、Skill、技能面板（第五阶段 GUI 定案）。*

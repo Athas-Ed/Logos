@@ -1,6 +1,19 @@
-# `skills/` — 能力层（MCP Skill 包）
+# `skills/` — 能力层
 
-与 **`src/logos/`** 并列：此处放 **可插拔、可单独版本化** 的 **MCP Server**（及元数据），经 **`harness/sg_layer`** 治理后把 **工具（tools）** 暴露给 Agent。
+与 **`src/logos/`** 并列。本目录含两类内容，**禁止混称**（见 **`original_docs/重要子系统开发文档/Skill形态与Prompt工程.md`** §2）：
+
+| 子目录 | 类型 | 说明 |
+|--------|------|------|
+| **`manifests/`** | **产品 Skill** | `*.yaml` manifest；`get_skill_manifest(skill_id)`（`logos.harness.skills_registry`） |
+| **`<包>/server.py`** | **工具 Skill（MCP）** | 可插拔 MCP Server，经 **`harness/sg_layer`** 暴露 **tools** |
+
+## 产品 Skill manifest（F5-01）
+
+- 路径：**`skills/manifests/<skill_id>.yaml`**
+- 样例：`lint_zh`、`chat_inspire`；L1 占位：**`skills/<skill_id>/DESIGN.md`**
+- 详见 **`manifests/README.md`**
+
+## MCP 工具包（既有）
 
 > **现阶段（2026-05-12）**：**不要求**在本目录新增「设定导入」MCP 包；该方向封存见 **`original_docs/重要子系统开发文档/设定导入Skill开发.md`**。仍可用 **`example-stdio-mcp/`** 验证 MCP 与 S&G 接线。
 

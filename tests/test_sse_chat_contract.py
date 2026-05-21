@@ -87,6 +87,7 @@ def _make_ports(tmp_path: Path) -> AppPorts:
         ksfs_root=str(tmp_path / "ksfs"),
         index_root=str(tmp_path / ".index"),
         logs_root=str(tmp_path / "logs"),
+        conversations_cache="./workspace/conversations",
         hsi_sqlite_path=str(tmp_path / ".index" / "hsi.sqlite"),
         chroma_persist_directory=str(tmp_path / ".index" / "vec"),
         chroma_collection="t",
@@ -130,7 +131,10 @@ def test_contract_full_stream_from_app(tmp_path: Path) -> None:
         with client.stream(
             "POST",
             "/api/v1/chat",
-            json={"messages": [{"role": "user", "content": "契约"}]},
+            json={
+                "skill_id": "retrieve_qa",
+                "messages": [{"role": "user", "content": "契约"}],
+            },
             headers={"Accept": "text/event-stream"},
         ) as stream:
             raw = stream.read().decode("utf-8")
@@ -169,6 +173,7 @@ def test_contract_developer_presentation_emits_reasoning_full(tmp_path: Path) ->
             "POST",
             "/api/v1/chat",
             json={
+                "skill_id": "retrieve_qa",
                 "messages": [{"role": "user", "content": "契约"}],
                 "presentation": "developer",
             },
@@ -203,7 +208,10 @@ def test_contract_citations_items_shape(tmp_path: Path) -> None:
         with client.stream(
             "POST",
             "/api/v1/chat",
-            json={"messages": [{"role": "user", "content": "x"}]},
+            json={
+                "skill_id": "retrieve_qa",
+                "messages": [{"role": "user", "content": "请引用"}],
+            },
         ) as stream:
             raw = stream.read().decode("utf-8")
     cite_events = [

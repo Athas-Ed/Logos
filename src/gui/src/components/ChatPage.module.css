@@ -162,6 +162,26 @@
   background: var(--muted);
 }
 
+.backLink {
+  display: inline-block;
+  margin-top: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.backLink:hover {
+  text-decoration: underline;
+}
+
+.mainInspire {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  margin-top: 1rem;
+}
+
 .main {
   flex: 1;
   display: grid;
@@ -384,6 +404,13 @@
   margin: 0 0 0.75rem;
   font-size: 0.95rem;
   font-weight: 600;
+}
+
+.citeHint {
+  margin: 0 0 0.75rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+  line-height: 1.45;
 }
 
 .citeEmpty {

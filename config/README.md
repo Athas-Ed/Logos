@@ -8,6 +8,8 @@
 ## 展示与日志（`ui` / `obs`）
 
 - **`ui.default_presentation`**：`work` \| `developer`；新建 GUI 会话的默认展示档位（浏览器内可覆盖，见 `SPEC-DISPLAY-AND-LOGGING-V0.1.md`）。
+- **`ui.SSE_maxNum`**：正整数，默认 **3**；后台 SSE 并发上限，超额排队（`GET /api/v1/bootstrap` → `ui.SSE_maxNum`）。
+- **`ui.cache_warn_bytes`**：非负整数，默认 **524288000**（500 MiB）；会话缓存占用告警阈值（bootstrap → `ui.cache_warn_bytes`；GUI 设置页展示，见 `DECISIONS.md` §13.6）。
 - **`obs.log_profile`**：`minimal` \| `standard` \| `verbose` \| `audit`；影响 **维护侧** `maint/*.log` 与**控制台**的最低级别；**日常** `daily/…` 固定为 `>= INFO`，与此项解耦。
 - **环境变量覆盖**：`LOGOS_UI__DEFAULT_PRESENTATION`、`LOGOS_OBS__LOG_PROFILE`（规则同其他 `LOGOS_*` 段）。
 
@@ -27,6 +29,14 @@
 - **`skills.mcp_servers`**：声明式挂载多个 stdio MCP（`id`、`enabled`、`entrypoint`、`strip_http_proxy`、`env`）。**必须为 YAML 列表**（可为 `[]`）；误写成字符串/映射时进程启动读配置将 **`ValueError` fail-fast**（见 **`MCP开发.md`** §8.3）。权威说明见 **`original_docs/重要子系统开发文档/MCP开发.md`**；`defaults.yaml` 中默认为空列表。
 - **高德实况天气**：仓库内 **`skills/amap-weather-mcp/`**（工具 `query_weather`）；**不写入** `defaults.yaml`，在 **`local.yaml`** 的 `mcp_servers` 中自行增加一条，并在 `env` 中提供 **`AMAP_WEB_KEY`**（勿提交真实 Key）。细节见 `skills/amap-weather-mcp/README.md`。
 - **MCP 与仓库路径**：若看不到某 MCP 工具，请确认 `entrypoint` 路径存在；从非仓库 cwd 启动或包在 site-packages 时，设置 **`LOGOS_REPO_ROOT`** 指向仓库根（`scripts/run_backend_stub.py` 已默认 `setdefault`）。
+
+## 档 B 会话缓存（`paths.CONVERSATIONS_CACHE`）
+
+- **用途**：Electron 将每个任务会话存为单个 JSON（`&lt;id&gt;.json`），含进行中与已归档任务。
+- **默认**：`./workspace/conversations`（相对**仓库根**，目录已由 `.gitignore` 忽略，勿提交）。
+- **覆盖**：`local.yaml` 中设置 `paths.CONVERSATIONS_CACHE`；或 `LOGOS_PATHS__CONVERSATIONS_CACHE`、`LOGOS_CONVERSATIONS_CACHE`。
+- **约束**：解析后的目录必须在仓库根之下（与草稿晋升等 Main 路径校验一致）。
+- **GUI**：`GET /api/v1/bootstrap` 返回 `conversations_cache_root`（绝对路径）；Electron IPC `conversations.root()` 与之一致。
 
 ## 日志目录（`logs/`）
 

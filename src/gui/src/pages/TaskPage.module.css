@@ -1,0 +1,228 @@
+.page {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-width: 52rem;
+  margin: 0 auto;
+  width: 100%;
+  padding: 0 1rem 1rem;
+}
+
+.header {
+  padding: 0.75rem 0 0.5rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 0.5rem;
+}
+
+.title {
+  margin: 0 0 0.25rem;
+  font-size: 1.05rem;
+  font-weight: 650;
+}
+
+.meta {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.steps {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin: 0.5rem 0 0.75rem;
+  font-size: 0.78rem;
+}
+
+.step {
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  color: var(--muted);
+  border: 1px solid transparent;
+}
+
+.stepActive {
+  color: var(--text);
+  border-color: var(--border);
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+}
+
+.body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  gap: 0.75rem;
+}
+
+.bodyWithTrace {
+  flex-direction: row;
+  align-items: stretch;
+  gap: 0.75rem;
+}
+
+@media (max-width: 720px) {
+  .bodyWithTrace {
+    flex-direction: column;
+  }
+}
+
+.mainCol {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 0;
+}
+
+.bodyWithTrace .panelSlot {
+  width: min(18rem, 38vw);
+  min-height: 0;
+}
+
+@media (max-width: 720px) {
+  .bodyWithTrace aside {
+    width: 100%;
+    max-height: 14rem;
+  }
+}
+
+.label {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.inlineReasoning {
+  margin-bottom: 0.5rem;
+  font-size: 0.78rem;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  padding: 0.35rem 0.5rem;
+}
+
+.inlineReasoning pre {
+  margin: 0.35rem 0 0;
+  white-space: pre-wrap;
+  font-size: 0.75rem;
+  max-height: 8rem;
+  overflow: auto;
+}
+
+.muted {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.errorBanner {
+  padding: 0.55rem 0.85rem;
+  border-radius: var(--radius);
+  border: 1px solid color-mix(in srgb, var(--err) 55%, var(--border));
+  background: color-mix(in srgb, var(--err) 10%, var(--surface));
+  font-size: 0.85rem;
+}
+
+.inputPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.textarea {
+  width: 100%;
+  min-height: 7rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.textarea:focus {
+  outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  border-color: var(--accent);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.primaryBtn,
+.secondaryBtn {
+  padding: 0.45rem 0.9rem;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  cursor: pointer;
+  border: 1px solid var(--border);
+}
+
+.primaryBtn {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.primaryBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.secondaryBtn {
+  background: transparent;
+  color: var(--text);
+}
+
+.secondaryBtn:hover {
+  border-color: var(--accent);
+}
+
+.messageList {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 0.25rem 0;
+}
+
+.bubbleUser,
+.bubbleAssistant {
+  padding: 0.65rem 0.8rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+.bubbleUser {
+  align-self: flex-end;
+  max-width: 92%;
+  background: color-mix(in srgb, var(--accent) 14%, var(--surface));
+}
+
+.bubbleAssistant {
+  align-self: stretch;
+  background: var(--surface);
+}
+
+.bubbleMeta {
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-bottom: 0.35rem;
+}
+
+.bubbleContent {
+  font-size: 0.9rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+

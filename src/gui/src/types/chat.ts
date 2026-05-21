@@ -10,8 +10,6 @@ export interface ChatMessage {
 /** 与 ``GET /api/v1/bootstrap``、``POST /api/v1/chat`` 的 presentation 对齐 */
 export type PresentationMode = "work" | "developer";
 
-export const PRESENTATION_STORAGE_KEY = "logos.presentation.v0";
-
 /** 与 ``GET /api/v1/bootstrap`` 的 ``log_profile``、``obs.log_profile`` 对齐（只读展示） */
 export type LogProfile = "minimal" | "standard" | "verbose" | "audit";
 

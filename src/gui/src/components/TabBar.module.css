@@ -1,0 +1,114 @@
+.tabBar {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.25rem;
+  padding: 0.45rem 0.75rem 0;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 92%, var(--bg));
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+
+.tabList {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.25rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  max-width: 12rem;
+  padding: 0.35rem 0.5rem 0.35rem 0.65rem;
+  border-radius: 8px 8px 0 0;
+  border: 1px solid var(--border);
+  border-bottom: none;
+  background: color-mix(in srgb, var(--surface) 90%, var(--bg));
+  color: var(--muted);
+  font-size: 0.8rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tab:hover {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+}
+
+.tabActive {
+  background: var(--bg);
+  color: var(--text);
+  border-color: var(--border);
+  margin-bottom: -1px;
+  padding-bottom: calc(0.35rem + 1px);
+}
+
+.tabLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  min-width: 0;
+}
+
+.unreadDot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+
+.closeBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.closeBtn:hover {
+  background: color-mix(in srgb, var(--err) 18%, transparent);
+  color: var(--err);
+}
+
+.newTabBtn {
+  flex-shrink: 0;
+  padding: 0.3rem 0.55rem;
+  border-radius: 6px;
+  border: 1px dashed var(--border);
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.newTabBtn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.meta {
+  flex-shrink: 0;
+  align-self: center;
+  margin-left: 0.35rem;
+  font-size: 0.72rem;
+  color: var(--muted);
+  white-space: nowrap;
+}

@@ -25,8 +25,21 @@
   - `default_presentation`：`"work"` \| `"developer"`（来自 `ui.default_presentation`）
   - `log_profile`：`"minimal"` \| `"standard"` \| `"verbose"` \| `"audit"`（来自 `obs.log_profile`）
   - `operating_mode`：字符串（与配置 `operating_mode` 一致）
+  - `llm_mode`：`"stub"` \| `"remote"`；无 `llm.api_key` 或环境 `LOGOS_FORCE_STUB_LLM=1` 时为 **`stub`**（桩回复带「桩后端」前缀），否则 **`remote`**
   - `obs_show_log_root_in_gui`：布尔（来自 `obs.show_log_root_in_gui`，默认 **false**；Obs O4 与 **`GUI开发文档.md`** §6.2 对齐）
   - `obs_logs_root`：字符串或 **`null`**；仅当 `obs_show_log_root_in_gui === true` 时为 **已解析的绝对路径**（`paths.logs_root` 展开），否则为 **`null`**（不向 GUI 暴露日志根）
+  - `ui`：对象（来自配置 `ui.*`，供 GUI 首屏；见 **`DECISIONS.md` §13.6**、**`GUI开发文档.md`** §12.4），字段：
+    - `SSE_maxNum`：正整数（来自 `ui.SSE_maxNum`，默认 **3**）；后台 SSE 并发上限，超额 **排队**
+    - `cache_warn_bytes`：非负整数（来自 `ui.cache_warn_bytes`，默认 **524288000**，即 500×1024×1024 字节）；会话缓存占用告警阈值
+  - `skills`：数组（**F5-08**），供 GUI **技能面板**与任务/对话页元数据；每项字段：
+    - `skill_id`：字符串，稳定标识（对应 `skills/manifests/<skill_id>.yaml`）
+    - `display_name`：字符串
+    - `description`：字符串（技能面板卡片**一句话**摘要）
+    - `ui_instructions`：字符串（任务页 `/task`、对话页 `/chat` **「技能说明」**区块正文；YAML 多行经 manifest `ui_instructions: |` 写入；**勿**在 GUI 按 `skill_id` 硬编码）
+    - `persistence_tier`：`"p0"` \| `"p1"` \| `"p2"`
+    - `paradigm`：`"dialogue"` \| `"react"` \| `"plan"` \| `"pipeline"`
+  - 来源：宿主扫描 `skills/manifests/*.yaml`（与 `get_skill_manifest` 一致）；**不含** `turn_policy` / `allowed_tools`（路由与执行见 manifest 或前端 `catalog.ts` 回退）
+  - `conversations_cache_root`：字符串；档 B 会话 JSON 目录的**绝对路径**（来自 `paths.CONVERSATIONS_CACHE`，相对仓库根解析）
 - 与 `SPEC-DISPLAY-AND-LOGGING-V0.1.md` 正交：会话内切换展示档位 **不** 通过本接口写回配置。
 
 ---
@@ -42,6 +55,8 @@ V0.2 **强制**采用 **Server-Sent Events** 流式返回；**不提供**同路�
 
 ```json
 {
+  "skill_id": "lint_zh",
+  "task_input": { "text": "待检查段落……" },
   "messages": [
     {"role": "system", "content": "可选：前端补充 system"},
     {"role": "user", "content": "……"},
@@ -53,9 +68,16 @@ V0.2 **强制**采用 **Server-Sent Events** 流式返回；**不提供**同路�
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
+| `skill_id` | 字符串 | **推荐必填**。产品 Skill 标识（manifest 见 `skills/manifests/<skill_id>.yaml`）。**省略**时服务端回退 **`chat_inspire`** 并写 WARNING 日志（过渡行为；目标态为 **400**）。**未知** id → HTTP **400** JSON（不开启 SSE），`detail` 为人类可读说明。 |
+| `task_input` | 对象 | 可选。任务向导第二步输入；结构依该 Skill 的 `input_schema`（F5-03 起参与 CB 拼装；F5-02 仅透传接收）。 |
+| `paradigm_override` | 字符串 | 可选。开发者试验：`dialogue` \| `react` \| `plan` \| `pipeline`；**仅当** `developer.show_dev_tools_ui=true` 或进程环境 `LOGOS_FORCE_STUB_LLM=1` 时覆盖 manifest 范式；否则忽略。 |
 | `messages` | 数组 | 每项 `role` ∈ `system` \| `user` \| `assistant`，`content` 为字符串。 |
 | `operating_mode` | 字符串 | 可选，默认 **`author`**。服务端按小写比较；内置 **`screenwriter`**（编剧）与 **`author`**（作者）两种提示后缀，其余值按 **author** 处理。 |
 | `presentation` | 字符串 | 可选。`work` \| `developer`（及别名 `dev`）；省略则使用服务端 `ui.default_presentation`。影响 chat SSE 中推理与引用等事件的**档位**（摘要 vs 全文），见 §3.5。 |
+
+**工具注册（S&G）**：服务端按 manifest 的 `allowed_tools` 调用 `build_v01_guarded_tool_registry(..., allowed_tools=…)`，仅注册白名单内工具名（可为空列表，如 `lint_zh`）。未传 `skill_id` 时回退 Skill 的 `allowed_tools` 同样生效。
+
+**范式路由（PR，F5-03）**：解析 manifest 后 `select_paradigm(skill_id)` → Shell 分支：`dialogue` 为自然语言 SSE（`json_mode=false`，**无** `reasoning_*` 事件）；`react` 为现行 ReAct + `reasoning_*` / `tool_trace_*`；`plan` / `pipeline` 当前返回 SSE `error`，`code: not_implemented`（不进入 ReAct 循环）。`dialogue` **不**在流结束前调用 `retrieval.query` 阻塞。
 
 ### 3.2 消息拆分（与实现对齐）
 
@@ -114,6 +136,7 @@ data: <单行 JSON>
 |--------|------|
 | `empty_message` | 无有效用户消息（见上文第 3.2 节）。 |
 | `internal` | Agent 未正常结束（未收到结束状态）。 |
+| `not_implemented` | 范式 `plan` / `pipeline` 尚未实现（F5-03 桩）。 |
 | 其他 | 未捕获异常时为 **异常类型名**（如 `RuntimeError`）；`message` 为人类可读说明（`OSError` 可能含路径）。 |
 
 ### 3.7 Agent 与流式行为摘要
@@ -197,3 +220,6 @@ data: <单行 JSON>
 |------|------|
 | 2026-05-13 | 对齐 A3：沿革与 GUI 表改为分档位 SSE 事件名；补充 `bootstrap.ts` / `test_sse_chat_contract` 引用。 |
 | 2026-05-14 | **§2.1 `bootstrap`**：增补 **`obs_show_log_root_in_gui`**、**`obs_logs_root`**（Obs O4，默认不向 GUI 暴露日志根）。 |
+| 2026-05-16 | **§2.1 `bootstrap`**：增补 **`ui`** 段（**`SSE_maxNum`**、**`cache_warn_bytes`**）；对齐 GUI 步 G2 / **`DECISIONS.md` §13.6**。 |
+| 2026-05-21 | **§2.1 `bootstrap`**：增补 **`skills[]`**（F5-08）；技能面板从 manifest 摘要动态渲染。 |
+| 2026-05-21 | **§2.1 `bootstrap`**：增补 **`skills[].ui_instructions`**、**`conversations_cache_root`**；GUI「技能说明」与 manifest 绑定（见 **`GUI开发文档.md`** §11.6）。 |

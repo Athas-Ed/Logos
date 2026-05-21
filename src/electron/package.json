@@ -44,6 +44,9 @@
       "signAndEditExecutable": false
     }
   },
+  "dependencies": {
+    "yaml": "^2.8.0"
+  },
   "devDependencies": {
     "@types/node": "^22.10.2",
     "electron": "^33.4.11",

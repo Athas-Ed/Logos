@@ -55,47 +55,80 @@ class FusedRetrievalService:
     metadata_index: MetadataIndex
     semantic_store: SemanticStore
     embedder: TextEmbedder
-    #: 若二者均非空，则在首次（及进程内去重后的）``query`` 前执行 ``ensure_ksfs_hsi_registered``（懒登记）。
+    #: 若二者均非空，则在 ``query`` 前对 KSFS 做 HSI/SVS 增量对账（见 ``refresh_indexes_on_query``）。
     lazy_hsi_ksfs_root: Path | None = None
     lazy_hsi_db_path: Path | None = None
-    #: 若非空，每次 ``query`` 前在 ``sync_ksfs_hsi`` 之后执行 SVS 增量（内含 HSI 对账）。
+    #: 若非空且已装配真实向量库，每次 ``query`` 前执行 ``sync_ksfs_svs_incremental``（内含 HSI 对账）。
     lazy_svs_state_db: Path | None = None
+    #: 为 True 时每次 ``query`` 前扫描 KSFS 并刷新索引；为 False 时仅进程内首次登记（旧行为）。
+    refresh_indexes_on_query: bool = True
 
-    def query(self, *, text: str, top_k: int = 8) -> list[Citation]:
-        if top_k <= 0:
-            return []
+    def _refresh_indexes_from_ksfs(self) -> None:
         root = self.lazy_hsi_ksfs_root
         dbp = self.lazy_hsi_db_path
-        if root is not None and dbp is not None:
-            if self.lazy_svs_state_db is not None:
-                from logos.persistence.chroma_bootstrap import sync_ksfs_svs_incremental
+        if root is None or dbp is None:
+            return
+        if not self.refresh_indexes_on_query:
+            from logos.persistence.registration import ensure_ksfs_hsi_registered
 
-                srep = sync_ksfs_svs_incremental(
-                    ksfs_root=root,
-                    hsi_db=dbp,
-                    store=self.semantic_store,
-                    embedder=self.embedder,
-                    svs_state_db=self.lazy_svs_state_db,
+            report = ensure_ksfs_hsi_registered(ksfs_root=root, hsi_db=dbp)
+            if report is not None:
+                _log.info(
+                    "HSI 懒登记完成：扫描 %s 条，写入 %s 条，跳过 %s 条",
+                    report.documents_scanned,
+                    report.hsi_upserted,
+                    report.hsi_skipped_unchanged,
                 )
-                _log.debug(
-                    "HDL 向量增量：HSI 扫描 %s；向量化 %s 文件，跳过 %s；upsert 块 %s，删块 %s",
+            return
+        if self.lazy_svs_state_db is not None:
+            from logos.persistence.chroma_bootstrap import sync_ksfs_svs_incremental
+
+            srep = sync_ksfs_svs_incremental(
+                ksfs_root=root,
+                hsi_db=dbp,
+                store=self.semantic_store,
+                embedder=self.embedder,
+                svs_state_db=self.lazy_svs_state_db,
+            )
+            if (
+                srep.documents_vectorized > 0
+                or srep.chunks_upserted > 0
+                or srep.chunks_deleted_stale > 0
+            ):
+                _log.info(
+                    "检索前 HDL 增量：扫描 %s 文档；向量化 %s 文件；upsert 块 %s；删块 %s",
                     srep.hsi_documents_scanned,
                     srep.documents_vectorized,
-                    srep.documents_skipped_unchanged,
                     srep.chunks_upserted,
                     srep.chunks_deleted_stale,
                 )
             else:
-                from logos.persistence.registration import ensure_ksfs_hsi_registered
+                _log.debug(
+                    "检索前 HDL 对账：HSI 扫描 %s，无变更（跳过向量化 %s）",
+                    srep.hsi_documents_scanned,
+                    srep.documents_skipped_unchanged,
+                )
+            return
+        from logos.persistence.hdl_sync import sync_ksfs_hsi
 
-                report = ensure_ksfs_hsi_registered(ksfs_root=root, hsi_db=dbp)
-                if report is not None:
-                    _log.info(
-                        "HSI 懒登记完成：扫描 %s 条，写入 %s 条，跳过 %s 条",
-                        report.documents_scanned,
-                        report.hsi_upserted,
-                        report.hsi_skipped_unchanged,
-                    )
+        report = sync_ksfs_hsi(ksfs_root=root, hsi_db=dbp)
+        if report.hsi_upserted > 0 or report.hsi_deleted_stale > 0:
+            _log.info(
+                "检索前 HSI 增量：扫描 %s 条，写入 %s 条，删除陈旧 %s 条",
+                report.documents_scanned,
+                report.hsi_upserted,
+                report.hsi_deleted_stale,
+            )
+        else:
+            _log.debug(
+                "检索前 HSI 对账：扫描 %s 条，无正文/mtime 变更",
+                report.documents_scanned,
+            )
+
+    def query(self, *, text: str, top_k: int = 8) -> list[Citation]:
+        if top_k <= 0:
+            return []
+        self._refresh_indexes_from_ksfs()
         q = text.strip()
         by_path: dict[str, tuple[float, str]] = {}
 

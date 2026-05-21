@@ -4,7 +4,7 @@
 
 **Logos** 是面向游戏叙事的双模式智能体（作家 / 编剧），采用分层架构：**决策层**编排任务，**基础设施层**提供检索与模型等全局能力，**能力层（Skills）**经 MCP 可插拔扩展，**持久层（HDL）**以 **KSFS** 为叙事知识**唯一事实源**。本文描述全流程结构、模块职责与接口约定；**KSFS / HDL 细节**以 **`重要子系统开发文档/KSFS开发.md`** 为准；**已定决策**见 **`DECISIONS.md`**。
 
-**产品形态（现行）**：**独立工作助手**（不将内置编辑器作为作品正文第一现场）；**GUI 优先侧边栏**；桌面壳 **Electron**；主传输 **HTTP + SSE**（见 **`重要子系统开发文档/API-V0.2.md`**）。
+**产品形态（现行）**：**小屏独立写作助手**（不将内置编辑器作为作品正文第一现场）；**任务 / Skill 驱动**（技能面板 → 输入 → 执行；长对话为特殊 Skill）；桌面壳 **Electron**；标签式**多任务槽**（档 B 本地 JSON）；主传输 **HTTP + SSE**（见 **`API-V0.2.md`**）。**上层建筑**（GUI、产品 Skill、Prompt 工程）与**下层能力**（工具、MCP、CB/Shell、KSFS）分层见 **`重要子系统开发文档/Skill形态与Prompt工程.md` §1**；定案索引：**`DECISIONS.md` §14**、**`任务与Skill驱动GUI定案.md`**。
 
 ---
 
@@ -18,7 +18,7 @@
 
 - **Shell**：调度器；经端口调用检索、模型、工作区等；不直接 import 具体驱动。
 - **CB（Context Builder）**：模板与历史、上下文预算；模板资产默认 **`resources/prompts/`**。
-- **PR（Paradigm Router）**：范式路由（默认 ReAct；演进可扩展）。
+- **PR（Paradigm Router）**：按产品 Skill manifest 调度 **dialogue / react / plan / pipeline**（现行代码仅 **react**；见 **`重要子系统开发文档/范式路由与PR定案.md`**）。
 
 ### 2.2 能力层 — Skills（`skills/`）
 
@@ -126,4 +126,4 @@ Logos/
 
 ---
 
-*最后更新：2026-05-14 — §4.1 增补性能 profiling 基线（`scripts/perf_baseline_bootstrap.py` + DEVLOG S12～S14）。*
+*最后更新：2026-05-16 — §1 产品形态对齐任务/Skill 驱动（§14、任务与Skill驱动GUI定案）。*

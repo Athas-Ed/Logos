@@ -3,6 +3,10 @@ import { spawn, spawnSync, type ChildProcess } from "child_process";
 import { app, BrowserWindow, dialog, ipcMain, session, shell } from "electron";
 import * as net from "net";
 import * as path from "path";
+import {
+  initConversationsStorage,
+  registerConversationIpcHandlers,
+} from "./conversations";
 
 const DEFAULT_GUI_HOST = "127.0.0.1";
 const DEFAULT_GUI_PORT = 5173;
@@ -873,6 +877,15 @@ if (!hasSingleInstanceLock) {
       return await runPromoteDraftDryRunMain(repoRoot, payload.workspace, payload.targetKsfs);
     },
   );
+
+  registerConversationIpcHandlers();
+
+  try {
+    initConversationsStorage(resolveRepoRoot());
+  } catch (err) {
+    console.error("[logos-electron] 初始化档 B 会话目录失败:", err);
+    throw err;
+  }
 
   app.on("second-instance", () => {
     focusPrimaryWindow();

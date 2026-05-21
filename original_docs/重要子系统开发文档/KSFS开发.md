@@ -2,7 +2,7 @@
 
 > **地位**：**KSFS 及与之相关的 HDL / Retrieval 边界** 的现行权威说明。若与 [`../已完成文档/SPEC-V0.1.md`](../已完成文档/SPEC-V0.1.md)（归档）中 KSS/LKC、`workspace` 为事实源等表述冲突，**以本文与 `ARCHITECTURE.md` / `GLOSSARY.md` / `DECISIONS.md` 为准**。  
 > **状态**：架构已定案；实现分期落地，**以代码与测试为准**对齐本文。  
-> **实现进度（摘要）**：已移除 LKC 产品路径；**`sync_ksfs_hsi`**（`logos.persistence`）自 **`ksfs_root`** 扫描 **`*.md`**（**跳过各层 `README.md`**），以 **仅正文 body** 的哈希 + **mtime** 增量写 HSI；**已实现** HSI **纯数字 id 发号**、front matter **`id:` 回写**、**§3.4** 声明 id 与 HSI **冲突时重发号并回写**；**`ensure_ksfs_hsi_registered`** 提供**进程内至多一次** KSFS→HSI 登记（默认在 **`FusedRetrievalService.query`** 首次调用前懒登记，可选 **`paths.sync_hsi_on_startup`** 于 FastAPI lifespan 启动即登记）。**`read_ksfs`** 只读 KSFS；上述同步与登记行为由 **`tests/test_stream2_persistence.py`** 覆盖。**定案**：KSFS **仅 `.md`** 入核心扫描；**`.docx`/PDF 不纳入 HDL 核心**（可选 Skill，见 **§3.0**、[`../DECISIONS.md`](../DECISIONS.md) §12）。**SVS**：**§5 分块**、**§5.5 `chunk_id`**、**Chroma 增量**（`sync_ksfs_svs_incremental` / `SvsEmbeddingStateStore`，见 **`tests/test_stream2_persistence.py`** 与 **`chroma_bootstrap`**）。**设定导入**语义见 **§7.3**；Skill 全链封存与恢复见 [**`设定导入Skill开发.md`**](设定导入Skill开发.md)（排期见 [`../下一阶段开发计划.md`](../下一阶段开发计划.md)）。
+> **实现进度（摘要）**：已移除 LKC 产品路径；**`sync_ksfs_hsi`**（`logos.persistence`）自 **`ksfs_root`** 扫描 **`*.md`**（**跳过各层 `README.md`**），以 **仅正文 body** 的哈希 + **mtime** 增量写 HSI；**已实现** HSI **纯数字 id 发号**、front matter **`id:` 回写**、**§3.4** 声明 id 与 HSI **冲突时重发号并回写**；**默认**在每次 **`retrieve` / `FusedRetrievalService.query`** 前增量对账（**`paths.sync_hsi_on_retrieve`**，见 §3.2）；**`ensure_ksfs_hsi_registered`** 仅在关闭该开关时作进程内一次懒登记；可选 **`paths.sync_hsi_on_startup`** 于 FastAPI lifespan 启动即登记。**`read_ksfs`** 只读 KSFS；上述同步与登记行为由 **`tests/test_stream2_persistence.py`** 覆盖。**定案**：KSFS **仅 `.md`** 入核心扫描；**`.docx`/PDF 不纳入 HDL 核心**（可选 Skill，见 **§3.0**、[`../DECISIONS.md`](../DECISIONS.md) §12）。**SVS**：**§5 分块**、**§5.5 `chunk_id`**、**Chroma 增量**（`sync_ksfs_svs_incremental` / `SvsEmbeddingStateStore`，见 **`tests/test_stream2_persistence.py`** 与 **`chroma_bootstrap`**）。**设定导入**语义见 **§7.3**；Skill 全链封存与恢复见 [**`设定导入Skill开发.md`**](设定导入Skill开发.md)（排期见 [`../下一阶段开发计划.md`](../下一阶段开发计划.md)）。
 
 ---
 
@@ -58,7 +58,7 @@
 | **身份** | **`id`** 建议 SQLite `INTEGER PRIMARY KEY` 自增或等价；**`id:`** 写回 **front matter**；新建稿默认不手写 `id`。 |
 | **路径** | **`rel_path`** 相对 `ksfs_root`；**移动/重命名**只更新 HSI（及 SVS 元数据）中路径，**`id` 不变**；chunk 以 **`entity_id`** 关联。 |
 | **变更检测哈希（§4.2 用途 A）** | **仅 body**（front matter **之后**的 Markdown）；**不含** front matter。回写 `id:` 不改 body → 不触发正文类重嵌。实现：`sync_ksfs_hsi` / `_body_content_hash`。 |
-| **自动登记** | **进程启动**或 **首次依赖 HSI/SVS 的路径之前** — **先发生者触发一次** — KSFS 扫描 + HSI 对账；**同进程默认仅一次**（除非显式重建索引）。 |
+| **自动登记** | **进程启动**（``paths.sync_hsi_on_startup``）或 **每次检索**（``paths.sync_hsi_on_retrieve``，**默认 true**）：扫描 KSFS + HSI 增量对账；已装配 Chroma 时走 ``sync_ksfs_svs_incremental``（含 SVS）。设为 false 时退化为进程内**仅首次**懒登记（``ensure_ksfs_hsi_registered``）。 |
 | **回写载体** | **front matter**；**不用** sidecar。 |
 | **mtime** | **登记**与 **晋升到 KSFS** 须校验 mtime；不一致则**中止**并提示。 |
 | **产品假设** | 私有库；不要求「只拷 `.md`、不拷 HSI」即可携。 |

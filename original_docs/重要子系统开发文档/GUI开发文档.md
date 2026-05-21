@@ -1,10 +1,11 @@
 # Logos — GUI 与 Electron 壳层开发（权威指南）
 
-> **地位**：**本仓库内一切与「Web GUI（`src/gui`）+ 未来/现行 Electron 桌面壳」相关的实现与评审**，以本文与 **`API-V0.2.md`**、**`SPEC-DISPLAY-AND-LOGGING-V0.1.md`**、**`DECISIONS.md` §10** 为权威组合：  
+> **地位**：**本仓库内一切与「Web GUI（`src/gui`）+ 未来/现行 Electron 桌面壳」相关的实现与评审**，以本文与 **`API-V0.2.md`**、**`SPEC-DISPLAY-AND-LOGGING-V0.1.md`**、**`DECISIONS.md` §10、§13、§14**、**`任务与Skill驱动GUI定案.md`** 为权威组合：  
 > - **HTTP/SSE 形状与事件名** → 以 **`API-V0.2.md`** 为准；  
 > - **展示档位、日志 profile、`bootstrap` 语义** → 以 **SPEC** 与 **`API-V0.2.md`** 为准；  
-> - **产品形态（Electron 壳、标签页式多会话）** → 以 **`DECISIONS.md` §10、§13** 为准；  
-> - **分步实施与验收** → 以 **本文 §12** 为准；  
+> - **产品形态（Electron 壳、任务/Skill 驱动、标签式多任务）** → 以 **`DECISIONS.md` §10、§13、§14** 与 **`任务与Skill驱动GUI定案.md`** 为准；  
+> - **第四阶段 G 轨（Router / 档 B / 多标签）** → 以 **本文 §12** 为准（G1～G4 已实施部分**保留**）；  
+> - **第五阶段 T 轨（技能面板 / 单任务向导）** → 以 **本文 §11** 与 **`../第五阶段开发计划.md`** 为准；  
 > - **进程模型、安全边界、目录约定、Cursor 协作** → **以本文 §2～§8** 为准。  
 > **更新**：随 Electron 落地与 CI 策略迭代；**第三阶段 P0** 已结案（见 **`已完成/第三阶段开发计划.md`**）；**第四阶段**主排期已定案（见 **`../已完成/第四阶段开发计划.md`**）；Electron **安装/签名/自动更新** 路线图见 **`产品化文档.md`**。
 
@@ -187,14 +188,84 @@
 |----------------|----------|
 | **第三阶段 P0**（已结案）Electron HA | §2、§3、§4、§9 |
 | **第三阶段 P0** 打包 | §2.2、§9 |
-| **GUI 下一阶段（多会话 / Router / 缓存）** | **§12**（与 **`DECISIONS.md` §13** 一致） |
-| **第四阶段** P1 契约工程升级 | **顺延**；跟踪 **`API终极文档.md`** §4.3、§6 |
-| **第四阶段** P1 A7 / MCP | 以后端与 CLI 为主；GUI 按 §12 需要时再暴露按钮 |
+| **第四阶段 G 轨**（Router / 档 B / 多标签 SSE） | **§12**（G1～G4 已实施；G5/M-UI/G6 **冻结顺延**，见 §11.3） |
+| **第五阶段 T 轨**（任务 / Skill 驱动） | **§11**、**`任务与Skill驱动GUI定案.md`**、**`../第五阶段开发计划.md`** |
+| **第四阶段** P1 契约 / A7 / MCP | 后端为主；GUI 在 T3 暴露 `bootstrap.skills` 等 |
 
 ---
 
-## 12. GUI 下一阶段实施计划（分步推进与验收）
+## 11. 第五阶段：任务与 Skill 驱动（产品 IA，2026-05-16 定案）
 
+> **权威全文**：**`任务与Skill驱动GUI定案.md`**（必读）。  
+> **DECISIONS 摘要**：**`DECISIONS.md` §14**。  
+> **本节角色**：GUI 实现者速查；**不重复**定案全文。
+
+### 11.1 产品主轴（一句话）
+
+**用户先选 Skill，再输入，再执行；一个任务 = 档 B 一个会话 JSON；长对话只是名为 `chat_inspire` 的 Skill。**
+
+### 11.2 目标路由（相对现行代码）
+
+| 路由 | 目标态 | 现行（第四阶段） |
+|------|--------|------------------|
+| **`/`** | **技能面板** | 重定向至 `/chat/...` → **T1 改** |
+| **`/task/:id`** | 单任务向导（选步/输入步/执行步） | 无 → **T1 增** |
+| **`/chat/:id`** | 仅 `chat_inspire` 或过渡兼容 | 默认工作区 → **T2 降级** |
+| **`/settings`**、**`/cache`** | 不变 | 已有 |
+
+### 11.3 第四阶段成果：保留 / 冻结 / 废弃
+
+| 类别 | 项 |
+|------|-----|
+| **保留** | Electron 壳、`ConversationProvider`、标签条、档 B IPC、SSE 客户端、`/settings`、健康/bootstrap |
+| **冻结**（T1 前少投入） | G5 全功能 `/cache`、M-UI 以 Chat 为中心的定稿、多标签边缘体验 |
+| **废弃（产品层）** | 冷启动空白全工具 Chat；对话页堆叠「运行模式 / 展示档位」（已迁设置页） |
+
+### 11.4 第五阶段步序（实施）
+
+**唯一排期**：**`../第五阶段开发计划.md`（F5-00～F5-10）**；**PR 细节**：**`PR开发文档.md`**。旧 T0～T3 **废止**。
+
+```text
+F5-04  技能面板 + 路由 /
+  └─► F5-05  Task 向导 + lint_zh
+        └─► F5-07  chat_inspire
+              └─► F5-08  bootstrap.skills + react 示例
+```
+
+| 步 | 界面轨 | 后端/PR |
+|----|--------|---------|
+| **F5-04～05** | `SkillPanelPage`、`TaskPage` | F5-02 契约、F5-03 PR、F5-01 manifest |
+| **F5-07～08** | 多轮对话、动态面板 | `dialogue` / `react` scoped |
+
+### 11.6 技能说明 UI（manifest 驱动，2026-05-21）
+
+| 项 | 定案 |
+|----|------|
+| **组件** | `src/gui/src/components/SkillInstructions.tsx`（标题固定 **「技能说明」**，`data-testid="skill-instructions"`） |
+| **数据来源** | manifest 可选字段 **`ui_instructions`** → `GET /api/v1/bootstrap` → `skills[].ui_instructions`；启动时 `hydrateSkillRegistry`（`src/gui/src/skills/registry.ts`） |
+| **展示位置** | **`TaskPage`** 输入区上方；**`ChatPage`** 消息列表上方（含 `chat_inspire`） |
+| **写死在 GUI 的通用文案** | 输入标签「输入」、按钮 **「发送」** / **「再来一次」**、placeholder「输入内容…」、空状态与 SSE 排队提示；**步骤条**「② 输入 · ③ 执行 · 完成」 |
+| **面板卡片** | 仍用 `description`（短摘要）；与 `ui_instructions`（长说明）分工 |
+| **回退** | bootstrap 不可用时 `catalog.ts` 的 `FALLBACK_PANEL_SKILLS` 须与 manifest **同步** `ui_instructions`（应急，非主路径） |
+| **新增 Skill** | 只改 `skills/manifests/<id>.yaml` + `resources/prompts/skills/<id>.md`；详见 **`skills/manifests/README.md`** |
+
+**已废弃**：按 skill 分散维护的 `taskUi.ts` 式 GUI 文案。
+
+### 11.5 Cursor 起手模板（第五阶段）
+
+```text
+【Logos GUI · 第五阶段 Tx】
+权威：任务与Skill驱动GUI定案.md §x、GUI开发文档.md §11、DECISIONS.md §14。
+范围：仅 src/gui / src/electron（或契约轨另开 PR）。
+禁止：默认首页 Chat、无 skill_id 全工具 Agent、扩大 G5 范围（除非任务写明）。
+验收：npm run build；契约：无变更 或 已更新 API-V0.2（…）。
+```
+
+---
+
+## 12. 第四阶段 GUI 实施计划（G 轨，分步推进与验收）
+
+> **状态（2026-05-16）**：**G1～G4 已实施**；**G5 / M-UI / G6 冻结顺延**至第五阶段 T1 后（§11.3）。  
 > **定案来源**：**`DECISIONS.md` §13**（标签页、档 B 缓存、`/cache`、配置键等）。  
 > **开工前**：`git checkout -b gui/<步编号>-<简述>`；每步 **一条 Cursor 会话 / 一个 PR**（§8.1）。  
 > **轨别**：默认 **界面轨**（仅 `src/gui`、`src/electron`）；涉及 `bootstrap` 新增 `ui.*` 字段时走 **契约轨**（§7）。
@@ -221,25 +292,21 @@ src/electron/src/
 
 ```text
 G0 准备
- └─► G1 Router + 设置/缓存占位（首 PR，可交付）
-      └─► G2 配置与 bootstrap（契约轨，可与 G1 并行或紧随）
-           └─► G3 Electron 缓存 IPC + 单会话 JSON 持久化
-                └─► G4 多标签 + 后台 SSE 队列
-                     └─► G5 /cache 全功能 + 启动提醒
-                          └─► M-UI 手动视觉调校（负责人，非 Agent 主责）
-                               └─► G6 回归与窄窗 E2E
+ └─► G1 Router + 设置/缓存占位  ✅
+      └─► G2 bootstrap ui 段  ✅
+           └─► G3 Electron 缓存 IPC  ✅
+                └─► G4 多标签 + 后台 SSE  ✅
+                     └─► G5 /cache 全功能  ⏸ 冻结 → 第五阶段 T1 后
+                          └─► M-UI  ⏸
+                               └─► G6 E2E  ⏸ 部分已有 smoke
 ```
 
-| 步 | 名称 | 轨 | 建议 PR |
-|----|------|-----|---------|
-| **G0** | 环境与分支 | — | 无 |
-| **G1** | Router + `/settings` + `/cache` 占位 | 界面 | **首 PR** |
-| **G2** | `ui.SSE_maxNum` / `ui.cache_warn_bytes` | 契约（若进 bootstrap） | 可合并 G1 或独立 |
-| **G3** | 档 B 落盘（单会话 → 多会话索引） | 界面 + Electron | 独立 |
-| **G4** | 顶栏标签 + 后台 SSE | 界面 | 独立 |
-| **G5** | 缓存管理页 + 阈值 + 启动提醒 | 界面 + 可选契约 | 独立 |
-| **M-UI** | **手动 UI 调校** | **负责人** | 可选单独 commit |
-| **G6** | E2E / 打包冒烟 | 界面 + CI | 独立 |
+| 步 | 名称 | 轨 | 状态（2026-05-16） |
+|----|------|-----|-------------------|
+| **G0～G4** | 见 §12.2～12.6 正文 | 界面 / 契约 | **已实施** |
+| **G5** | `/cache` 全功能 + 启动提醒 | 界面 | **冻结顺延** |
+| **M-UI** | 手动 UI 调校 | 负责人 | **冻结顺延** |
+| **G6** | E2E / 打包冒烟 | CI | **部分**；T 轨后增补面板路径 |
 
 ---
 
@@ -346,14 +413,14 @@ G0 准备
 
 **Renderer**
 
-- `src/gui/src/conversation/`：`ConversationRecord` 类型，`schema_version: 1`。  
+- `src/gui/src/conversation/`：`ConversationRecord` 类型，`schema_version: 2`（`skill_id`、`task_phase`、`task_input`；读盘兼容 v1 → 默认 `skill_id: chat_inspire`）。  
 - 启动：加载索引；默认会话 `idle`；`active` 与路由 `:id` 同步。  
 - G3 可先 **仅支持 1 个活跃标签 + 写盘**；多标签列表在 G4 扩展。
 
 **验收**
 
 - [ ] 发若干消息后重启 Electron，消息仍在。  
-- [ ] JSON 含 `schema_version: 1`；损坏文件有降级提示（不崩溃）。  
+- [x] JSON 含 `schema_version: 2`（写盘）；v1 读入迁移；损坏文件有降级提示（不崩溃）。  
 - [ ] Renderer 无硬编码绝对路径；无 `fs` 直连。  
 - [ ] `npm run build`；Electron 手动冒烟。
 
@@ -482,3 +549,4 @@ G0 准备
 | 2026-05-14 | 阶段索引：第四阶段主排期**已定案**（A7→MCP→Obs）；契约/产品化大块顺延；互链 **`产品化文档.md`**。 |
 | 2026-05-14 | **§6.2**：设置页与 **Obs O4**（`obs.show_log_root_in_gui` / `bootstrap` 字段）占位说明，供后续按体验微调 UI。 |
 | 2026-05-16 | **§12**：GUI 下一阶段分步计划（G0～G6、M-UI 手动调校）；§6.2 与 **`DECISIONS.md` §13** 对齐；§10 增加 §12 索引。 |
+| 2026-05-16 | **§11**：第五阶段任务/Skill 驱动 IA；G1～G4 标已实施；G5/M-UI 冻结；互链 **`任务与Skill驱动GUI定案.md`**、**`第五阶段开发计划.md`**。 |

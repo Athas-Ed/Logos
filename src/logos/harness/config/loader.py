@@ -188,6 +188,25 @@ def _normalize_log_profile(raw: Any) -> str:
     return "standard"
 
 
+def _coerce_non_negative_int(raw: Any, *, default: int) -> int:
+    if raw is None:
+        return default
+    try:
+        n = int(raw)
+    except (TypeError, ValueError):
+        return default
+    return max(0, n)
+
+
+def _normalize_sse_max_num(raw: Any) -> int:
+    n = _coerce_non_negative_int(raw, default=3)
+    return max(1, n)
+
+
+def _normalize_cache_warn_bytes(raw: Any) -> int:
+    return _coerce_non_negative_int(raw, default=524288000)
+
+
 def merged_dict_to_app_settings(data: Mapping[str, Any]) -> AppSettings:
     paths = data.get("paths") or {}
     emb = data.get("embeddings") or {}
@@ -213,6 +232,11 @@ def merged_dict_to_app_settings(data: Mapping[str, Any]) -> AppSettings:
         ksfs_root=str(paths.get("ksfs_root", "./resources/ksfs")),
         index_root=str(paths.get("index_root", "./.index")),
         logs_root=str(paths.get("logs_root", "./logs")),
+        conversations_cache=str(
+            paths.get("CONVERSATIONS_CACHE")
+            or paths.get("conversations_cache")
+            or "./workspace/conversations"
+        ),
         hsi_sqlite_path=str(paths.get("hsi_sqlite_path", "./.index/.high-speed_index")),
         chroma_persist_directory=str(
             chroma.get("persist_directory", "./.index/.vector_index")
@@ -232,6 +256,10 @@ def merged_dict_to_app_settings(data: Mapping[str, Any]) -> AppSettings:
         llm_https_proxy=_str_opt(llm.get("https_proxy")),
         llm_no_proxy=_str_opt(llm.get("no_proxy")),
         ui_default_presentation=_normalize_presentation(ui.get("default_presentation")),
+        ui_sse_max_num=_normalize_sse_max_num(
+            ui.get("SSE_maxNum", ui.get("sse_max_num"))
+        ),
+        ui_cache_warn_bytes=_normalize_cache_warn_bytes(ui.get("cache_warn_bytes")),
         obs_log_profile=_normalize_log_profile(obs.get("log_profile")),
         obs_show_log_root_in_gui=_coerce_truthy(
             obs.get("show_log_root_in_gui"), default=False
@@ -242,6 +270,9 @@ def merged_dict_to_app_settings(data: Mapping[str, Any]) -> AppSettings:
         developer_prompt_echo=_coerce_truthy(dev.get("prompt_echo"), default=False),
         sync_hsi_on_startup=_coerce_truthy(
             paths.get("sync_hsi_on_startup"), default=False
+        ),
+        sync_hsi_on_retrieve=_coerce_truthy(
+            paths.get("sync_hsi_on_retrieve"), default=True
         ),
         mcp_servers=mcp_servers,
     )

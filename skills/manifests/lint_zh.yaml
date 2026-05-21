@@ -1,0 +1,20 @@
+skill_id: lint_zh
+display_name: 中文语病检查
+description: 对输入段落做语病与表达问题提示（纯对话，无工具）。
+ui_instructions: |
+  粘贴或输入一段中文正文；助手将指出语病与表达问题（单轮，无工具调用）。
+  示例：他跑的很快，我们要加快进度。
+persistence_tier: p2
+paradigm: dialogue
+turn_policy: single
+allowed_tools: []
+prompt_runtime_key: skills/lint_zh
+blueprint_path: skills/lint_zh/DESIGN.md
+input_schema:
+  type: object
+  properties:
+    text:
+      type: string
+      title: 待检查文本
+  required:
+    - text
