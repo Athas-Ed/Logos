@@ -62,6 +62,35 @@ def test_load_merged_from_repo_config() -> None:
     assert isinstance(s.mcp_servers, tuple)
 
 
+def test_ui_sse_and_cache_warn_from_yaml(tmp_path: Path) -> None:
+    cfg = tmp_path / "config"
+    cfg.mkdir()
+    (cfg / "defaults.yaml").write_text(
+        "paths:\n  logs_root: ./logs\n  workspace_root: ./w\n"
+        "  example_ksfs_root: ./e\n  ksfs_root: ./k\n  index_root: ./i\n"
+        "  hsi_sqlite_path: ./h\n"
+        "ui:\n  SSE_maxNum: 4\n  cache_warn_bytes: 999\n",
+        encoding="utf-8",
+    )
+    s = load_app_settings(cfg)
+    assert s.ui_sse_max_num == 4
+    assert s.ui_cache_warn_bytes == 999
+
+
+def test_ui_sse_max_num_clamps_to_at_least_one(tmp_path: Path) -> None:
+    cfg = tmp_path / "config"
+    cfg.mkdir()
+    (cfg / "defaults.yaml").write_text(
+        "paths:\n  logs_root: ./logs\n  workspace_root: ./w\n"
+        "  example_ksfs_root: ./e\n  ksfs_root: ./k\n  index_root: ./i\n"
+        "  hsi_sqlite_path: ./h\n"
+        "ui:\n  SSE_maxNum: 0\n",
+        encoding="utf-8",
+    )
+    s = load_app_settings(cfg)
+    assert s.ui_sse_max_num == 1
+
+
 def test_obs_show_log_root_in_gui_from_yaml(tmp_path: Path) -> None:
     cfg = tmp_path / "config"
     cfg.mkdir()
@@ -216,6 +245,7 @@ def test_configure_logging_writes_file(
         ksfs_root=".",
         index_root=".",
         logs_root=str(log_root),
+        conversations_cache="./workspace/conversations",
         hsi_sqlite_path=".",
         chroma_persist_directory=".",
         chroma_collection="c",

@@ -1,0 +1,20 @@
+skill_id: chat_inspire
+display_name: 创作启发对话
+description: 多轮对话式创作启发；非默认首页入口。
+ui_instructions: |
+  多轮创作启发对话：在下方输入创作相关问题，按 Enter 发送。
+  切换顶栏标签不会中断后台 SSE；超额请求将排队。
+persistence_tier: p2
+paradigm: dialogue
+turn_policy: multi
+allowed_tools: []
+prompt_runtime_key: skills/chat_inspire
+blueprint_path: skills/chat_inspire/DESIGN.md
+input_schema:
+  type: object
+  properties:
+    text:
+      type: string
+      title: 消息
+  required:
+    - text

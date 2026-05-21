@@ -102,78 +102,102 @@ class _EmptyRetrieval:
         return []
 
 
+def _tool_in_skill_scope(name: str, scoped: frozenset[str] | None) -> bool:
+    """*scoped* 为 ``None`` 时保留 V0.1 全量内置工具；否则仅 manifest 白名单内的名称可注册。"""
+    return scoped is None or name in scoped
+
+
 def build_v01_guarded_tool_registry(
     settings: AppSettings,
     *,
     retrieval: RetrievalService | None = None,
     citation_sink: list[Citation] | None = None,
     extra_allowed_tools: frozenset[str] | None = None,
+    allowed_tools: frozenset[str] | None = None,
 ) -> GuardedToolRegistry:
-    """注册 ``retrieve`` / ``read_ksfs`` / ``list_ksfs`` / ``write_draft``；按配置挂载 MCP 工具。"""
+    """注册 ``retrieve`` / ``read_ksfs`` / ``list_ksfs`` / ``write_draft``；按配置挂载 MCP 工具。
+
+    *allowed_tools*：产品 Skill manifest 工具白名单；``None`` 表示未按 Skill 裁剪（V0.1 全量内置 + MCP）。
+    空集合表示不注册任何工具（如 ``lint_zh``）。
+    """
+    scoped = allowed_tools
     seen_mcp_tool_names: set[str] = set()
     repo = resolve_repo_root()
 
-    cache_key = _mcp_discovery_cache_key(settings)
-    with _mcp_discovery_lock:
-        cached = _mcp_discovery_cache.get(cache_key)
-    if cached is not None:
-        mcp_tool_specs = list(cached[0])
-        mcp_handlers = list(cached[1])
+    if scoped is not None and len(scoped) == 0:
+        mcp_tool_specs = []
+        mcp_handlers = []
     else:
-        mcp_tool_specs: list[Any] = []
-        mcp_handlers: list[tuple[Any, list[str], dict[str, str]]] = []
-        for entry in settings.mcp_servers:
-            if not entry.enabled:
-                continue
-            script = (repo / Path(entry.entrypoint)).resolve()
-            if not script.is_file():
-                _log.warning(
-                    "MCP 技能 %s 的 entrypoint 不存在，已跳过：%s（可设置 LOGOS_REPO_ROOT）",
-                    entry.id,
-                    script,
-                )
-                continue
-            cmd = mcp_server_argv(repo, entry.entrypoint)
-            child_env = _mcp_child_env(entry)
-            try:
-                discovered = discover_mcp_tools_sync(cmd, child_env, cwd=repo)
-            except ImportError as exc:
-                _log.error("MCP 技能 %s 未挂载（缺少 Python 包 mcp 等）：%s", entry.id, exc)
-            except Exception:  # noqa: BLE001
-                _log.exception("MCP tools/list 失败（技能 id=%s）", entry.id)
-            else:
-                for t in discovered:
-                    if t.name in V01_SG_TOOL_WHITELIST:
-                        _log.warning(
-                            "忽略与内置工具同名的 MCP 工具：%s（来自 %s）",
-                            t.name,
-                            entry.id,
-                        )
-                        continue
-                    if t.name in seen_mcp_tool_names:
-                        _log.warning(
-                            "忽略重名 MCP 工具：%s（来自 %s，已先由其它技能注册）",
-                            t.name,
-                            entry.id,
-                        )
-                        continue
-                    seen_mcp_tool_names.add(t.name)
-                    mcp_tool_specs.append(t)
-                    mcp_handlers.append((t, cmd, child_env))
-                if not discovered:
-                    _log.warning(
-                        "MCP 技能 %s 已启用但 tools/list 为空",
-                        entry.id,
-                    )
-
+        cache_key = _mcp_discovery_cache_key(settings)
         with _mcp_discovery_lock:
-            _mcp_discovery_cache[cache_key] = (
-                tuple(mcp_tool_specs),
-                tuple(tuple(h) for h in mcp_handlers),
-            )
+            cached = _mcp_discovery_cache.get(cache_key)
+        if cached is not None:
+            mcp_tool_specs = list(cached[0])
+            mcp_handlers = list(cached[1])
+        else:
+            mcp_tool_specs = []
+            mcp_handlers = []
+            for entry in settings.mcp_servers:
+                if not entry.enabled:
+                    continue
+                script = (repo / Path(entry.entrypoint)).resolve()
+                if not script.is_file():
+                    _log.warning(
+                        "MCP 技能 %s 的 entrypoint 不存在，已跳过：%s（可设置 LOGOS_REPO_ROOT）",
+                        entry.id,
+                        script,
+                    )
+                    continue
+                cmd = mcp_server_argv(repo, entry.entrypoint)
+                child_env = _mcp_child_env(entry)
+                try:
+                    discovered = discover_mcp_tools_sync(cmd, child_env, cwd=repo)
+                except ImportError as exc:
+                    _log.error(
+                        "MCP 技能 %s 未挂载（缺少 Python 包 mcp 等）：%s",
+                        entry.id,
+                        exc,
+                    )
+                except Exception:  # noqa: BLE001
+                    _log.exception("MCP tools/list 失败（技能 id=%s）", entry.id)
+                else:
+                    for t in discovered:
+                        if t.name in V01_SG_TOOL_WHITELIST:
+                            _log.warning(
+                                "忽略与内置工具同名的 MCP 工具：%s（来自 %s）",
+                                t.name,
+                                entry.id,
+                            )
+                            continue
+                        if t.name in seen_mcp_tool_names:
+                            _log.warning(
+                                "忽略重名 MCP 工具：%s（来自 %s，已先由其它技能注册）",
+                                t.name,
+                                entry.id,
+                            )
+                            continue
+                        seen_mcp_tool_names.add(t.name)
+                        mcp_tool_specs.append(t)
+                        mcp_handlers.append((t, cmd, child_env))
+                    if not discovered:
+                        _log.warning(
+                            "MCP 技能 %s 已启用但 tools/list 为空",
+                            entry.id,
+                        )
+
+            with _mcp_discovery_lock:
+                _mcp_discovery_cache[cache_key] = (
+                    tuple(mcp_tool_specs),
+                    tuple(tuple(h) for h in mcp_handlers),
+                )
 
     extra_names = frozenset(t.name for t in mcp_tool_specs)
-    allowed = V01_SG_TOOL_WHITELIST | extra_names | (extra_allowed_tools or frozenset())
+    extras = extra_allowed_tools or frozenset()
+    if scoped is None:
+        allowed = V01_SG_TOOL_WHITELIST | extra_names | extras
+    else:
+        mcp_in_scope = frozenset(n for n in extra_names if n in scoped)
+        allowed = (scoped & V01_SG_TOOL_WHITELIST) | mcp_in_scope | (extras & scoped)
     reg = GuardedToolRegistry(allowed_names=allowed)
     workspace = Path(settings.workspace_root).resolve()
     ksfs_root = Path(settings.ksfs_root).resolve()
@@ -214,51 +238,57 @@ def build_v01_guarded_tool_registry(
     def _write_draft(path: str, content: str) -> str:
         return write_draft_under_workspace(workspace, path, content)
 
-    reg.register(
-        "retrieve",
-        description="按查询文本检索知识库，返回 path/snippet/score 列表（JSON 数组字符串）。",
-        parameters=RETRIEVE_PARAMETERS,
-        handler=_retrieve,
-    )
-    reg.register(
-        "read_ksfs",
-        description="只读打开 KSFS 根（paths.ksfs_root）下的相对路径 Markdown/文本（禁止绝对路径与 ..）。",
-        parameters=READ_KSFS_PARAMETERS,
-        handler=_read_ksfs,
-    )
-    reg.register(
-        "list_ksfs",
-        description="列出 KSFS 根下某目录中的子项（仅 .md/.txt 与目录名；path 空=根目录；recursive 默认 false）。",
-        parameters={
-            "type": "object",
-            "properties": {
-                "path": {
-                    "type": "string",
-                    "description": "相对 KSFS 根的目录，如 Test；留空表示根",
-                    "default": "",
+    if _tool_in_skill_scope("retrieve", scoped):
+        reg.register(
+            "retrieve",
+            description="按查询文本检索知识库，返回 path/snippet/score 列表（JSON 数组字符串）。",
+            parameters=RETRIEVE_PARAMETERS,
+            handler=_retrieve,
+        )
+    if _tool_in_skill_scope("read_ksfs", scoped):
+        reg.register(
+            "read_ksfs",
+            description="只读打开 KSFS 根（paths.ksfs_root）下的相对路径 Markdown/文本（禁止绝对路径与 ..）。",
+            parameters=READ_KSFS_PARAMETERS,
+            handler=_read_ksfs,
+        )
+    if _tool_in_skill_scope("list_ksfs", scoped):
+        reg.register(
+            "list_ksfs",
+            description="列出 KSFS 根下某目录中的子项（仅 .md/.txt 与目录名；path 空=根目录；recursive 默认 false）。",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "相对 KSFS 根的目录，如 Test；留空表示根",
+                        "default": "",
+                    },
+                    "recursive": {
+                        "type": "boolean",
+                        "description": "是否递归列出（仍受 max_entries 限制）",
+                        "default": False,
+                    },
+                    "max_entries": {
+                        "type": "integer",
+                        "description": "最多返回条数，默认 200，上限 1000",
+                        "default": 200,
+                    },
                 },
-                "recursive": {
-                    "type": "boolean",
-                    "description": "是否递归列出（仍受 max_entries 限制）",
-                    "default": False,
-                },
-                "max_entries": {
-                    "type": "integer",
-                    "description": "最多返回条数，默认 200，上限 1000",
-                    "default": 200,
-                },
+                "required": [],
             },
-            "required": [],
-        },
-        handler=_list_ksfs,
-    )
-    reg.register(
-        "write_draft",
-        description="将完整草稿内容写入 workspace 下的相对路径（禁止写出 workspace 外）。",
-        parameters=WRITE_DRAFT_PARAMETERS,
-        handler=_write_draft,
-    )
+            handler=_list_ksfs,
+        )
+    if _tool_in_skill_scope("write_draft", scoped):
+        reg.register(
+            "write_draft",
+            description="将完整草稿内容写入 workspace 下的相对路径（禁止写出 workspace 外）。",
+            parameters=WRITE_DRAFT_PARAMETERS,
+            handler=_write_draft,
+        )
     for t, cmd, child_env in mcp_handlers:
+        if not _tool_in_skill_scope(t.name, scoped):
+            continue
         params: dict[str, Any]
         if isinstance(t.inputSchema, dict):
             params = t.inputSchema

@@ -125,6 +125,12 @@ export interface StreamChatOptions {
   operatingMode: OperatingMode;
   /** 省略则服务端使用 ``ui.default_presentation`` */
   presentation?: PresentationMode;
+  /** 产品 Skill（F5-02）；任务页必填 */
+  skillId?: string;
+  /** 任务向导第二步输入（F5-02） */
+  taskInput?: { text: string };
+  /** 开发者试验台：强制 PR 范式 */
+  paradigmOverride?: string;
   signal?: AbortSignal;
   onEvent: (ev: StreamChatEvent) => void;
 }
@@ -136,6 +142,9 @@ export async function streamChat({
   messages,
   operatingMode,
   presentation,
+  skillId,
+  taskInput,
+  paradigmOverride,
   signal,
   onEvent,
 }: StreamChatOptions): Promise<void> {
@@ -145,6 +154,15 @@ export async function streamChat({
   };
   if (presentation !== undefined) {
     body.presentation = presentation;
+  }
+  if (skillId !== undefined && skillId !== "") {
+    body.skill_id = skillId;
+  }
+  if (taskInput !== undefined) {
+    body.task_input = taskInput;
+  }
+  if (paradigmOverride !== undefined && paradigmOverride !== "") {
+    body.paradigm_override = paradigmOverride;
   }
 
   const url = apiUrl(CHAT_PATH);
@@ -222,57 +240,48 @@ export async function streamChat({
     return;
   }
 
-  const bodyStream = res.body;
-  if (!bodyStream) {
+  let raw: string;
+  try {
+    raw = await res.text();
+  } catch (e) {
+    if (signal?.aborted) {
+      onEvent({
+        kind: "error",
+        code: "aborted",
+        message: "已中断",
+      });
+      return;
+    }
     onEvent({
       kind: "error",
-      code: "no_body",
-      message: "响应无可读流",
+      code: "sse_read",
+      message: e instanceof Error ? e.message : String(e),
     });
     return;
   }
 
-  const reader = bodyStream.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
+  if (!raw.trim()) {
+    onEvent({
+      kind: "error",
+      code: "empty_body",
+      message: "空响应",
+    });
+    return;
+  }
 
-  try {
-    while (true) {
-      let chunk: ReadableStreamReadResult<Uint8Array>;
-      try {
-        chunk = await reader.read();
-      } catch (readErr) {
-        onEvent({
-          kind: "error",
-          code: "sse_read",
-          message:
-            readErr instanceof Error
-              ? readErr.message
-              : "SSE 流传输中断，请稍后重试或检查后端",
-        });
-        return;
-      }
-      const { done, value } = chunk;
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-
-      const parts = buffer.split(/\n\n/);
-      buffer = parts.pop() ?? "";
-
-      for (const rawBlock of parts) {
-        const block = rawBlock.trim();
-        if (!block) continue;
-        const ev = parseSseBlock(block);
-        if (ev) onEvent(ev);
-      }
+  const blocks = raw.split(/\n\n+/);
+  for (const block of blocks) {
+    const trimmed = block.trim();
+    if (!trimmed) {
+      continue;
     }
-
-    const tail = buffer.trim();
-    if (tail) {
-      const ev = parseSseBlock(tail);
-      if (ev) onEvent(ev);
+    const ev = parseSseBlock(trimmed);
+    if (!ev) {
+      continue;
     }
-  } finally {
-    reader.releaseLock();
+    onEvent(ev);
+    if (ev.kind === "done" || ev.kind === "error") {
+      return;
+    }
   }
 }

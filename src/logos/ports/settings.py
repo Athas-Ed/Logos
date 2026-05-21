@@ -23,6 +23,8 @@ class AppSettings:
     ksfs_root: str  # KSFS 事实源；read_ksfs 仅允许读此树内相对路径
     index_root: str
     logs_root: str
+    #: ``paths.CONVERSATIONS_CACHE``：档 B 会话 JSON 目录（相对仓库根或绝对路径）
+    conversations_cache: str
     hsi_sqlite_path: str
     chroma_persist_directory: str
     chroma_collection: str
@@ -41,6 +43,10 @@ class AppSettings:
     llm_no_proxy: str = ""
     #: ``ui.default_presentation``：work | developer
     ui_default_presentation: str = "work"
+    #: ``ui.SSE_maxNum``：后台 SSE 并发上限（默认 3）
+    ui_sse_max_num: int = 3
+    #: ``ui.cache_warn_bytes``：会话缓存占用告警阈值（字节，默认 500 MiB）
+    ui_cache_warn_bytes: int = 524288000
     #: ``obs.log_profile``：minimal | standard | verbose | audit
     obs_log_profile: str = "standard"
     #: ``obs.show_log_root_in_gui``：为 True 时 ``GET /api/v1/bootstrap`` 暴露 ``obs_logs_root``，供 GUI 展示日志根（Obs O4）；默认 False
@@ -49,7 +55,9 @@ class AppSettings:
     developer_show_dev_tools_ui: bool = False
     #: 启动初值；运行时可由 :class:`~logos.harness.ii_layer.developer.DeveloperToggles` 改写
     developer_prompt_echo: bool = False
-    #: 进程启动时是否在 FastAPI lifespan 内执行一次 KSFS→HSI 登记（默认关闭；默认改由检索懒登记）
+    #: 进程启动时是否在 FastAPI lifespan 内执行一次 KSFS→HSI 登记（默认关闭）
     sync_hsi_on_startup: bool = False
+    #: 每次 ``retrieve`` / 融合检索 ``query`` 前是否扫描 KSFS 并增量刷新 HSI/SVS（默认开启）
+    sync_hsi_on_retrieve: bool = True
     #: MCP stdio 技能列表（``config`` 中 ``skills.mcp_servers``）；见 ``重要子系统开发文档/MCP开发.md``
     mcp_servers: tuple[McpServerEntry, ...] = field(default_factory=tuple)

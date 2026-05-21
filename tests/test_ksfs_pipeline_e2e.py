@@ -114,3 +114,34 @@ def test_e2e_tmp_ksfs_hsi_svs_chroma_fused_snippet(
 
     fm = md.read_text(encoding="utf-8")
     assert re.search(r'id:\s*"\d+"', fm)
+
+
+def test_fused_query_resyncs_hsi_after_ksfs_edit(tmp_path: Path) -> None:
+    """第二次 retrieve 前应拾取 KSFS 文件变更（非进程内仅登记一次）。"""
+    ksfs = tmp_path / "ksfs"
+    index_root = tmp_path / ".index"
+    hsi_db = index_root / ".high-speed_index"
+    (ksfs / "Test").mkdir(parents=True)
+    md = ksfs / "Test" / "Test.md"
+    md.write_text("---\ntitle: 初稿标题\n---\n\n正文 v1\n", encoding="utf-8")
+
+    meta = SqliteMetadataIndex(hsi_db)
+    retrieval = FusedRetrievalService(
+        metadata_index=meta,
+        semantic_store=_NoopSemanticStore(),
+        embedder=_Fixed512Embedder(),
+        lazy_hsi_ksfs_root=ksfs,
+        lazy_hsi_db_path=hsi_db,
+        lazy_svs_state_db=None,
+        refresh_indexes_on_query=True,
+    )
+    retrieval.query(text="初稿", top_k=5)
+    row1 = meta.fetch_by_paths(["Test/Test.md"])["Test/Test.md"]
+
+    md.write_text("---\ntitle: 修订后唯一标题\n---\n\n正文 v2\n", encoding="utf-8")
+    retrieval.query(text="修订后", top_k=5)
+    row2 = meta.fetch_by_paths(["Test/Test.md"])["Test/Test.md"]
+    assert row1.content_hash != row2.content_hash
+
+    cites = retrieval.query(text="修订后唯一", top_k=5)
+    assert any(c.path.replace("\\", "/") == "Test/Test.md" for c in cites)

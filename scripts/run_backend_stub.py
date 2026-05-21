@@ -3,10 +3,10 @@
 - 若在 ``config/local.yaml`` 中配置了 ``llm.api_key``（及可选 ``base_url`` / ``model``），
   则使用 **OpenAI 兼容** HTTP 客户端调用远程模型（如 DeepSeek）。
 - 否则 LLM 为内存桩。
-- **检索**：装配 ``FusedRetrievalService``；**HSI**（SQLite）默认在 **首次 ``retrieve``/融合检索** 前懒登记
-  （发号、回写 ``id:``）；若 ``paths.sync_hsi_on_startup: true`` 则改为进程启动时 lifespan 登记。
-  若已安装 ``chromadb`` 且 ``embeddings.model_path`` 下存在 BGE 权重，则启动时尝试 **SVS→Chroma 增量同步**
-  （``KSFS开发.md`` §5 分块、§5.5 ``chunk_id``；失败则仅 HSI 关键词检索，并在日志中提示）。
+- **检索**：装配 ``FusedRetrievalService``；默认 **每次 ``retrieve``** 前按 ``paths.sync_hsi_on_retrieve``
+  扫描 KSFS 并增量刷新 HSI/SVS（``sync_hsi_on_retrieve: false`` 时退化为进程内仅首次懒登记）。
+  若 ``paths.sync_hsi_on_startup: true`` 则进程启动时额外登记一次。
+  若已安装 ``chromadb``，则检索前走 **SVS 增量**（内含 HSI）；启动时另有一次全量 Chroma 预热（可选）。
 
 用法（仓库根、已激活 venv）::
 
@@ -88,7 +88,16 @@ def main() -> None:
             "  安装后请重新启动本脚本。\n",
             file=sys.stderr,
         )
-    llm = build_chat_llm_from_settings(settings) or _StubLLM()
+    force_stub = os.environ.get("LOGOS_FORCE_STUB_LLM", "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+    if force_stub:
+        _log.info("LOGOS_FORCE_STUB_LLM=1：使用内存桩 LLM（忽略 config 中的 llm.api_key）")
+        llm = _StubLLM()
+    else:
+        llm = build_chat_llm_from_settings(settings) or _StubLLM()
 
     _log.info(
         "正在准备检索索引（可选 Chroma 重建；HSI 默认在首次检索时懒登记）；"
@@ -146,6 +155,7 @@ def main() -> None:
         lazy_svs_state_db=svs_state_db
         if not isinstance(semantic_store, _StubSemanticStore)
         else None,
+        refresh_indexes_on_query=settings.sync_hsi_on_retrieve,
     )
     knowledge_source = FilesystemKnowledgeSource(ksfs_root)
 

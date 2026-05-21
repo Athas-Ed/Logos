@@ -67,6 +67,7 @@ def _settings(tmp_path: Path) -> AppSettings:
         ksfs_root=str(tmp_path / "ksfs"),
         index_root=str(tmp_path / "idx"),
         logs_root=str(tmp_path / "logs"),
+        conversations_cache="./workspace/conversations",
         hsi_sqlite_path=str(tmp_path / "idx" / "hsi"),
         chroma_persist_directory=str(tmp_path / "idx" / "chroma"),
         chroma_collection="c",

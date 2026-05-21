@@ -23,6 +23,18 @@ export default defineConfig(({ mode }) => {
         "/api": {
           target,
           changeOrigin: true,
+          configure: (proxy) => {
+            proxy.on("proxyRes", (proxyRes) => {
+              const ct = proxyRes.headers["content-type"];
+              if (
+                typeof ct === "string" &&
+                ct.includes("text/event-stream")
+              ) {
+                proxyRes.headers["cache-control"] = "no-cache";
+                proxyRes.headers["x-accel-buffering"] = "no";
+              }
+            });
+          },
         },
       },
     },
