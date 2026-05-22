@@ -29,6 +29,13 @@ export type StreamChatEvent =
       result: string;
       error: string | null;
     }
+  | {
+      kind: "pipeline_step";
+      stepId: string;
+      status: string;
+      summary: string;
+    }
+  | { kind: "pipeline_warning"; warnings: string[] }
   | { kind: "done"; payload: Record<string, unknown> }
   | { kind: "error"; code: string; message: string };
 
@@ -104,6 +111,21 @@ function parseSseBlock(block: string): StreamChatEvent | null {
           result: String(payload.result ?? ""),
           error: err == null ? null : String(err),
         };
+      }
+      case "pipeline_step": {
+        return {
+          kind: "pipeline_step",
+          stepId: String(payload.step_id ?? ""),
+          status: String(payload.status ?? ""),
+          summary: String(payload.summary ?? ""),
+        };
+      }
+      case "pipeline_warning": {
+        const raw = payload.warnings;
+        const warnings = Array.isArray(raw)
+          ? raw.map((w) => String(w))
+          : [];
+        return { kind: "pipeline_warning", warnings };
       }
       case "done":
         return { kind: "done", payload };

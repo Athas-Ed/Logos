@@ -1,7 +1,7 @@
 # 设定导入 Skill 开发（封存规格）
 
 > **地位**：**产品/架构讨论结果的封存稿**；与 **`KSFS开发.md` §7.3**、**`DECISIONS.md` §12** 冲突时以二者为**现行权威**；本文件负责 **收束已定方向、路径与分工**，便于下阶段开箱即做。  
-> **状态（2026-05-12）**：**当前开发计划内不实现**「设定导入」全链（含 MCP Skill、渲染落盘、与导入绑定的晋升自动化）；**本阶段重心为 KSFS 本体**（HSI、登记、SVS、E2E 等，见 [`../下一阶段开发计划.md`](../下一阶段开发计划.md)）。恢复开发时以本文为起点更新 `KSFS开发.md` / `DECISIONS.md` 与代码。
+> **状态（2026-05-21）**：F6 **`import_setting`** 使用 **`pipeline_profile: default_import_v0`** 跑通竖切片；产品定稿后迁至 **`your_profile_v1`**（只换 `entity_template/` + `pipelines/` + manifest 一行）。进程内 **PipelineRunner**；晋升与重叠见 F6-08（**`../第六阶段开发计划.md` §4.1 Q7**）。
 
 ---
 
@@ -9,7 +9,7 @@
 
 | 层级 | 物理位置 | 职责 |
 |------|-----------|------|
-| **Skill（MCP）** | `skills/<包名>/`（新建，如 `settings-import-mcp/`，实现期再定） | **Agent 可见入口**：收粘贴/参数 → 调 LLM 产出 JSON → 调用下游校验/写盘（本机 API 或受控工具）；经 **`GuardedToolRegistry`** 等治理接入对话。 |
+| ~~Skill（MCP）~~ **产品 Skill + 进程内 Pipeline** | **`import_setting`** manifest；**`PipelineRunner`**（F6 定案） | **非**独立 MCP 范式包；收粘贴 → LLM JSON → schema → 重叠扫描 → 渲染 `setting_entry` → 人审 → **`DraftPromotionPort`**。MCP 仅提供可选**工具**（如 `retrieve`），见 **`Skill形态与Prompt工程.md` §2**。 |
 | **HDL / 底座** | `src/logos/persistence`、`src/logos/tools` 等 | **确定性**：JSON Schema 校验、按 `render_spec` 写 **`workspace/setting_entry/`**、**`DraftPromotionPort`** 晋升、`sync_ksfs_hsi` / HSI 发号回写。 |
 | **契约** | **`resources/entity_template/<profile>/`**（已备 MVP：`default_import_v0`） | **单一来源**：`manifest.yaml`、`schema.json`、`render_spec.yaml`、`llm_instructions.md`、`examples/` 金样；Skill **只引用**，勿维护第二套 schema。 |
 

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useConversation } from "../conversation/ConversationProvider";
+import { PipelineTaskTrace } from "../components/PipelineTaskTrace";
 import { TaskExecutionTrace } from "../components/TaskExecutionTrace";
 import type { TaskPhase } from "../conversation/storeTypes";
 import { SkillInstructions } from "../components/SkillInstructions";
@@ -23,16 +24,33 @@ export function TaskPage() {
   const messages = conv?.messages ?? [];
   const citations = conv?.citations ?? [];
   const toolTraceLog = conv?.toolTraceLog ?? [];
+  const pipelineSteps = conv?.pipelineSteps ?? [];
+  const pipelineWarnings = conv?.pipelineWarnings ?? [];
   const presentation = conv?.presentation ?? "work";
   const streaming = Boolean(conv?.streaming);
   const queued = Boolean(conv?.queued);
   const streamError = conv?.streamError ?? null;
-  const showTracePanel =
+  const isPipeline = skill?.paradigm === "pipeline";
+  const showReactTrace =
     phase !== "input" &&
-    (skill?.paradigm === "react" ||
-      toolTraceLog.length > 0 ||
-      citations.length > 0 ||
-      streaming);
+    skill?.paradigm === "react" &&
+    (toolTraceLog.length > 0 || citations.length > 0 || streaming);
+  const showPipelineTrace =
+    phase !== "input" &&
+    isPipeline &&
+    (pipelineSteps.length > 0 || pipelineWarnings.length > 0 || streaming);
+  const showTracePanel = showReactTrace || showPipelineTrace;
+  const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
+  const resultText = lastAssistant?.content?.trim() ?? "";
+
+  const copyResult = useCallback(async () => {
+    if (!resultText) return;
+    try {
+      await navigator.clipboard.writeText(resultText);
+    } catch {
+      /* 浏览器策略限制时忽略 */
+    }
+  }, [resultText]);
 
   useEffect(() => {
     if (phase === "input" && conv?.taskInputText) {
@@ -121,8 +139,12 @@ export function TaskPage() {
                 id="task-input-text"
                 className={styles.textarea}
                 data-testid="task-input-textarea"
-                rows={6}
-                placeholder="输入内容…（Enter 发送，Shift+Enter 换行）"
+                rows={isPipeline ? 10 : 6}
+                placeholder={
+                  isPipeline
+                    ? "粘贴设定正文（角色、地点、世界观片段等）…（Enter 发送，Shift+Enter 换行）"
+                    : "输入内容…（Enter 发送，Shift+Enter 换行）"
+                }
                 value={draft}
                 disabled={streaming}
                 onChange={(e) => setDraft(e.target.value)}
@@ -204,6 +226,16 @@ export function TaskPage() {
               : null}
               {phase === "done" ?
                 <>
+                  {resultText ?
+                    <button
+                      type="button"
+                      className={styles.secondaryBtn}
+                      data-testid="task-copy-result"
+                      onClick={() => void copyResult()}
+                    >
+                      复制结果
+                    </button>
+                  : null}
                   <button
                     type="button"
                     className={styles.primaryBtn}
@@ -226,7 +258,14 @@ export function TaskPage() {
           : null}
         </div>
 
-        {showTracePanel && skill ?
+        {showPipelineTrace ?
+          <PipelineTaskTrace
+            steps={pipelineSteps}
+            warnings={pipelineWarnings}
+            streaming={streaming}
+          />
+        : null}
+        {showReactTrace && skill ?
           <TaskExecutionTrace
             paradigm={skill.paradigm}
             presentation={presentation}

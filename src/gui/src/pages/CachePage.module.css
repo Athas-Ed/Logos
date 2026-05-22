@@ -105,3 +105,86 @@
 .itemMeta code {
   font-family: ui-monospace, "Cascadia Code", monospace;
 }
+
+.usage {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.usage strong {
+  font-weight: 650;
+}
+
+.errorBanner {
+  margin-bottom: 0.75rem;
+  padding: 0.55rem 0.85rem;
+  border-radius: var(--radius);
+  border: 1px solid color-mix(in srgb, var(--err) 55%, var(--border));
+  background: color-mix(in srgb, var(--err) 10%, var(--surface));
+  font-size: 0.85rem;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.65rem;
+}
+
+.toolbarActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.primaryBtn,
+.secondaryBtn,
+.dangerBtn {
+  padding: 0.4rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  border: 1px solid var(--border);
+}
+
+.primaryBtn {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.primaryBtn:disabled,
+.secondaryBtn:disabled,
+.dangerBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.secondaryBtn {
+  background: transparent;
+  color: var(--text);
+}
+
+.dangerBtn {
+  background: color-mix(in srgb, var(--err) 12%, var(--surface));
+  color: var(--err);
+  border-color: color-mix(in srgb, var(--err) 45%, var(--border));
+}
+
+.rowLabel {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  cursor: pointer;
+}
+
+.rowLabel input {
+  margin-top: 0.25rem;
+}
+
+.itemBody {
+  flex: 1;
+  min-width: 0;
+}

@@ -138,6 +138,7 @@ L2 + task_input + history + operating_mode  →  CB.render  →  L3
 | `allowed_skill_calls` | 否 | 互调须限深度，防循环 |
 | `workspace_writes` | P0/P1 | 是否允许写 workspace |
 | `ksfs_promotion` | P0 | 是否走人审晋升 |
+| `pipeline_profile` | `paradigm: pipeline` 时必填 | 流水线配置名；F6 **`import_setting`** 用 **`default_import_v0`**，产品定稿后改为 **`your_profile_v1`** 等 → `resources/entity_template/<profile>/` + `resources/pipelines/<profile>.yaml` |
 
 **T1 竖切片**可用最小 manifest（P2 示例）：
 

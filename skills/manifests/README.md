@@ -28,3 +28,4 @@
 - **`lint_zh.yaml`** — `dialogue` + `p2` + `turn_policy: single`
 - **`chat_inspire.yaml`** — `dialogue` + `p2` + `turn_policy: multi`
 - **`retrieve_qa.yaml`** — `react` + `allowed_tools: [retrieve, read_ksfs]`（检索后读原文，F5-08）
+- **`outline_plan.yaml`** — `plan` Phase A 演示（F5-09 / PR-5）

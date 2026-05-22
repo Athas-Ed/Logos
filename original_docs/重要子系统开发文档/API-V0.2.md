@@ -77,7 +77,7 @@ V0.2 **强制**采用 **Server-Sent Events** 流式返回；**不提供**同路�
 
 **工具注册（S&G）**：服务端按 manifest 的 `allowed_tools` 调用 `build_v01_guarded_tool_registry(..., allowed_tools=…)`，仅注册白名单内工具名（可为空列表，如 `lint_zh`）。未传 `skill_id` 时回退 Skill 的 `allowed_tools` 同样生效。
 
-**范式路由（PR，F5-03）**：解析 manifest 后 `select_paradigm(skill_id)` → Shell 分支：`dialogue` 为自然语言 SSE（`json_mode=false`，**无** `reasoning_*` 事件）；`react` 为现行 ReAct + `reasoning_*` / `tool_trace_*`；`plan` / `pipeline` 当前返回 SSE `error`，`code: not_implemented`（不进入 ReAct 循环）。`dialogue` **不**在流结束前调用 `retrieval.query` 阻塞。
+**范式路由（PR，F5-03～F6-03）**：解析 manifest 后 `select_paradigm(skill_id)` → Shell 分支：`dialogue` 为自然语言 SSE（`json_mode=false`，**无** `reasoning_*` 事件）；`react` 为现行 ReAct + `reasoning_*` / `tool_trace_*`；`plan` 为 **Phase A** 单次计划生成（`json_mode=true`，SSE 仍为 `delta` + `done`，**无** ReAct 条令，示例 Skill **`outline_plan`**）；`pipeline` 为设定导入流水线（示例 Skill **`import_setting`**），SSE 为 **`pipeline_step`** / 可选 **`pipeline_warning`** + 摘要 **`delta`** + **`done`**（**无** ReAct 条令）。`dialogue` **不**在流结束前调用 `retrieval.query` 阻塞。
 
 ### 3.2 消息拆分（与实现对齐）
 
@@ -123,10 +123,16 @@ data: <单行 JSON>
 | `citations_partial` | `{"items":[{"path","snippet","score"}]}` | **`work`** 档：引用列表（条目与片段可能截断）。 |
 | `citations_full` | `{"items":[…]}` | **`developer`** 档：引用全文。 |
 | `delta` | `{"text": "..."}` | **最终答复**正文增量；因分块可 **多次** 发送。 |
-| `done` | `{}` | 正常结束。 |
+| `pipeline_step` | `{"step_id":"…","status":"started"\|"ok"\|"error","summary":"…"}` | **`pipeline` 范式**（F6-03）：阶段进度；`status=error` 后紧跟 `error` 并结束流。 |
+| `pipeline_warning` | `{"warnings":["…"]}` | **`pipeline` 范式**：只读重叠等警告（F6-08 起可非空）；可 **多次**。 |
+| `done` | `{}` 或 pipeline 扩展字段 | 正常结束。`pipeline` 成功时 `done` 可含 `written_paths`、`warnings`、`unit_count`、`batch_id`。 |
 | `error` | `{"code":"…","message":"…"}` | 业务或不可恢复错误；发送后流结束。见 §3.6。 |
 
-**典型成功顺序**（非 Prompt 回显）：零段或多段 `reasoning_*` → 可选 `citations_*` → 一段或多段 `delta` → `done`。
+**典型成功顺序**（非 Prompt 回显）：
+
+- **dialogue / plan**：零段或多段 `reasoning_*`（plan 通常无）→ 可选 `citations_*`（plan 无）→ 一段或多段 `delta` → `done`。
+- **react**：`reasoning_*` → 可选 `tool_trace_*` → 可选 `citations_*` → `delta` → `done`。
+- **pipeline**：多段 `pipeline_step` → 可选 `pipeline_warning` → 一段 `delta`（写入摘要）→ `done`。
 
 **Prompt 回显模式**（`developer.prompt_echo` 为真）：**不调用 LLM**；直接产生 `delta`（内容为格式化后的 messages 回显文本，含固定标题「【Prompt 回显模式】」）与 `done`。见 §4。
 
@@ -136,7 +142,9 @@ data: <单行 JSON>
 |--------|------|
 | `empty_message` | 无有效用户消息（见上文第 3.2 节）。 |
 | `internal` | Agent 未正常结束（未收到结束状态）。 |
-| `not_implemented` | 范式 `plan` / `pipeline` 尚未实现（F5-03 桩）。 |
+| `not_implemented` | 已废弃于 `pipeline`（F6-03 已接线）；保留供历史客户端对照。 |
+| `pipeline_step_failed` | `pipeline` 某阶段 `pipeline_step.status=error`。 |
+| `invalid_skill` | `pipeline` Skill 缺少 `pipeline_profile`。 |
 | 其他 | 未捕获异常时为 **异常类型名**（如 `RuntimeError`）；`message` 为人类可读说明（`OSError` 可能含路径）。 |
 
 ### 3.7 Agent 与流式行为摘要
@@ -223,3 +231,4 @@ data: <单行 JSON>
 | 2026-05-16 | **§2.1 `bootstrap`**：增补 **`ui`** 段（**`SSE_maxNum`**、**`cache_warn_bytes`**）；对齐 GUI 步 G2 / **`DECISIONS.md` §13.6**。 |
 | 2026-05-21 | **§2.1 `bootstrap`**：增补 **`skills[]`**（F5-08）；技能面板从 manifest 摘要动态渲染。 |
 | 2026-05-21 | **§2.1 `bootstrap`**：增补 **`skills[].ui_instructions`**、**`conversations_cache_root`**；GUI「技能说明」与 manifest 绑定（见 **`GUI开发文档.md`** §11.6）。 |
+| 2026-05-21 | **§3.1 范式路由**：`plan` Phase A（`outline_plan`）改为 `delta`+`done`；`pipeline` 仍为 `not_implemented`（F5-09 / F5-10 对齐）。 |

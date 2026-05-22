@@ -20,7 +20,6 @@ import {
 import { FALLBACK_PANEL_SKILLS } from "../skills/catalog";
 import { getSkillMeta, hydrateSkillRegistry } from "../skills/registry";
 import { conversationNavPath } from "../skills/routing";
-import { DEFAULT_CONVERSATION_ID } from "./constants";
 import {
   conversationStateFromRecord,
   createEmptyConversationState,
@@ -34,9 +33,16 @@ import {
 } from "./ipc";
 import { deriveConversationTitle } from "./record";
 import {
+  cancelConversationPersist,
   flushConversationPersist,
   scheduleConversationPersist,
 } from "./persistScheduler";
+import { currentAppPath, isConversationRoute } from "./routeUtils";
+import {
+  clearSessionDismissed,
+  isSessionDismissed,
+  markSessionDismissed,
+} from "./sessionDismissed";
 import type { ConversationState } from "./storeTypes";
 import { buildConversationRecord } from "./record";
 import { writeConversationIpc } from "./ipc";
@@ -57,6 +63,8 @@ export type ConversationActions = {
   /** 多轮 Skill（如 chat_inspire）→ ``/chat/:id`` */
   createInspireChat: (skillId: string) => string;
   archiveTab: (id: string) => void;
+  /** 从 /cache 恢复 archived → idle 并加入顶栏（F6-04） */
+  restoreArchivedConversation: (id: string) => Promise<boolean>;
   clearUnread: (id: string) => void;
   patchConversation: (
     id: string,
@@ -139,6 +147,8 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
   const queueRef = useRef<string[]>([]);
   const abortControllersRef = useRef<Map<string, AbortController>>(new Map());
   const pendingSendRef = useRef<Set<string>>(new Set());
+  /** 归档/关闭过程中，禁止 ensureOpenTab 把标签重新加回顶栏 */
+  const closingTabsRef = useRef<Set<string>>(new Set());
   const runStreamRef = useRef<(conversationId: string) => Promise<void>>(
     async () => {},
   );
@@ -189,7 +199,11 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
             : { ...cur, ...patch, id };
         const next = { ...prev, [id]: nextState };
         byIdRef.current = next;
-        if (nextState.hydrated && nextState.status === "idle") {
+        if (
+          nextState.hydrated &&
+          nextState.status === "idle" &&
+          !closingTabsRef.current.has(id)
+        ) {
           scheduleConversationPersist(id, nextState);
         }
         // 须在 ref 写入后同步通知：异步 SSE onEvent 中若先 notify 再落盘，useSyncExternalStore 会读到旧快照
@@ -284,6 +298,32 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
               patchConversation(conversationId, (s) => ({
                 ...s,
                 streamError: `${ev.code}: ${ev.message}`,
+              }));
+              return;
+            }
+            if (ev.kind === "pipeline_step") {
+              patchConversation(conversationId, (s) => {
+                const rest = s.pipelineSteps.filter(
+                  (x) => x.stepId !== ev.stepId,
+                );
+                return {
+                  ...s,
+                  pipelineSteps: [
+                    ...rest,
+                    {
+                      stepId: ev.stepId,
+                      status: ev.status,
+                      summary: ev.summary,
+                    },
+                  ],
+                };
+              });
+              return;
+            }
+            if (ev.kind === "pipeline_warning") {
+              patchConversation(conversationId, (s) => ({
+                ...s,
+                pipelineWarnings: ev.warnings,
               }));
               return;
             }
@@ -404,6 +444,8 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
         messages: [userMsg, { role: "assistant", content: "", reasoning: "" }],
         citations: [],
         toolTraceLog: [],
+        pipelineSteps: [],
+        pipelineWarnings: [],
         title: deriveConversationTitle([userMsg]),
       }));
       const after = byIdRef.current[conversationId];
@@ -499,6 +541,8 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
             messages: [],
             citations: [],
             toolTraceLog: [],
+            pipelineSteps: [],
+            pipelineWarnings: [],
             streamError: null,
             streaming: false,
             queued: false,
@@ -511,67 +555,104 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
 
   const archiveTab = useCallback(
     (conversationId: string) => {
+      closingTabsRef.current.add(conversationId);
       stopStream(conversationId);
+      pendingSendRef.current.delete(conversationId);
       queueRef.current = queueRef.current.filter((id) => id !== conversationId);
+      cancelConversationPersist(conversationId);
+      syncQueueMeta();
 
       const state =
         byIdRef.current[conversationId] ??
         createEmptyConversationState(conversationId);
-      const archived = { ...state, status: "archived" as const };
-      if (isConversationIpcAvailable()) {
-        const record = buildConversationRecord({
-          id: archived.id,
-          messages: archived.messages,
-          citations: archived.citations,
-          toolTraceLog: archived.toolTraceLog,
-          operatingMode: archived.operatingMode,
-          presentation: archived.presentation,
-          status: "archived",
-          title: archived.title,
-          skillId: archived.skillId,
-          taskPhase: archived.taskPhase,
-          taskInputText: archived.taskInputText,
-        });
-        void writeConversationIpc(conversationId, record);
-      }
+      const record = buildConversationRecord({
+        id: state.id,
+        messages: state.messages,
+        citations: state.citations,
+        toolTraceLog: state.toolTraceLog,
+        operatingMode: state.operatingMode,
+        presentation: state.presentation,
+        status: "archived",
+        title: state.title,
+        skillId: state.skillId,
+        taskPhase: state.taskPhase,
+        taskInputText: state.taskInputText,
+      });
 
+      const path = currentAppPath();
+      const onArchivedRoute = isConversationRoute(path, conversationId);
+
+      markSessionDismissed(conversationId);
+
+      void (async () => {
+        if (isConversationIpcAvailable()) {
+          await writeConversationIpc(conversationId, record);
+        }
+
+        setOpenTabIds((prev) => {
+          const next = prev.filter((x) => x !== conversationId);
+          if (onArchivedRoute) {
+            if (next.length === 0) {
+              navigate("/", { replace: true });
+            } else {
+              const nextState = byIdRef.current[next[0]];
+              navigate(
+                nextState
+                  ? conversationNavPath(nextState)
+                  : `/chat/${next[0]}`,
+                { replace: true },
+              );
+            }
+          }
+          return next;
+        });
+
+        setById((prev) => {
+          const next = { ...prev };
+          delete next[conversationId];
+          byIdRef.current = next;
+          return next;
+        });
+        notifyConversation(conversationId);
+        closingTabsRef.current.delete(conversationId);
+      })();
+    },
+    [navigate, stopStream, syncQueueMeta],
+  );
+
+  const restoreArchivedConversation = useCallback(
+    async (conversationId: string): Promise<boolean> => {
+      if (!isConversationIpcAvailable()) {
+        return false;
+      }
+      const read = await readConversationIpc(conversationId);
+      if (!read.ok) {
+        return false;
+      }
+      const record = {
+        ...read.record,
+        status: "idle" as const,
+        updated_at: new Date().toISOString(),
+      };
+      const written = await writeConversationIpc(conversationId, record);
+      if (!written.ok) {
+        return false;
+      }
+      clearSessionDismissed(conversationId);
+      const state = conversationStateFromRecord(record);
       setById((prev) => {
-        const next = { ...prev };
-        delete next[conversationId];
+        const next = { ...prev, [conversationId]: state };
         byIdRef.current = next;
         return next;
       });
       notifyConversation(conversationId);
-
-      setOpenTabIds((prev) => {
-        const next = prev.filter((x) => x !== conversationId);
-        if (next.length === 0) {
-          const path = window.location.hash.replace(/^#/, "");
-          if (
-            path.startsWith(`/chat/${conversationId}`) ||
-            path.startsWith(`/task/${conversationId}`) ||
-            path.startsWith(`/lab/${conversationId}`)
-          ) {
-            navigate("/", { replace: true });
-          }
-          return [];
-        }
-        const path = window.location.hash.replace(/^#/, "");
-        const nextState = byIdRef.current[next[0]];
-        const nextPath = nextState
-          ? conversationNavPath(nextState)
-          : `/chat/${next[0]}`;
-        if (
-          path.startsWith(`/chat/${conversationId}`) ||
-          path.startsWith(`/task/${conversationId}`) ||
-          path.startsWith(`/lab/${conversationId}`)
-        ) {
-          navigate(nextPath, { replace: true });
-        }
-        return next;
-      });
+      setOpenTabIds((prev) =>
+        prev.includes(conversationId) ? prev : [...prev, conversationId],
+      );
+      navigate(conversationNavPath(state));
+      return true;
     },
-    [navigate, patchConversation, stopStream],
+    [navigate],
   );
 
   const createTab = useCallback(() => {
@@ -657,31 +738,46 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
 
   const ensureOpenTab = useCallback(
     (conversationId: string) => {
-      setOpenTabIds((prev) => {
-        if (prev.includes(conversationId)) {
-          return prev;
+      if (closingTabsRef.current.has(conversationId)) {
+        return;
+      }
+      const cur = byIdRef.current[conversationId];
+      if (cur) {
+        if (cur.status === "archived") {
+          return;
         }
-        return [...prev, conversationId];
-      });
-      if (byIdRef.current[conversationId]) {
+        setOpenTabIds((prev) =>
+          prev.includes(conversationId) ? prev : [...prev, conversationId],
+        );
         return;
       }
       void (async () => {
-        const result = await readConversationIpc(conversationId);
-        if (result.ok) {
-          patchConversation(
-            conversationId,
-            conversationStateFromRecord(result.record),
-          );
-        } else {
-          patchConversation(
-            conversationId,
-            createEmptyConversationState(conversationId),
-          );
+        if (closingTabsRef.current.has(conversationId)) {
+          return;
         }
+        if (!isConversationIpcAvailable()) {
+          return;
+        }
+        const result = await readConversationIpc(conversationId);
+        if (closingTabsRef.current.has(conversationId)) {
+          return;
+        }
+        if (!result.ok || result.record.status === "archived") {
+          if (isConversationRoute(currentAppPath(), conversationId)) {
+            navigate("/", { replace: true });
+          }
+          return;
+        }
+        patchConversation(
+          conversationId,
+          conversationStateFromRecord(result.record),
+        );
+        setOpenTabIds((prev) =>
+          prev.includes(conversationId) ? prev : [...prev, conversationId],
+        );
       })();
     },
-    [patchConversation],
+    [navigate, patchConversation],
   );
 
   const clearUnread = useCallback(
@@ -713,15 +809,27 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
 
       if (isConversationIpcAvailable()) {
         const metas = await listConversationsIpc();
-        const idle = metas.filter((m) => m.status === "idle");
-        tabIds = idle.length > 0 ? idle.map((m) => m.id) : [DEFAULT_CONVERSATION_ID];
-        for (const id of tabIds) {
-          const r = await readConversationIpc(id);
-          if (r.ok) {
-            loaded[id] = conversationStateFromRecord(r.record);
-          } else {
-            loaded[id] = createEmptyConversationState(id);
+        const idleCandidates = metas.filter((m) => m.status === "idle");
+        for (const { id } of idleCandidates) {
+          if (isSessionDismissed(id)) {
+            const r = await readConversationIpc(id);
+            if (r.ok && r.record.status === "archived") {
+              clearSessionDismissed(id);
+            } else if (r.ok && r.record.status === "idle") {
+              await writeConversationIpc(id, {
+                ...r.record,
+                status: "archived",
+                updated_at: new Date().toISOString(),
+              });
+            }
+            continue;
           }
+          const r = await readConversationIpc(id);
+          if (!r.ok || r.record.status !== "idle") {
+            continue;
+          }
+          loaded[id] = conversationStateFromRecord(r.record);
+          tabIds.push(id);
         }
       } else {
         tabIds = [];
@@ -742,6 +850,7 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
       createTask,
       createInspireChat,
       archiveTab,
+      restoreArchivedConversation,
       clearUnread,
       patchConversation,
       resetTaskToInput,
@@ -751,6 +860,7 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
     }),
     [
       archiveTab,
+      restoreArchivedConversation,
       clearUnread,
       createTab,
       createLabTab,

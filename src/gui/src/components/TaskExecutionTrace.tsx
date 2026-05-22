@@ -20,7 +20,7 @@ export function TaskExecutionTrace({
 }: TaskExecutionTraceProps) {
   const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
   const reasoning = lastAssistant?.reasoning?.trim() ?? "";
-  const showReactHint = paradigm === "react";
+  const showReactHint = paradigm === "react" || paradigm === "plan";
   const hasTrace =
     toolTraceLog.length > 0 || citations.length > 0 || reasoning.length > 0;
 
@@ -36,9 +36,11 @@ export function TaskExecutionTrace({
     >
       <h2 className={styles.title}>执行轨迹</h2>
       <p className={styles.hint}>
-        {showReactHint
+        {paradigm === "react"
           ? "ReAct 工具调用与检索引用（工作档为摘要，开发者档为全文）。"
-          : "对话范式通常无工具轨迹；若出现引用事件会显示在下方。"}
+          : paradigm === "plan"
+            ? "Plan 范式通常无工具轨迹；推理片段见上方消息区。"
+            : "对话范式通常无工具轨迹；若出现引用事件会显示在下方。"}
       </p>
 
       {reasoning ? (

@@ -2,6 +2,55 @@
 
 ---
 
+## 2026-05-21 — F6 Q5/Q7 定案
+
+- **Q5**：省略 `skill_id` **维持回退** `chat_inspire`（F6 不改 400）。  
+- **Q7**：F6 竖切片 **`default_import_v0`**；定稿后 **`your_profile_v1`**（换 profile 资源即可）。
+
+---
+
+## 2026-05-21 — F6 Q5/Q7 讨论收口
+
+- **Q5**：三态表（合法执行 / 未知 400 / **省略→回退 chat_inspire**）；F6 仍默认不改 400，可选 developer 与 product 分轨。  
+- **Q7**：F6 做 **平台轨**（Runner、SSE、profile 机制）；具体 schema/render/pipeline yaml **随产品模板迭代**。  
+- **确认**：Q1 进程内 Runner；Q3 SSE 扩展；Q6 M-UI 含 inspire；Q8 共用 LLM。
+
+---
+
+## 2026-05-21 — F6 §4 技术 FAQ 与产品确认
+
+- **确认**：Q2 含 **晋升 KSFS**；Q3 **pipeline 分步 SSE**；Q4 **只读重叠 warnings**；Q8 **共用全局 LLM**。  
+- **澄清**：Q1 `pipeline` 为范式，执行走 **进程内 PipelineRunner**（非设定导入 MCP 包）；Q3 为「共享 SSE 主干 + 范式扩展事件」。  
+- **文档**：**`第六阶段开发计划.md` §4.1～4.2**；**`Skill形态与Prompt工程.md`** 增 `pipeline_profile`。
+
+---
+
+## 2026-05-21 — 第六阶段定案（A+B+E）
+
+- **主轴**：**A** CD-2～CD-3（`PipelineRunner`、`import_setting` 后端）；**B** G5 `/cache` + 启动提醒 + M-UI；**E** `import_setting` GUI 竖切片。
+- **文档**：**`第六阶段开发计划.md`** 重写为 F6-00～F6-09；§4 列 **Q1～Q8** 待技术确认（默认假设已写）。
+- **不做 F6**：产品化 C、OpenAPI D、`ksfs_edit`、`paradigm_auto`、Plan Phase B。
+
+---
+
+## 2026-05-21 — 第五阶段归档 + 第六阶段 backlog 草案
+
+- **归档**：**`第五阶段开发计划.md`** → **`已完成/第五阶段开发计划.md`**；根目录 stub；**`已完成/README.md`** 已索引。
+- **第六阶段**：新增 **`第六阶段开发计划.md`**（未立项）；**§2** 汇总 F4/F5 顺延、CD-2～4、产品化、业务 Skill 等待办，供排期讨论。
+- **索引**：**`DECISIONS.md`** §1 表、§14.2 修订为 F5 已落地项。
+
+---
+
+## 2026-05-21 — 第五阶段结案（F5-00～F5-10）
+
+- **结论**：第五阶段 **产品主轴** 已落地 — 冷启动 **技能面板**（`/`）、产品 Skill manifest + `skill_id` 契约、PR 四范式分轨（`dialogue` / `react` / `plan` Phase A / `pipeline` 桩）、竖切片 **`lint_zh`**、**`chat_inspire`**、**`retrieve_qa`**（scoped react）、**`outline_plan`**（plan）。
+- **验收（自动）**：`python -m pytest -q` → **146 passed, 1 skipped**；`src/gui` → **`npm run build`**、**`npm run test`**（7）、**`npm run test:e2e`**（6，含面板四卡 + lint 竖切片 + inspire 多轮）。
+- **文档**：**`第五阶段开发计划.md`** §0.5 / F5-10 全勾选；**`PR开发文档.md`** §4 PR 轨结案；**`API-V0.2.md`** §3.1 对齐 `plan` 语义。
+- **顺延**：G5 `/cache` 全功能、M-UI 定稿、设定导入 **pipeline** 全链、Electron 安装包/签名/真壳 E2E 全覆盖 → **F5 后**（见计划 §2.2、§6）。
+- **契约**：第五阶段 HTTP 字段以 **`API-V0.2.md`** 为准；后续改 `api_v1` 须同 PR 更新契约测 + 提交说明 `契约：` 行。
+
+---
+
 ## 2026-05-16 — 第五阶段产品主轴与地基评估入 DECISIONS
 
 - **背景**：GUI 默认「万能 Chat + 全工具」与作家模式「任务/Skill 驱动」主轴错位；多标签/SSE/Prompt 回显等暴露**上层运行时**问题，下层 `pytest`（约 110 项）仍稳。

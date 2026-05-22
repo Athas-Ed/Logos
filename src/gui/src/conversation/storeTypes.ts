@@ -10,6 +10,13 @@ import type { ConversationStatus } from "./types";
 /** 任务向导阶段（单任务 Skill；F5-06 落盘） */
 export type TaskPhase = "input" | "running" | "done";
 
+/** pipeline SSE ``pipeline_step`` 条目（内存态，F6-07） */
+export type PipelineStepEntry = {
+  stepId: string;
+  status: string;
+  summary: string;
+};
+
 export type ParadigmOverride = SkillCardMeta["paradigm"];
 
 export type ConversationState = {
@@ -29,6 +36,8 @@ export type ConversationState = {
   messages: ChatMessage[];
   citations: CitationItem[];
   toolTraceLog: string[];
+  pipelineSteps: PipelineStepEntry[];
+  pipelineWarnings: string[];
   operatingMode: OperatingMode;
   presentation: PresentationMode;
   streaming: boolean;

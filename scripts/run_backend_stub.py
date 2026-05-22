@@ -53,8 +53,26 @@ def main() -> None:
     )
     from logos.persistence.ksfs_filesystem import FilesystemKnowledgeSource
 
+    _import_batch_path = (
+        _REPO_ROOT
+        / "resources"
+        / "entity_template"
+        / "default_import_v0"
+        / "examples"
+        / "minimal_batch.json"
+    )
+    _import_batch_stub = (
+        _import_batch_path.read_text(encoding="utf-8")
+        if _import_batch_path.is_file()
+        else '{"batch_id":"stub","units":[{"classification":"character","slug":"stub","title":"桩角色","body_markdown":"桩正文"}]}'
+    )
+
     class _StubLLM:
         def complete(self, messages, *, json_mode: bool = False) -> str:
+            if json_mode:
+                for m in messages:
+                    if m.role == "system" and "结构化拆分" in m.content:
+                        return _import_batch_stub
             return "（桩后端）" + messages[-1].content
 
         def stream_completion(self, messages, *, json_mode: bool = False):

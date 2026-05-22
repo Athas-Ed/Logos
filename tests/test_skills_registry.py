@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from logos.harness.skills_registry import (
+    SkillManifestError,
     SkillManifestNotFoundError,
     get_skill_manifest,
     list_bootstrap_skill_summaries,
@@ -44,9 +45,12 @@ def test_list_bootstrap_skill_summaries() -> None:
     ids = {s.skill_id for s in summaries}
     assert "lint_zh" in ids
     assert "retrieve_qa" in ids
+    assert "outline_plan" in ids
     rq = next(s for s in summaries if s.skill_id == "retrieve_qa")
     assert rq.paradigm == "react"
     assert rq.display_name
+    op = next(s for s in summaries if s.skill_id == "outline_plan")
+    assert op.paradigm == "plan"
 
 
 def test_unknown_skill_id_raises() -> None:
@@ -59,3 +63,23 @@ def test_list_builtin_includes_samples() -> None:
     assert "lint_zh" in ids
     assert "chat_inspire" in ids
     assert "retrieve_qa" in ids
+    assert "outline_plan" in ids
+    assert "pipeline_dev" in ids
+
+
+def test_dialogue_manifest_rejects_stray_pipeline_profile() -> None:
+    from logos.harness.skills_registry import _validate_manifest_dict
+
+    raw = {
+        "skill_id": "x",
+        "display_name": "x",
+        "persistence_tier": "p2",
+        "paradigm": "dialogue",
+        "turn_policy": "single",
+        "allowed_tools": [],
+        "prompt_runtime_key": "skills/lint_zh",
+        "input_schema": {"type": "object", "properties": {}},
+        "pipeline_profile": "default_import_v0",
+    }
+    with pytest.raises(SkillManifestError, match="only allowed when paradigm is pipeline"):
+        _validate_manifest_dict(raw, source="test")

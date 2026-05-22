@@ -108,4 +108,18 @@ export function flushConversationPersist(
 
 }
 
+export function cancelConversationPersist(id: string): void {
+
+  const prev = timers.get(id);
+
+  if (prev !== undefined) {
+
+    window.clearTimeout(prev);
+
+    timers.delete(id);
+
+  }
+
+}
+
 

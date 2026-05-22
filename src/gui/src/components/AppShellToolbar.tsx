@@ -60,7 +60,7 @@ export function AppShellToolbar() {
 
     void refreshHealth();
 
-    const timer = window.setInterval(() => void refreshHealth(), 60_000);
+    const timer = window.setInterval(() => void refreshHealth(), 180_000);
 
     return () => window.clearInterval(timer);
 
