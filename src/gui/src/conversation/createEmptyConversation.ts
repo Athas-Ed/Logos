@@ -46,6 +46,10 @@ export function createEmptyConversationState(
 
     toolTraceLog: [],
 
+    pipelineSteps: [],
+
+    pipelineWarnings: [],
+
     operatingMode: readStoredOperatingMode() ?? "author",
 
     presentation: readStoredPresentation() ?? "work",
@@ -101,6 +105,10 @@ export function conversationStateFromRecord(
     citations: record.citations,
 
     toolTraceLog: record.tool_trace_log,
+
+    pipelineSteps: [],
+
+    pipelineWarnings: [],
 
     operatingMode: record.operating_mode,
 

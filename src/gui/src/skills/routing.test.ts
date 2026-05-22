@@ -12,6 +12,10 @@ describe("skill routing", () => {
     expect(path).toBe("/task/a");
   });
 
+  it("outline_plan 走任务向导", () => {
+    expect(skillUsesTaskWizard("outline_plan")).toBe(true);
+  });
+
   it("chat_inspire 走多轮 Chat", () => {
     expect(skillUsesTaskWizard("chat_inspire")).toBe(false);
     const state = { id: "b", skillId: "chat_inspire" as const };

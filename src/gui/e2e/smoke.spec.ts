@@ -44,6 +44,8 @@ test.describe("GUI smoke", () => {
 
     await expect(page.getByTestId("skill-card-retrieve_qa")).toBeVisible();
 
+    await expect(page.getByTestId("skill-card-import_setting")).toBeVisible();
+
 
 
   });
@@ -53,6 +55,41 @@ test.describe("GUI smoke", () => {
 
 
 
+
+  test("import_setting 竖切片：粘贴设定并完成 pipeline", async ({ page }) => {
+    const sample = "林动，青阳镇少年，性格执拗。";
+
+    await page.goto("/");
+    await page.getByTestId("skill-card-import_setting").click();
+    await expect(page.getByTestId("task-page")).toBeVisible();
+    await expect(page.getByTestId("task-input-textarea")).toBeVisible();
+
+    await page.getByTestId("task-input-textarea").fill(sample);
+
+    const responseDone = page.waitForResponse(
+      (r) =>
+        r.url().includes("/api/v1/chat") && r.request().method() === "POST",
+      { timeout: 30_000 },
+    );
+    await page.getByTestId("task-submit").click();
+    const resp = await responseDone;
+    expect(resp.ok()).toBeTruthy();
+
+    await expect(page.getByTestId("pipeline-task-trace")).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(page.getByTestId("pipeline-step-render")).toBeVisible({
+      timeout: 30_000,
+    });
+
+    const assistant = page.getByTestId("task-assistant-content");
+    await expect(assistant).toContainText("已写入", { timeout: 30_000 });
+    await expect(assistant).toContainText("setting_entry", { timeout: 15_000 });
+
+    await expect(page.getByTestId("task-archive")).toBeVisible({
+      timeout: 15_000,
+    });
+  });
 
   test("lint_zh 竖切片：输入并收到助手回复", async ({ page }) => {
 

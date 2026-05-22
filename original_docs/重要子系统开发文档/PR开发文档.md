@@ -2,7 +2,7 @@
 
 > **地位**：**`src/logos/agent/pr.py`** 及 **Shell / CB / 执行器** 分范式落地的**唯一实施与验收**依据。  
 > **定案（语义）**：**`范式路由与PR定案.md`**（范式含义、与 ReAct 分工、Prompt 矩阵）。  
-> **阶段排期**：**`../第五阶段开发计划.md`** 步 **F5-03** 与本文件 **PR-1～PR-5** 对齐。  
+> **阶段排期**：第五阶段 **F5-03**（PR-1～PR-6 已结案，见 **`../已完成/第五阶段开发计划.md`**）；**`pipeline` 可执行** → **第六阶段 F6-02～F6-03**（**`../第六阶段开发计划.md`**）。  
 > **不替代**：**`API-V0.2.md`**（HTTP 字段）、**`Skill形态与Prompt工程.md`**（manifest 全表）。  
 > **冷启动**：做 PR 轨时 **@ 本文件 + `../第五阶段开发计划.md` §0**；阶段总排期以 F5-03 为准。
 
@@ -145,8 +145,8 @@
 |----|------|
 | **目标** | 验证 Plan 范式接线，**不**要求执行 B |
 | **交付** | `build_plan_system_message`；`run_plan_phase_a` 返回 plan 文本/JSON；GUI 或 API 将 plan 作为 assistant 一条展示 |
-| **验收（自动）** | [ ] 单测：demo skill `outline_plan` 返回含步骤列表的 JSON 或 Markdown |
-| **验收（手动）** | [ ] 用户可复制计划文本 |
+| **验收（自动）** | [x] 单测：demo skill `outline_plan` 返回含步骤列表的 JSON 或 Markdown |
+| **验收（手动）** | [x] 用户可复制计划文本（Task 向导 SSE `delta` 展示） |
 
 ---
 
@@ -164,15 +164,15 @@
 
 以下条件 **全部** 满足时，PR 轨视为第五阶段结案：
 
-| # | 条件 |
-|---|------|
-| 1 | `select_paradigm` **仅** 以 manifest 为准（除显式 developer 覆盖外无硬编码 `react`） |
-| 2 | 至少 **一个** `dialogue` Skill（`lint_zh`）端到端：API + GUI，自然语言输出，无 ReAct JSON 强塞 |
-| 3 | 至少 **一个** `react` Skill 在 **scoped tools** 下端到端 |
-| 4 | `plan`：PR-5 完成 **或** 明确推迟并在 `第五阶段开发计划.md` 标注顺延 |
-| 5 | `pipeline`：PR-6 不误路由；设定导入不在本阶段冒充完成 |
-| 6 | `pytest` 全绿；契约 PR 含 `契约：` 行 |
-| 7 | Prompt 目录存在 `paradigms/dialogue`、`paradigms/react`、`persistence/p0|p1|p2` 骨架 |
+| # | 条件 | 状态 |
+|---|------|------|
+| 1 | `select_paradigm` **仅** 以 manifest 为准（除显式 developer 覆盖外无硬编码 `react`） | [x] `test_pr_manifest.py` |
+| 2 | 至少 **一个** `dialogue` Skill（`lint_zh`）端到端：API + GUI，自然语言输出，无 ReAct JSON 强塞 | [x] API + e2e 竖切片 |
+| 3 | 至少 **一个** `react` Skill 在 **scoped tools** 下端到端 | [x] `retrieve_qa` |
+| 4 | `plan`：PR-5 完成 **或** 明确推迟并在 `第五阶段开发计划.md` 标注顺延 | [x] F5-09 `outline_plan` |
+| 5 | `pipeline`：PR-6 不误路由；设定导入不在本阶段冒充完成 | [x] `test_pipeline_paradigm_not_implemented` |
+| 6 | `pytest` 全绿；契约 PR 含 `契约：` 行 | [x] F5-10：146 passed；改契约须 `契约：` 提交行（见 API 纪律） |
+| 7 | Prompt 目录存在 `paradigms/dialogue`、`paradigms/react`、`persistence/p0|p1|p2` 骨架 | [x] `resources/prompts/` |
 
 ---
 
@@ -202,3 +202,4 @@
 |------|------|
 | 2026-05-16 | 初版：PR-0～PR-6、最终效果与最终验收、与第五阶段 F5-03 对齐。 |
 | 2026-05-20 | §0 新对话起手表、与 F5-01/02 依赖说明。 |
+| 2026-05-21 | §4 PR 轨最终验收全表勾选（F5-10 结案）；PR-5 `outline_plan` 已交付。 |

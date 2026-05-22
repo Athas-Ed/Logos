@@ -1,0 +1,21 @@
+skill_id: outline_plan
+display_name: 大纲规划
+description: 【暂停】产品设计讨论中；试验台可用。见 重要子系统开发文档/大纲规划skill.md
+ui_instructions: |
+  【开发暂停】产品大纲规划 Skill 正在重新设计，详见子系统文档「大纲规划skill.md」。
+  技能面板默认不展示；范式试验台仍可选用本 Skill 做 Plan Phase A 技术验证。
+  恢复后：输入主题 → 可审阅分步大纲（JSON 或 Markdown），不自动执行、不调用工具。
+persistence_tier: p1
+paradigm: plan
+turn_policy: single
+allowed_tools: []
+prompt_runtime_key: skills/outline_plan
+blueprint_path: skills/outline_plan/DESIGN.md
+input_schema:
+  type: object
+  properties:
+    text:
+      type: string
+      title: 主题或目标
+  required:
+    - text

@@ -1,0 +1,22 @@
+skill_id: import_setting
+display_name: 导入设定
+description: 粘贴设定正文，结构化后写入 workspace/setting_entry/ 草稿供人审。
+ui_instructions: |
+  将 Word 等来源的设定正文粘贴到输入框，点击执行。
+  流水线会：LLM 产出 JSON → Schema 校验 → 按模板渲染为 Markdown 草稿。
+  完成后请在结果区查看写入路径；晋升至 KSFS 见后续步骤（F6-08）。
+persistence_tier: p0
+paradigm: pipeline
+pipeline_profile: default_import_v0
+turn_policy: single
+allowed_tools: []
+prompt_runtime_key: skills/import_setting
+blueprint_path: skills/import_setting/DESIGN.md
+input_schema:
+  type: object
+  properties:
+    text:
+      type: string
+      title: 粘贴的设定正文
+  required:
+    - text

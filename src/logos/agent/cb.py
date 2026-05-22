@@ -53,6 +53,46 @@ def _merge_task_input_into_user(user_text: str, task_input: dict[str, Any] | Non
     return "\n\n".join(lines).strip() or base
 
 
+def build_plan_system_message(
+    skill_id: str,
+    *,
+    extra_system: str | None = None,
+) -> str:
+    """Plan Phase A system：要求输出含步骤列表的 JSON 或 Markdown（无 ReAct JSON 协议）。"""
+    from logos.harness.skills_registry import get_skill_manifest
+
+    manifest = get_skill_manifest(skill_id)
+    parts = [
+        load_prompt_fragment("paradigms/plan/base.md"),
+        load_prompt_fragment(f"{manifest.prompt_runtime_key}.md"),
+    ]
+    system = "\n\n".join(p for p in parts if p) or "Plan 范式 Phase A。"
+    if extra_system:
+        system = system + "\n\n" + extra_system.strip()
+    return system
+
+
+def seed_plan_messages(
+    skill_id: str,
+    history: list[ChatMessage],
+    user_text: str,
+    *,
+    extra_system: str | None = None,
+    task_input: dict[str, Any] | None = None,
+) -> list[ChatMessage]:
+    """system + 历史 + 当前 user（Plan Phase A）。"""
+    system = build_plan_system_message(skill_id, extra_system=extra_system)
+    out: list[ChatMessage] = [ChatMessage(role="system", content=system)]
+    out.extend(history)
+    out.append(
+        ChatMessage(
+            role="user",
+            content=_merge_task_input_into_user(user_text, task_input),
+        )
+    )
+    return out
+
+
 def build_dialogue_system_message(
     skill_id: str,
     registry: ToolRegistry | None = None,
@@ -102,17 +142,7 @@ def compose_prompt(
             system = system + "\n\n" + extra_system.strip()
         return system
     if paradigm == "plan":
-        from logos.harness.skills_registry import get_skill_manifest
-
-        base = load_prompt_fragment("paradigms/plan/base.md")
-        skill = load_prompt_fragment(
-            get_skill_manifest(skill_id).prompt_runtime_key + ".md"
-        )
-        parts = [p for p in (base, skill) if p]
-        system = "\n\n".join(parts) if parts else "Plan 范式。"
-        if extra_system:
-            system = system + "\n\n" + extra_system.strip()
-        return system
+        return build_plan_system_message(skill_id, extra_system=extra_system)
     _ = persistence_tier
     msg = f"compose_prompt unsupported paradigm: {paradigm!r}"
     raise ValueError(msg)
@@ -140,20 +170,22 @@ def seed_dialogue_messages(
     return out
 
 
+def load_operating_mode_suffix(mode: str) -> str:
+    """运行模式后缀：``resources/prompts/modes/{author|screenwriter}.md``。"""
+    m = (mode or "author").strip().lower()
+    rel = "modes/screenwriter.md" if m == "screenwriter" else "modes/author.md"
+    return load_prompt_fragment(rel)
+
+
 def build_react_system_message(registry: ToolRegistry) -> str:
     tools = registry.tools_prompt_section()
-    return (
-        "你是 Agent 的推理模块。每一轮必须只回复**一个** JSON 对象（键名保持英文，与下述示例一致），"
-        "不要在该 JSON 外再包一层说明文字：\n"
-        "1）若无需工具即可作答："
-        '{"thought": "…", "final_answer": "…"}\n'
-        "2）若需调用工具："
-        '{"thought": "…", "action": {"name": "工具名", "arguments": { … 参数 … }}}\n'
-        "每轮最多一次工具调用；name 必须与下方目录中的工具名完全一致。\n"
-        "工具目录（JSON 数组）：\n"
-        f"{tools}\n"
-        "说明：thought / final_answer / action / name / arguments 等字段名请勿改写或翻译。"
-    )
+    template = load_prompt_fragment("paradigms/react/base.md")
+    if not template:
+        msg = "missing resources/prompts/paradigms/react/base.md"
+        raise FileNotFoundError(msg)
+    if "{{TOOLS_JSON}}" in template:
+        return template.replace("{{TOOLS_JSON}}", tools)
+    return template + "\n工具目录（JSON 数组）：\n" + tools
 
 
 def seed_messages(

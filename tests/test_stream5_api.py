@@ -158,6 +158,8 @@ def test_api_v1_bootstrap_skills(tmp_path: Path) -> None:
     assert "retrieve_qa" in by_id
     assert by_id["retrieve_qa"]["paradigm"] == "react"
     assert by_id["retrieve_qa"]["display_name"]
+    assert "import_setting" in by_id
+    assert by_id["import_setting"]["paradigm"] == "pipeline"
     assert "ui_instructions" in by_id["lint_zh"]
     assert "语病" in by_id["lint_zh"]["ui_instructions"]
 
@@ -245,8 +247,8 @@ def test_api_v1_chat_paradigm_override_plan(tmp_path: Path) -> None:
         ) as stream:
             assert stream.status_code == 200
             raw = stream.read().decode("utf-8")
-    assert "event: error" in raw
-    assert "not_implemented" in raw
+    assert "event: done" in raw
+    assert "not_implemented" not in raw
 
 
 def test_api_v1_chat_chat_inspire_multi_turn_messages(tmp_path: Path) -> None:

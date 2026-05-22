@@ -58,6 +58,8 @@ class SkillManifest:
     #: GUI「技能说明」区块正文（任务页 / 对话页按 skill_id 注入）
     ui_instructions: str = ""
     blueprint_path: str | None = None
+    #: ``paradigm: pipeline`` 时必填；指向 ``resources/pipelines/<name>.yaml`` 与 entity_template profile
+    pipeline_profile: str | None = None
 
 
 def manifests_dir() -> Path:
@@ -134,6 +136,20 @@ def _validate_manifest_dict(raw: dict[str, Any], *, source: str) -> SkillManifes
     if blueprint_path is not None and not isinstance(blueprint_path, str):
         raise SkillManifestError(f"{source}: blueprint_path must be a string")
 
+    pipeline_profile_raw = raw.get("pipeline_profile")
+    if paradigm == "pipeline":
+        if not isinstance(pipeline_profile_raw, str) or not pipeline_profile_raw.strip():
+            raise SkillManifestError(
+                f"{source}: pipeline_profile required when paradigm is pipeline"
+            )
+        pipeline_profile = pipeline_profile_raw.strip()
+    else:
+        if pipeline_profile_raw is not None:
+            raise SkillManifestError(
+                f"{source}: pipeline_profile only allowed when paradigm is pipeline"
+            )
+        pipeline_profile = None
+
     return SkillManifest(
         skill_id=skill_id,
         display_name=display_name,
@@ -146,6 +162,7 @@ def _validate_manifest_dict(raw: dict[str, Any], *, source: str) -> SkillManifes
         description=description,
         ui_instructions=ui_instructions.strip(),
         blueprint_path=blueprint_path,
+        pipeline_profile=pipeline_profile,
     )
 
 

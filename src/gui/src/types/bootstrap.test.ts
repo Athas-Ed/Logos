@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { panelSkillsFromBootstrap } from "./bootstrap";
 
 describe("panelSkillsFromBootstrap", () => {
-describe("panelSkillsFromBootstrap", () => {
   it("补全 retrieve_qa 的 turn_policy 与 ui_instructions", () => {
     const cards = panelSkillsFromBootstrap([
       {

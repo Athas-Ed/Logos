@@ -55,11 +55,14 @@ export const LAB_SKILL_CARDS: readonly SkillCardMeta[] = [
   },
 ] as const;
 
+const IMPORT_UI = `将 Word 等来源的设定正文粘贴到下方；流水线会产出 JSON、校验并写入 workspace/setting_entry/ 草稿。
+完成后请查看结果摘要与右侧阶段进度；晋升 KSFS 见后续版本。`;
+
 export const PARADIGM_LABELS: Record<SkillCardMeta["paradigm"], string> = {
   dialogue: "dialogue（自然语言 SSE）",
   react: "react（ReAct + 工具轨迹）",
-  plan: "plan（未实现）",
-  pipeline: "pipeline（未实现）",
+  plan: "plan（Phase A）",
+  pipeline: "pipeline（设定导入）",
 };
 
 export const BUILTIN_SKILL_CARDS: readonly SkillCardMeta[] = [
@@ -85,10 +88,21 @@ export const BUILTIN_SKILL_CARDS: readonly SkillCardMeta[] = [
 
 const RETRIEVE_QA_CARD = LAB_SKILL_CARDS.find((c) => c.skill_id === "retrieve_qa")!;
 
+const IMPORT_SETTING_CARD: SkillCardMeta = {
+  skill_id: "import_setting",
+  display_name: "导入设定",
+  description: "粘贴设定 → 结构化 JSON → setting_entry 草稿（pipeline）。",
+  ui_instructions: IMPORT_UI,
+  paradigm: "pipeline",
+  persistence_tier: "p0",
+  turn_policy: "single",
+};
+
 /** bootstrap 请求失败时的面板 Skill 列表 */
 export const FALLBACK_PANEL_SKILLS: readonly SkillCardMeta[] = [
   ...BUILTIN_SKILL_CARDS,
   RETRIEVE_QA_CARD,
+  IMPORT_SETTING_CARD,
 ] as const;
 
 /** @deprecated 使用 {@link getSkillMeta}（registry） */

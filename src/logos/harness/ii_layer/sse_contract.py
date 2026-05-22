@@ -19,6 +19,8 @@ CHAT_SSE_EVENT_NAMES: Final[frozenset[str]] = frozenset(
         "citations_full",
         "tool_trace_summary",
         "tool_trace_full",
+        "pipeline_step",
+        "pipeline_warning",
         "delta",
         "done",
         "error",
@@ -39,6 +41,8 @@ CHAT_SSE_MINIMAL_JSON: Final[dict[str, dict[str, Any]]] = {
         "result": "",
         "error": None,
     },
+    "pipeline_step": {"step_id": "", "status": "ok", "summary": ""},
+    "pipeline_warning": {"warnings": []},
     "done": {},
     "error": {"code": "", "message": ""},
 }
@@ -127,6 +131,23 @@ def validate_chat_sse_payload(event: str, payload: dict[str, Any]) -> None:
         ):
             msg = "事件 tool_trace_full 的 error 须为 string 或 null"
             raise TypeError(msg)
+    elif event == "pipeline_step":
+        for key in ("step_id", "status", "summary"):
+            if key not in payload:
+                msg = f"事件 pipeline_step 缺少必填字段 {key!r}"
+                raise ValueError(msg)
+            if not isinstance(payload[key], str):
+                msg = f"事件 pipeline_step 的 {key!r} 须为 string"
+                raise TypeError(msg)
+    elif event == "pipeline_warning":
+        warnings = payload.get("warnings")
+        if not isinstance(warnings, list):
+            msg = "事件 pipeline_warning 的 warnings 须为 array"
+            raise TypeError(msg)
+        for idx, w in enumerate(warnings):
+            if not isinstance(w, str):
+                msg = f"pipeline_warning.warnings[{idx}] 须为 string"
+                raise TypeError(msg)
     elif event == "error":
         for key in ("code", "message"):
             if key not in payload:

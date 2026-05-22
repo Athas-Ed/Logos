@@ -78,7 +78,8 @@ def test_api_v1_lint_zh_dialogue_no_react_json_header(tmp_path: Path) -> None:
     assert "event: reasoning_summary" not in raw
 
 
-def test_pipeline_paradigm_not_implemented(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_forced_pipeline_on_dialogue_skill_errors(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """dialogue Skill 被试验台强制 pipeline 时缺少 pipeline_profile，应 error 而非 ReAct。"""
     from logos.agent import pr as pr_mod
 
     monkeypatch.setattr(pr_mod, "select_paradigm", lambda _sid, **_: "pipeline")
@@ -93,5 +94,6 @@ def test_pipeline_paradigm_not_implemented(tmp_path: Path, monkeypatch: pytest.M
             },
         ) as stream:
             raw = stream.read().decode("utf-8")
-    assert "not_implemented" in raw
+    assert "not_implemented" not in raw
     assert "event: reasoning_summary" not in raw
+    assert "event: error" in raw

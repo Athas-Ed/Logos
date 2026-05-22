@@ -1,0 +1,13 @@
+# CD-3：设定导入平台轨阶段表（F6-02+）
+profile_id: default_import_v0
+
+steps:
+  - id: llm_json
+    type: llm_json
+  - id: schema
+    type: json_schema
+  - id: overlap
+    type: overlap_scan
+    enabled: false
+  - id: render
+    type: render

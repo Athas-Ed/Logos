@@ -21,12 +21,18 @@ from pydantic import BaseModel, Field
 
 from logos.agent import pr as paradigm_router
 from logos.agent.dialogue import DialogueStreamDone, DialogueStreamText
+from logos.agent.pipeline import (
+    PipelineStepEvent,
+    PipelineStreamDone,
+    PipelineWarningEvent,
+)
 from logos.agent.react import (
     ReActStreamDone,
     ReActStreamReasoning,
     ReActStreamToolTrace,
 )
 from logos.agent.shell import AgentShell
+from logos.harness.mcp_stdio import resolve_repo_root
 from logos.harness.obs.tool_chain import (
     clear_obs_log_profile_tls,
     prime_obs_log_profile_for_chat,
@@ -177,16 +183,16 @@ def _effective_presentation(raw: str | None, default: str) -> Literal["work", "d
 
 
 def _operating_mode_suffix(mode: str) -> str:
-    m = (mode or "author").strip().lower()
-    if m == "screenwriter":
-        return (
-            "【运行模式：编剧（screenwriter）】请侧重剧本结构、场次、对白节奏与视听叙事；"
-            "引用设定时务必先用 retrieve；若不确定路径，可用 list_ksfs 浏览目录，再用 read_ksfs 读原文。"
-        )
-    return (
-        "【运行模式：作者（author）】请侧重小说叙事、人物与情节推进；"
-        "需要设定依据时先 retrieve，必要时 list_ksfs + read_ksfs 核对 KSFS 文件。"
-    )
+    from logos.agent.cb import load_operating_mode_suffix
+
+    return load_operating_mode_suffix(mode)
+
+
+def _resolve_workspace_root(settings: AppSettings) -> Path:
+    p = Path(settings.workspace_root)
+    if not p.is_absolute():
+        p = resolve_repo_root() / p
+    return p.resolve()
 
 
 def _split_request_messages(
@@ -389,17 +395,90 @@ def build_v1_router() -> Any:
                         user_text=ut,
                     )
 
-                    if paradigm in ("plan", "pipeline"):
-                        yield _sse_frame(
-                            "error",
-                            {
-                                "code": "not_implemented",
-                                "message": (
-                                    f"范式 {paradigm!r} 尚未实现"
-                                    "（设定导入 pipeline 全链顺延下阶段）"
-                                ),
-                            },
-                        )
+                    if paradigm == "pipeline":
+                        profile = skill_manifest.pipeline_profile
+                        if not profile:
+                            yield _sse_frame(
+                                "error",
+                                {
+                                    "code": "invalid_skill",
+                                    "message": (
+                                        f"Skill {skill_id!r} 为 pipeline 但缺少 pipeline_profile"
+                                    ),
+                                },
+                            )
+                            return
+                        ws_root = _resolve_workspace_root(ports.settings)
+                        pipeline_finished = False
+                        for item in shell.iter_paradigm_task(
+                            skill_id,
+                            ut,
+                            max_steps=16,
+                            extra_system=extra,
+                            history=history,
+                            task_input=body.task_input,
+                            stream_assistant=True,
+                            workspace_root=ws_root,
+                        ):
+                            if isinstance(item, PipelineStepEvent):
+                                yield _sse_frame(
+                                    "pipeline_step",
+                                    {
+                                        "step_id": item.step_id,
+                                        "status": item.status,
+                                        "summary": item.summary,
+                                    },
+                                )
+                                if item.status == "error":
+                                    yield _sse_frame(
+                                        "error",
+                                        {
+                                            "code": "pipeline_step_failed",
+                                            "message": item.summary,
+                                        },
+                                    )
+                                    return
+                            elif isinstance(item, PipelineWarningEvent):
+                                yield _sse_frame(
+                                    "pipeline_warning",
+                                    {"warnings": list(item.warnings)},
+                                )
+                            elif isinstance(item, PipelineStreamDone):
+                                result = item.result
+                                units = result.batch.get("units") or []
+                                summary_lines = [
+                                    f"批次 {result.batch.get('batch_id', '')}："
+                                    f"共 {len(units)} 个单元，"
+                                    f"已写入 {len(result.written_paths)} 个文件。",
+                                ]
+                                for rel in result.written_paths:
+                                    summary_lines.append(f"- {rel}")
+                                if result.warnings:
+                                    summary_lines.append(
+                                        "警告：" + "；".join(result.warnings)
+                                    )
+                                yield _sse_frame(
+                                    "delta",
+                                    {"text": "\n".join(summary_lines)},
+                                )
+                                yield _sse_frame(
+                                    "done",
+                                    {
+                                        "written_paths": list(result.written_paths),
+                                        "warnings": list(result.warnings),
+                                        "unit_count": len(units),
+                                        "batch_id": result.batch.get("batch_id"),
+                                    },
+                                )
+                                pipeline_finished = True
+                        if not pipeline_finished:
+                            yield _sse_frame(
+                                "error",
+                                {
+                                    "code": "internal",
+                                    "message": "Pipeline 未正常结束",
+                                },
+                            )
                         return
 
                     if paradigm == "react":
