@@ -1,6 +1,6 @@
 # `skills/` — 能力层
 
-与 **`src/logos/`** 并列。本目录含两类内容，**禁止混称**（见 **`original_docs/重要子系统开发文档/Skill形态与Prompt工程.md`** §2）：
+与 **`src/logos/`** 并列。本目录含两类内容，**禁止混称**（见 **`docs/子系统文档/Skills与MCP扩展.md`**）：
 
 | 子目录 | 类型 | 说明 |
 |--------|------|------|
@@ -27,4 +27,4 @@
 - **`example-stdio-mcp/`**：真实 MCP（FastMCP + stdio），工具 **`echo`**；另含 **`echo_worker.py`** 供非 MCP 子进程生命周期测试。
 - **`amap-weather-mcp/`**：完整 MCP（FastMCP + stdio），工具 **`query_weather`**；在 `config/local.yaml` 的 **`skills.mcp_servers`** 中启用并配置 `env.AMAP_WEB_KEY`（详见该目录 `README.md`）。
 
-权威分层：`original_docs/ARCHITECTURE.md` §2.4–2.5；KSFS 与导入细则：`original_docs/重要子系统开发文档/KSFS开发.md` §7.3。
+分层见 **`docs/架构概览.md`**；KSFS 与导入见 **`docs/子系统文档/KSFS与叙事知识库.md`**。

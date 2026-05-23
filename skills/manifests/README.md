@@ -21,7 +21,7 @@
 | `description` | 技能面板卡片一句话摘要 |
 | `ui_instructions` | 任务页 / 对话页 **「技能说明」** 区块正文（多行用 YAML `\|`）；经 `GET /api/v1/bootstrap` → `skills[].ui_instructions` 注入，**勿**再在 `src/gui` 按 skill_id 硬编码 |
 
-权威语义见 **`original_docs/重要子系统开发文档/Skill形态与Prompt工程.md`** §6。
+说明见 **`docs/子系统文档/Skills与MCP扩展.md`**。
 
 ## 内置样例
 

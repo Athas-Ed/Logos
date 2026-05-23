@@ -6,4 +6,4 @@
 
 子目录按用途划分，避免不同功能互相覆盖。默认 **除本 README 与 `setting_entry/README.md` 外** 仍由 `.gitignore` 忽略，便于本地随意实验而不误提交。
 
-详见 **`original_docs/重要子系统开发文档/KSFS开发.md`** §2、§7。
+详见 **`docs/子系统文档/KSFS与叙事知识库.md`**。

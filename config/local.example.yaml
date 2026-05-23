@@ -16,7 +16,7 @@
 #   https_proxy: "http://127.0.0.1:26561"
 #   no_proxy: "127.0.0.1,localhost"
 
-# 可选：MCP stdio 技能（见 original_docs/重要子系统开发文档/MCP开发.md）
+# 可选：MCP stdio 技能（见 docs/子系统文档/Skills与MCP扩展.md）
 # 说明：每条目的 enabled 可省略，省略时默认 true（挂载）；需关闭时写 enabled: false
 # skills:
 #   mcp_servers:

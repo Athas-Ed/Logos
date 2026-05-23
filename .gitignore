@@ -1,3 +1,6 @@
+# 作者自用开发文档（对外介绍见 docs/；本机可保留任意草稿）
+original_docs/
+
 # 本地与密钥（统一走 config/local.yaml，不再使用根目录 .env）
 config/local.yaml
 config/secrets.yaml

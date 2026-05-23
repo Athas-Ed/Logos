@@ -5,7 +5,7 @@
 paths:
   workspace_root: "./workspace"
   example_ksfs_root: "./example_ksfs"
-  # KSFS 事实源（叙事知识 .md 根）；见 original_docs/重要子系统开发文档/KSFS开发.md
+  # KSFS 事实源（叙事知识 .md 根）；见 docs/子系统文档/KSFS与叙事知识库.md
   ksfs_root: "./resources/ksfs"
   # KSFS→HSI 登记时机（见 KSFS开发.md §3.2 / §3.3）：
   # - false（默认）：首次融合检索 ``query`` 前懒登记（发号、回写 id:）
@@ -37,7 +37,7 @@ developer:
   show_dev_tools_ui: false
   prompt_echo: false
 
-# MCP stdio 技能（高德、示例 echo 等）：见 original_docs/重要子系统开发文档/MCP开发.md
+# MCP stdio 技能（高德、示例 echo 等）：见 docs/子系统文档/Skills与MCP扩展.md
 skills:
   mcp_servers: []
 

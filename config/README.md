@@ -26,7 +26,7 @@
 
 ## 可选 MCP 技能（`skills`）
 
-- **`skills.mcp_servers`**：声明式挂载多个 stdio MCP（`id`、`enabled`、`entrypoint`、`strip_http_proxy`、`env`）。**必须为 YAML 列表**（可为 `[]`）；误写成字符串/映射时进程启动读配置将 **`ValueError` fail-fast**（见 **`MCP开发.md`** §8.3）。权威说明见 **`original_docs/重要子系统开发文档/MCP开发.md`**；`defaults.yaml` 中默认为空列表。
+- **`skills.mcp_servers`**：声明式挂载多个 stdio MCP（`id`、`enabled`、`entrypoint`、`strip_http_proxy`、`env`）。**必须为 YAML 列表**（可为 `[]`）；误写成字符串/映射时进程启动读配置将 **`ValueError` fail-fast**（见 **`MCP开发.md`** §8.3）。说明见 **`docs/子系统文档/Skills与MCP扩展.md`**；`defaults.yaml` 中默认为空列表。
 - **高德实况天气**：仓库内 **`skills/amap-weather-mcp/`**（工具 `query_weather`）；**不写入** `defaults.yaml`，在 **`local.yaml`** 的 `mcp_servers` 中自行增加一条，并在 `env` 中提供 **`AMAP_WEB_KEY`**（勿提交真实 Key）。细节见 `skills/amap-weather-mcp/README.md`。
 - **MCP 与仓库路径**：若看不到某 MCP 工具，请确认 `entrypoint` 路径存在；从非仓库 cwd 启动或包在 site-packages 时，设置 **`LOGOS_REPO_ROOT`** 指向仓库根（`scripts/run_backend_stub.py` 已默认 `setdefault`）。
 
