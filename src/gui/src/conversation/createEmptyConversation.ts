@@ -50,6 +50,12 @@ export function createEmptyConversationState(
 
     pipelineWarnings: [],
 
+    pipelineWrittenPaths: [],
+
+    promoteMessage: null,
+
+    promoteBusy: false,
+
     operatingMode: readStoredOperatingMode() ?? "author",
 
     presentation: readStoredPresentation() ?? "work",
@@ -109,6 +115,12 @@ export function conversationStateFromRecord(
     pipelineSteps: [],
 
     pipelineWarnings: [],
+
+    pipelineWrittenPaths: [],
+
+    promoteMessage: null,
+
+    promoteBusy: false,
 
     operatingMode: record.operating_mode,
 

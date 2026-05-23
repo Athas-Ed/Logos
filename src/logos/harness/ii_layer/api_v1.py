@@ -149,6 +149,22 @@ class BootstrapSkillPayload(BaseModel):
     paradigm: Literal["dialogue", "react", "plan", "pipeline"]
 
 
+class SettingEntryPromoteBody(BaseModel):
+    """将 ``workspace/setting_entry/`` 下草稿晋升至 KSFS（F6-08）。"""
+
+    draft_relpaths: list[str] | None = Field(
+        default=None,
+        description="相对 setting_entry 根的路径；省略则晋升全部候选",
+    )
+
+
+class SettingEntryPromoteResponse(BaseModel):
+    ok: bool
+    applied: list[str] = Field(default_factory=list)
+    skipped: list[str] = Field(default_factory=list)
+    notes: str = ""
+
+
 class BootstrapResponse(BaseModel):
     default_presentation: Literal["work", "developer"]
     log_profile: Literal["minimal", "standard", "verbose", "audit"]
@@ -190,6 +206,20 @@ def _operating_mode_suffix(mode: str) -> str:
 
 def _resolve_workspace_root(settings: AppSettings) -> Path:
     p = Path(settings.workspace_root)
+    if not p.is_absolute():
+        p = resolve_repo_root() / p
+    return p.resolve()
+
+
+def _resolve_ksfs_root(settings: AppSettings) -> Path:
+    p = Path(settings.ksfs_root)
+    if not p.is_absolute():
+        p = resolve_repo_root() / p
+    return p.resolve()
+
+
+def _resolve_hsi_db(settings: AppSettings) -> Path:
+    p = Path(settings.hsi_sqlite_path)
     if not p.is_absolute():
         p = resolve_repo_root() / p
     return p.resolve()
@@ -409,6 +439,7 @@ def build_v1_router() -> Any:
                             )
                             return
                         ws_root = _resolve_workspace_root(ports.settings)
+                        ksfs_root = _resolve_ksfs_root(ports.settings)
                         pipeline_finished = False
                         for item in shell.iter_paradigm_task(
                             skill_id,
@@ -419,6 +450,7 @@ def build_v1_router() -> Any:
                             task_input=body.task_input,
                             stream_assistant=True,
                             workspace_root=ws_root,
+                            ksfs_root=ksfs_root,
                         ):
                             if isinstance(item, PipelineStepEvent):
                                 yield _sse_frame(
@@ -563,6 +595,38 @@ def build_v1_router() -> Any:
                 "Connection": "keep-alive",
                 "X-Accel-Buffering": "no",
             },
+        )
+
+    @router.post("/setting-entry/promote")
+    def setting_entry_promote_v1(
+        body: SettingEntryPromoteBody,
+        ports: AppPortsDep,
+    ) -> SettingEntryPromoteResponse:
+        """人审后将 setting_entry 草稿复制至 KSFS 并触发 HSI 同步。"""
+        from logos.tools.draft_promotion_fs import FilesystemDraftPromotionPort
+
+        ws_root = _resolve_workspace_root(ports.settings)
+        ksfs_root = _resolve_ksfs_root(ports.settings)
+        drafts_root = ws_root / "setting_entry"
+        hsi_db = _resolve_hsi_db(ports.settings)
+        port = FilesystemDraftPromotionPort(hsi_db=hsi_db)
+        candidates = port.list_promotion_candidates(drafts_root, ksfs_root)
+        if body.draft_relpaths is not None:
+            allowed = {p.strip().replace("\\", "/") for p in body.draft_relpaths if p.strip()}
+            candidates = [c for c in candidates if c.draft_relpath in allowed]
+        if not candidates:
+            return SettingEntryPromoteResponse(
+                ok=True,
+                applied=[],
+                skipped=[],
+                notes="无匹配的可晋升草稿",
+            )
+        report = port.apply_promotion(drafts_root, ksfs_root, candidates)
+        return SettingEntryPromoteResponse(
+            ok=report.ok,
+            applied=list(report.applied),
+            skipped=list(report.skipped),
+            notes=report.notes,
         )
 
     @router.get("/developer/ui")

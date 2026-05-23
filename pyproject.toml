@@ -7,6 +7,7 @@ name = "logos"
 version = "0.1.0"
 description = "Logos: dual-mode narrative agent for game writers (V0.1 scaffold)"
 readme = "README.md"
+license = "MIT"
 requires-python = ">=3.11"
 dependencies = [
     "PyYAML>=6.0",

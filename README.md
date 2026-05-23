@@ -72,3 +72,7 @@ python -m logos.tools.promote_draft --workspace ./workspace --target-ksfs <KSFS�
 - **`chromadb`**：Chroma 持久化客户端（`ChromaSemanticStore`），`pip install -e ".[dev]"` 已包含。
 - **`sentence-transformers` + PyTorch**：本地 `BgeSmallZhEmbedder` 加载 `models/tooling/embeddings/bge-small-zh-v1.5` 时需要（体积较大，首次会自动下载相关 wheel）。
 - **`fastapi` / `uvicorn` / `httpx`**：`/api/v1` 与 SSE 测试用，同上在 `[dev]` 中。
+
+## 许可证
+
+本项目采用 [MIT License](LICENSE)。

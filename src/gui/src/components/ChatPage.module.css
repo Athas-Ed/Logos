@@ -22,9 +22,12 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  max-width: 1200px;
+  width: 100%;
+  max-width: min(1200px, 100%);
   margin: 0 auto;
   padding: 1rem 1.25rem 1.5rem;
+  min-width: 0;
+  overflow-x: clip;
 }
 
 .shellBannerWarn,
@@ -59,7 +62,8 @@
 }
 
 .titleBlock {
-  min-width: 200px;
+  min-width: 0;
+  flex: 1 1 12rem;
 }
 
 .title {
@@ -97,6 +101,7 @@
   background: var(--surface);
   color: var(--text);
   min-width: 11rem;
+  max-width: 100%;
 }
 
 .ghostBtn {
@@ -352,9 +357,48 @@
 
 .composerRow {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
+}
+
+@media (max-width: 480px) {
+  .layout {
+    padding: 0.75rem 0.65rem 1rem;
+  }
+
+  .title {
+    font-size: 1.15rem;
+  }
+
+  .header {
+    gap: 0.65rem;
+    padding-bottom: 0.75rem;
+  }
+
+  .headerActions {
+    width: 100%;
+    gap: 0.5rem;
+  }
+
+  .select {
+    min-width: 0;
+    flex: 1 1 8rem;
+  }
+
+  .messageList {
+    padding: 0.75rem;
+  }
+
+  .composer {
+    padding: 0.65rem;
+  }
+
+  .primaryBtn {
+    width: 100%;
+    text-align: center;
+  }
 }
 
 .muted {

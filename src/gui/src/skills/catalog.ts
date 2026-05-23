@@ -56,7 +56,7 @@ export const LAB_SKILL_CARDS: readonly SkillCardMeta[] = [
 ] as const;
 
 const IMPORT_UI = `将 Word 等来源的设定正文粘贴到下方；流水线会产出 JSON、校验并写入 workspace/setting_entry/ 草稿。
-完成后请查看结果摘要与右侧阶段进度；晋升 KSFS 见后续版本。`;
+完成后请查看结果摘要与右侧阶段进度；确认无误后点击「晋升至 KSFS」。`;
 
 export const PARADIGM_LABELS: Record<SkillCardMeta["paradigm"], string> = {
   dialogue: "dialogue（自然语言 SSE）",

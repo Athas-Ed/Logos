@@ -16,6 +16,36 @@ from logos.ports.llm import ChatMessage
 _log = logging.getLogger("logos.infrastructure.llm")
 
 
+def _connect_error_hint(
+    url: str,
+    exc: BaseException,
+    *,
+    proxies: dict[str, str] | None,
+    verify: bool | str,
+) -> str:
+    base = (
+        f"无法连接到 LLM 服务（{url}）。常见原因：网络不可达、"
+        "`config/local.yaml` 中 `llm.base_url` 主机或端口错误、对端未监听、或被防火墙/代理拦截。"
+        "Windows 下 `WinError 10061` 表示「连接被拒绝」（该地址上没有服务在监听）。"
+        "若你只想用本地桩模型，请去掉或清空 `llm.api_key`，或改回可访问的 base_url。"
+    )
+    err = str(exc)
+    if "CERTIFICATE_VERIFY_FAILED" in err or "certificate verify failed" in err.lower():
+        extra = (
+            "当前为 HTTPS 证书校验失败。"
+            "若配置了 `llm.http_proxy` / `llm.https_proxy`（如 Steam++ 加速器），"
+            "代理会对流量做 MITM，需信任代理根证书；`Plugins/Accelerator/SteamTools.Certificate.cer` "
+            "常与当前代理实际签发密钥不一致，仅设置 `llm.ca_bundle` 仍会失败。"
+            "可暂时将 `llm.verify_ssl` 设为 `false`，或在加速器中重新导出/安装根证书后再开启校验；"
+            "若无需代理访问 API，可去掉 `llm.http_proxy` / `llm.https_proxy` 后使用系统 CA。"
+        )
+        if proxies:
+            return f"{base} {extra}"
+        if verify not in (True, "true"):
+            return f"{base} {extra}"
+    return base
+
+
 class OpenAICompatibleChatClient:
     """同步调用 ``POST {base_url}/chat/completions``，实现 :class:`~logos.ports.llm.LLMClient` 形态。"""
 
@@ -74,7 +104,8 @@ class OpenAICompatibleChatClient:
             self._trust_env = False
         else:
             self._proxies = None
-            self._trust_env = True
+            # 直连：不读 HTTP_PROXY / SSL_CERT_FILE 等，避免系统半套代理或无效 CA 路径（如 $ca）。
+            self._trust_env = False
 
     def _httpx_client_kwargs(self) -> dict[str, Any]:
         client_kw: dict[str, Any] = {
@@ -175,12 +206,7 @@ class OpenAICompatibleChatClient:
                             yield piece
         except httpx.ConnectError as exc:
             _log.exception("无法连接到 LLM 服务端（流式）")
-            hint = (
-                f"无法连接到 LLM 服务（{url}）。常见原因：网络不可达、"
-                "`config/local.yaml` 中 `llm.base_url` 主机或端口错误、对端未监听、或被防火墙/代理拦截。"
-                "Windows 下 `WinError 10061` 表示「连接被拒绝」（该地址上没有服务在监听）。"
-                "若你只想用本地桩模型，请去掉或清空 `llm.api_key`，或改回可访问的 base_url。"
-            )
+            hint = _connect_error_hint(url, exc, proxies=self._proxies, verify=self._verify)
             raise RuntimeError(f"{hint} 原始错误: {exc!s}") from exc
         except httpx.TimeoutException as exc:
             _log.exception("LLM 请求超时（流式）")
@@ -222,12 +248,7 @@ class OpenAICompatibleChatClient:
                 response = client.post(url, json=payload, headers=headers)
         except httpx.ConnectError as exc:
             _log.exception("无法连接到 LLM 服务端")
-            hint = (
-                f"无法连接到 LLM 服务（{url}）。常见原因：网络不可达、"
-                "`config/local.yaml` 中 `llm.base_url` 主机或端口错误、对端未监听、或被防火墙/代理拦截。"
-                "Windows 下 `WinError 10061` 表示「连接被拒绝」。"
-                "若只想使用本地桩模型，请去掉或清空 `llm.api_key`。"
-            )
+            hint = _connect_error_hint(url, exc, proxies=self._proxies, verify=self._verify)
             raise RuntimeError(f"{hint} 原始错误: {exc!s}") from exc
         except httpx.TimeoutException as exc:
             _log.exception("LLM 请求超时")

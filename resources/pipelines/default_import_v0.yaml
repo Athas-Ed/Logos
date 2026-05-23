@@ -8,6 +8,7 @@ steps:
     type: json_schema
   - id: overlap
     type: overlap_scan
-    enabled: false
   - id: render
     type: render
+  - id: promote
+    type: promote_gate
