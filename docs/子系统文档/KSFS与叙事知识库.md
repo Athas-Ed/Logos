@@ -43,6 +43,8 @@
 
 `resources/entity_template/` 存放 JSON Schema、渲染规格与 pipeline 配置（如 `default_import_v0`），与 `ksfs_root` **分离**，避免与用户实体混扫。
 
+**Git**：`resources/ksfs/`、`workspace/`、`example_ksfs/` 下的创作与示例实体**不入库**（见 [配置说明](../配置说明.md)「本地数据目录」）。
+
 ## 格式约定摘要
 
 - 核心格式：**仅 `.md`** 进入 HDL 扫描；`.docx`/PDF 等需经独立 Skill 转为 Markdown 再落户。

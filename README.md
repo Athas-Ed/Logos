@@ -12,7 +12,7 @@
 | `src/gui/`、`src/electron/` | Web GUI 与桌面壳 |
 | `skills/` | MCP Skill 与 manifest |
 | `config/` | `defaults.yaml` + 本机 `local.yaml`（勿提交） |
-| `workspace/` | 个人创作区（默认不入库） |
+| `workspace/`、`resources/ksfs/`、`example_ksfs/` | 个人创作与示例（内容不入库，见 [docs/配置说明.md](docs/配置说明.md)） |
 | `docs/` | **对外介绍文档** |
 
 ## 文档入口

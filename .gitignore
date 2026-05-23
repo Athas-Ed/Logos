@@ -8,7 +8,14 @@ config/secrets.yaml
 .env
 .env.local
 
-# 个人创作与工作区（默认全部忽略；仅例外提交两份说明，见 KSFS开发.md §2）
+# 开发用 KSFS 示例树（本机保留；不入库）
+/example_ksfs/**
+
+# KSFS 事实源：个人创作内容不入库，仅保留说明
+/resources/ksfs/**
+!/resources/ksfs/README.md
+
+# 工作区：草稿、会话缓存、setting_entry 等（仅保留说明）
 /workspace/**
 !/workspace/README.md
 !/workspace/setting_entry/

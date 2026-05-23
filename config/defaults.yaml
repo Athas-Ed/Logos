@@ -4,8 +4,9 @@
 
 paths:
   workspace_root: "./workspace"
+  # 开发用示例 KSFS（本机目录，.gitignore 不入库）
   example_ksfs_root: "./example_ksfs"
-  # KSFS 事实源（叙事知识 .md 根）；见 docs/子系统文档/KSFS与叙事知识库.md
+  # 个人创作 KSFS 事实源（树内 .md 不入库，仅 README 可提交）
   ksfs_root: "./resources/ksfs"
   # KSFS→HSI 登记时机（见 KSFS开发.md §3.2 / §3.3）：
   # - false（默认）：首次融合检索 ``query`` 前懒登记（发号、回写 id:）
