@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import cast
 
 from logos.agent.paradigm_types import Paradigm
-from logos.harness.skills_registry import SkillManifestNotFoundError, get_skill_manifest
+from logos.platform.skills_registry import SkillManifestNotFoundError, get_skill_manifest
 
 _VALID: frozenset[str] = frozenset({"dialogue", "react", "plan", "pipeline"})
 

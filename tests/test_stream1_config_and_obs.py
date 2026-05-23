@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from logos.harness.config import (
+from logos.platform.config import (
     apply_env_overrides,
     deep_merge,
     load_app_settings,
@@ -17,7 +17,7 @@ from logos.harness.config import (
     merged_dict_to_app_settings,
     resolve_config_dir,
 )
-from logos.harness.obs import configure_logging, get_obs_logger
+from logos.platform.obs import configure_logging, get_obs_logger
 
 
 def test_deep_merge_nested() -> None:

@@ -26,7 +26,7 @@ def test_commit_msg_fails_when_api_staged_without_contract_line(tmp_path: Path) 
     _git(repo, "config", "user.email", "t@t.t")
     _git(repo, "config", "user.name", "t")
 
-    rel = Path("src/logos/harness/ii_layer/api_v1.py")
+    rel = Path("src/logos/platform/ii_layer/api_v1.py")
     f = repo / rel
     f.parent.mkdir(parents=True)
     f.write_text("# x\n", encoding="utf-8")
@@ -56,7 +56,7 @@ def test_commit_msg_ok_when_contract_line_present(tmp_path: Path) -> None:
     _git(repo, "config", "user.email", "t@t.t")
     _git(repo, "config", "user.name", "t")
 
-    rel = Path("src/logos/harness/ii_layer/api_v1.py")
+    rel = Path("src/logos/platform/ii_layer/api_v1.py")
     f = repo / rel
     f.parent.mkdir(parents=True)
     f.write_text("# y\n", encoding="utf-8")

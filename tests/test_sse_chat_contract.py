@@ -11,10 +11,10 @@ pytest.importorskip("fastapi")
 
 from fastapi.testclient import TestClient
 
-from logos.harness.ii_layer.app import create_app
-from logos.harness.ii_layer.container import AppPorts
-from logos.harness.ii_layer.developer import DeveloperToggles
-from logos.harness.ii_layer.sse_contract import (
+from logos.platform.ii_layer.app import create_app
+from logos.platform.ii_layer.container import AppPorts
+from logos.platform.ii_layer.developer import DeveloperToggles
+from logos.platform.ii_layer.sse_contract import (
     CHAT_SSE_EVENT_NAMES,
     CHAT_SSE_MINIMAL_JSON,
     iter_chat_sse_events,

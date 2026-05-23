@@ -9,7 +9,7 @@ import threading
 from pathlib import Path
 from typing import Any
 
-from logos.harness.mcp_stdio import (
+from logos.platform.mcp_stdio import (
     discover_mcp_tools_sync,
     make_stdio_mcp_tool_handler,
     mcp_server_argv,

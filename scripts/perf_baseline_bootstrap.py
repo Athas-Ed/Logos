@@ -36,7 +36,7 @@ def main() -> None:
     tmp = Path(tempfile.mkdtemp())
     make_ports = _load_make_ports()
     ports = make_ports(tmp)
-    from logos.harness.ii_layer.app import create_app
+    from logos.platform.ii_layer.app import create_app
 
     app = create_app(ports)
     with TestClient(app) as client:

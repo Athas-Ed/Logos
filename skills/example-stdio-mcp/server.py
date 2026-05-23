@@ -1,7 +1,7 @@
 """示例 MCP（stdio）：``echo`` 与 ``echo_write_draft``。
 
 ``echo`` 用于进程泄漏与 discover 管线联调；``echo_write_draft`` 的入参 JSON Schema
-与内置 ``write_draft`` 一致（见 ``logos.harness.sg_layer.builtin_tool_schemas``），
+与内置 ``write_draft`` 一致（见 ``logos.platform.sg_layer.builtin_tool_schemas``），
 实现为只读回显，便于集成测试与 Agent 代理接线。
 """
 

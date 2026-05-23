@@ -32,18 +32,18 @@ from logos.agent.react import (
     ReActStreamToolTrace,
 )
 from logos.agent.shell import AgentShell
-from logos.harness.mcp_stdio import resolve_repo_root
-from logos.harness.obs.tool_chain import (
+from logos.platform.mcp_stdio import resolve_repo_root
+from logos.platform.obs.tool_chain import (
     clear_obs_log_profile_tls,
     prime_obs_log_profile_for_chat,
     reset_react_tool_steps,
 )
-from logos.harness.skills_registry import (
+from logos.platform.skills_registry import (
     SkillManifestNotFoundError,
     get_skill_manifest,
 )
-from logos.harness.sg_layer import build_v01_guarded_tool_registry
-from logos.harness.sg_layer.guarded_registry import V01_SG_TOOL_WHITELIST
+from logos.platform.sg_layer import build_v01_guarded_tool_registry
+from logos.platform.sg_layer.guarded_registry import V01_SG_TOOL_WHITELIST
 from logos.ports.llm import ChatMessage
 from logos.ports.retrieval import Citation
 
@@ -325,9 +325,9 @@ def build_v1_router() -> Any:
 
     @router.get("/bootstrap")
     def bootstrap_v1(ports: AppPortsDep) -> BootstrapResponse:
-        from logos.harness.config.paths_resolve import resolve_conversations_cache_abs
-        from logos.harness.mcp_stdio import resolve_repo_root
-        from logos.harness.skills_registry import list_bootstrap_skill_summaries
+        from logos.platform.config.paths_resolve import resolve_conversations_cache_abs
+        from logos.platform.mcp_stdio import resolve_repo_root
+        from logos.platform.skills_registry import list_bootstrap_skill_summaries
 
         pres = _effective_presentation(None, ports.settings.ui_default_presentation)
         prof = str(ports.settings.obs_log_profile or "standard").strip().lower()
@@ -660,7 +660,7 @@ def build_v1_router() -> Any:
                 status_code=403,
                 detail="配置 developer.show_dev_tools_ui 为 false，禁止查看。",
             )
-        from logos.harness.mcp_stdio import resolve_repo_root
+        from logos.platform.mcp_stdio import resolve_repo_root
 
         repo = resolve_repo_root()
         reg = build_v01_guarded_tool_registry(

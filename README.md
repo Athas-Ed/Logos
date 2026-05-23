@@ -8,7 +8,7 @@
 
 | 路径 | 用途 |
 |------|------|
-| `src/logos/` | Python 核心（Agent、HDL、Harness） |
+| `src/logos/` | Python 核心（Agent 决策层、HDL、支撑层） |
 | `src/gui/`、`src/electron/` | Web GUI 与桌面壳 |
 | `skills/` | MCP Skill 与 manifest |
 | `config/` | `defaults.yaml` + 本机 `local.yaml`（勿提交） |
@@ -26,7 +26,8 @@
 | 安装与启动 | [docs/快速开始.md](docs/快速开始.md) |
 | 配置与密钥 | [docs/配置说明.md](docs/配置说明.md) |
 | KSFS 知识库 | [docs/子系统文档/KSFS与叙事知识库.md](docs/子系统文档/KSFS与叙事知识库.md) |
-| 任务 / Skill 界面 | [docs/子系统文档/任务与Skill界面.md](docs/子系统文档/任务与Skill界面.md) |
+| 术语表 | [docs/术语表.md](docs/术语表.md) |
+| 会话 / Skill 界面 | [docs/子系统文档/任务与Skill界面.md](docs/子系统文档/任务与Skill界面.md) |
 | HTTP API | [docs/子系统文档/HTTP-API概览.md](docs/子系统文档/HTTP-API概览.md) |
 | 更多子系统 | [docs/子系统文档/README.md](docs/子系统文档/README.md) |
 

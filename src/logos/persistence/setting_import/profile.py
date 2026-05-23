@@ -8,7 +8,7 @@ from typing import Any
 
 import yaml
 
-from logos.harness.mcp_stdio import resolve_repo_root
+from logos.platform.mcp_stdio import resolve_repo_root
 
 
 @dataclass(frozen=True, slots=True)

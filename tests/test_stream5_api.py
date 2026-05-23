@@ -13,11 +13,11 @@ pytest.importorskip("fastapi")
 
 from fastapi.testclient import TestClient
 
-from logos.harness.ii_layer.app import create_app
-from logos.harness.ii_layer.container import AppPorts
-from logos.harness.ii_layer.developer import DeveloperToggles
-from logos.harness.sg_layer import build_v01_guarded_tool_registry
-from logos.harness.skills_registry import get_skill_manifest
+from logos.platform.ii_layer.app import create_app
+from logos.platform.ii_layer.container import AppPorts
+from logos.platform.ii_layer.developer import DeveloperToggles
+from logos.platform.sg_layer import build_v01_guarded_tool_registry
+from logos.platform.skills_registry import get_skill_manifest
 from logos.ports import AppSettings, McpServerEntry
 from logos.ports.knowledge_source import SourceDocument
 from logos.ports.retrieval import Citation
@@ -396,7 +396,7 @@ def test_api_v1_chat_via_httpx_async_asgi(tmp_path: Path) -> None:
 
     import httpx
 
-    from logos.harness.ii_layer.app import create_app
+    from logos.platform.ii_layer.app import create_app
 
     app = create_app(_make_ports(tmp_path))
 

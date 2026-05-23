@@ -7,7 +7,7 @@ import json
 import httpx
 import pytest
 
-from logos.harness.config import merged_dict_to_app_settings
+from logos.platform.config import merged_dict_to_app_settings
 from logos.infrastructure.llm import OpenAICompatibleChatClient, build_chat_llm_from_settings
 from logos.ports.llm import ChatMessage
 

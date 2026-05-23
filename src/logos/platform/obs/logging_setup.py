@@ -4,9 +4,9 @@ import logging
 from collections.abc import Mapping
 from pathlib import Path
 
-from logos.harness.config import load_merged_config_dict, merged_dict_to_app_settings
-from logos.harness.obs.path_handlers import DailyDirectoryFileHandler, MaintSubsystemFileHandler
-from logos.harness.obs.structured_formatter import make_formatter
+from logos.platform.config import load_merged_config_dict, merged_dict_to_app_settings
+from logos.platform.obs.path_handlers import DailyDirectoryFileHandler, MaintSubsystemFileHandler
+from logos.platform.obs.structured_formatter import make_formatter
 from logos.ports import AppSettings
 
 
@@ -37,7 +37,7 @@ def configure_logging(
     """配置 ``logos`` 根记录器：控制台 + 日常/维护分轨落盘。
 
     * **日常**：``<logs_root>/daily/YYYY-MM/YYYY-MM-DD.log``，固定 ``>= INFO``，与 ``obs.log_profile`` 解耦。
-    * **维护**：``<logs_root>/maint/<子系统>.log``（api / mcp / agent / retrieval / llm / persistence / harness / core），级别随 ``obs.log_profile``（或 *level* 覆盖）。
+    * **维护**：``<logs_root>/maint/<子系统>.log``（api / mcp / agent / retrieval / llm / persistence / platform / core），级别随 ``obs.log_profile``（或 *level* 覆盖）。
 
     合并 YAML 中的 ``logging.format``（``text`` / ``json``）；``logging.file_name`` 已废弃，保留键不影响落盘路径。
 

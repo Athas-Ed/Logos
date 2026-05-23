@@ -13,7 +13,7 @@ from typing import Any, Literal
 import yaml
 
 from logos.agent.paradigm_types import Paradigm
-from logos.harness.mcp_stdio import resolve_repo_root
+from logos.platform.mcp_stdio import resolve_repo_root
 
 PersistenceTier = Literal["p0", "p1", "p2"]
 TurnPolicy = Literal["single", "multi"]

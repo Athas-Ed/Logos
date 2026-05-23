@@ -4,8 +4,8 @@
 
 | 子目录 | 类型 | 说明 |
 |--------|------|------|
-| **`manifests/`** | **产品 Skill** | `*.yaml` manifest；`get_skill_manifest(skill_id)`（`logos.harness.skills_registry`） |
-| **`<包>/server.py`** | **工具 Skill（MCP）** | 可插拔 MCP Server，经 **`harness/sg_layer`** 暴露 **tools** |
+| **`manifests/`** | **产品 Skill** | `*.yaml` manifest；`get_skill_manifest(skill_id)`（`logos.platform.skills_registry`） |
+| **`<包>/server.py`** | **工具 Skill（MCP）** | 可插拔 MCP Server，经 **`platform/sg_layer`** 暴露 **tools** |
 
 ## 产品 Skill manifest（F5-01）
 

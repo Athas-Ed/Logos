@@ -1,4 +1,4 @@
-"""同步 MCP stdio 客户端（NDJSON JSON-RPC），供 :mod:`logos.harness.sg_layer.mcp_bridge` 在进程内工具注册表中转发调用。
+"""同步 MCP stdio 客户端（NDJSON JSON-RPC），供 :mod:`logos.platform.sg_layer.mcp_bridge` 在进程内工具注册表中转发调用。
 
 与 ``mcp.client.stdio`` 的成帧约定一致：每行一条 JSON-RPC 消息。子进程回收顺序遵循 MCP 规范：先关 stdin，再 ``wait``，超时后强杀。
 """

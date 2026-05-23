@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from logos.harness.sg_layer import (
+from logos.platform.sg_layer import (
     GuardedToolRegistry,
     PathSandboxViolationError,
     build_v01_guarded_tool_registry,

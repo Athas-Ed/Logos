@@ -1,6 +1,6 @@
 # 产品 Skill manifest（`skills/manifests/`）
 
-与 **`skills/<包>/server.py`**（MCP **工具 Skill**）并列；本目录仅存放**产品 Skill** 的宿主 manifest，供 `logos.harness.skills_registry.get_skill_manifest` 加载。
+与 **`skills/<包>/server.py`**（MCP **工具 Skill**）并列；本目录仅存放**产品 Skill** 的宿主 manifest，供 `logos.platform.skills_registry.get_skill_manifest` 加载。
 
 ## 约定（F5-01 写死）
 

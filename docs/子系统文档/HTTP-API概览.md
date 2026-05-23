@@ -1,6 +1,6 @@
 # HTTP API 概览
 
-Logos 对外以 **`/api/v1`** 为前缀（实现于 `src/logos/harness/ii_layer/api_v1.py`）。本地开发默认基址：`http://127.0.0.1:8000`。
+Logos 对外以 **`/api/v1`** 为前缀（实现于 `src/logos/platform/ii_layer/api_v1.py`）。本地由**开发用组合根后端**（`scripts/run_backend_stub.py`）提供，默认 `http://127.0.0.1:8000`。
 
 > 本文为**对外摘要**。字段增删以代码与 `tests/test_stream5_api.py` 为准；客户端应**忽略未知 SSE 事件名**。
 
@@ -22,10 +22,10 @@ GUI 首屏数据，字段包括（节选）：
 
 | 字段 | 说明 |
 |------|------|
-| `default_presentation` | `work` \| `developer` |
+| `default_presentation` | **Pd** 展示档位：`work` \| `developer`（`work` ≈ WM） |
 | `log_profile` | 日志详细度 |
 | `llm_mode` | `stub` \| `remote` |
-| `skills` | Skill 列表（面板与任务页元数据） |
+| `skills` | Skill 列表（面板与会话页元数据；含 `paradigm`） |
 | `conversations_cache_root` | 档 B JSON 目录绝对路径 |
 | `ui` | 含 `SSE_maxNum`、`cache_warn_bytes` 等 |
 

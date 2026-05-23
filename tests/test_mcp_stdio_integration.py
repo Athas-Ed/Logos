@@ -11,15 +11,15 @@ import pytest
 pytest.importorskip("mcp")
 
 from logos.agent.react import ReActStreamDone, iter_react_loop
-from logos.harness.sg_layer import (
+from logos.platform.sg_layer import (
     GuardedToolRegistry,
     V01_EXAMPLE_MCP_TOOL_NAMES,
     build_v01_guarded_tool_registry,
 )
-from logos.harness.sg_layer.builtin_tool_schemas import WRITE_DRAFT_PARAMETERS
-from logos.harness.sg_layer.guarded_registry import V01_SG_TOOL_WHITELIST as _V01_CORE
-from logos.harness.sg_layer.mcp_bridge import mcp_tool_summaries, register_mcp_tool_proxies
-from logos.harness.sg_layer.mcp_stdio_sync import McpStdioJsonRpcSession, stdio_params_for_example_skill
+from logos.platform.sg_layer.builtin_tool_schemas import WRITE_DRAFT_PARAMETERS
+from logos.platform.sg_layer.guarded_registry import V01_SG_TOOL_WHITELIST as _V01_CORE
+from logos.platform.sg_layer.mcp_bridge import mcp_tool_summaries, register_mcp_tool_proxies
+from logos.platform.sg_layer.mcp_stdio_sync import McpStdioJsonRpcSession, stdio_params_for_example_skill
 from logos.ports import AppSettings
 from logos.ports.llm import ChatMessage, LLMClient
 

@@ -137,7 +137,7 @@ class AgentShell:
     ]:
         """按 manifest 范式调度执行器（PR → Shell）。"""
         from logos.agent import cb
-        from logos.harness.skills_registry import get_skill_manifest
+        from logos.platform.skills_registry import get_skill_manifest
 
         paradigm = pr.select_paradigm(skill_id, user_text=user_text)
         if paradigm == "dialogue":

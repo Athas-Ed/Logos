@@ -26,7 +26,7 @@ def test_bundle_fails_when_only_api_staged(tmp_path: Path) -> None:
     _git(repo, "config", "user.email", "t@t.t")
     _git(repo, "config", "user.name", "t")
 
-    rel = Path("src/logos/harness/ii_layer/api_v1.py")
+    rel = Path("src/logos/platform/ii_layer/api_v1.py")
     f = repo / rel
     f.parent.mkdir(parents=True)
     f.write_text("# x\n", encoding="utf-8")
@@ -54,7 +54,7 @@ def test_bundle_ok_when_api_doc_and_test_staged(tmp_path: Path) -> None:
     _git(repo, "config", "user.name", "t")
 
     paths = [
-        Path("src/logos/harness/ii_layer/api_v1.py"),
+        Path("src/logos/platform/ii_layer/api_v1.py"),
         Path("original_docs/重要子系统开发文档/API-V0.2.md"),
         Path("tests/test_stream5_api.py"),
     ]

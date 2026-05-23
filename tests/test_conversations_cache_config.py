@@ -8,10 +8,10 @@ from pathlib import Path
 import yaml
 from fastapi.testclient import TestClient
 
-from logos.harness.config.loader import load_merged_config_dict, merged_dict_to_app_settings
-from logos.harness.config.paths_resolve import resolve_conversations_cache_abs
-from logos.harness.ii_layer.app import create_app
-from logos.harness.ii_layer.container import AppPorts
+from logos.platform.config.loader import load_merged_config_dict, merged_dict_to_app_settings
+from logos.platform.config.paths_resolve import resolve_conversations_cache_abs
+from logos.platform.ii_layer.app import create_app
+from logos.platform.ii_layer.container import AppPorts
 from tests.test_stream5_api import _make_ports
 
 
@@ -59,7 +59,7 @@ def test_bootstrap_conversations_cache_root(tmp_path: Path, monkeypatch) -> None
         developer=ports.developer,
     )
     monkeypatch.setattr(
-        "logos.harness.mcp_stdio.resolve_repo_root",
+        "logos.platform.mcp_stdio.resolve_repo_root",
         lambda: tmp_path,
     )
     app = create_app(ports)

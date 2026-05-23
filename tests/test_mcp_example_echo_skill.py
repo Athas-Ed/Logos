@@ -7,13 +7,13 @@ from pathlib import Path
 
 import pytest
 
-from logos.harness.mcp_stdio import (
+from logos.platform.mcp_stdio import (
     call_mcp_tool_sync,
     discover_mcp_tools_sync,
     mcp_server_argv,
     resolve_repo_root,
 )
-from logos.harness.sg_layer import build_v01_guarded_tool_registry
+from logos.platform.sg_layer import build_v01_guarded_tool_registry
 from logos.ports import AppSettings, McpServerEntry
 
 
@@ -61,7 +61,7 @@ def test_registry_mounts_echo(tmp_path: Path) -> None:
 def test_build_registry_reuses_mcp_discovery_cache(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from logos.harness.sg_layer import factory as sg_factory
+    from logos.platform.sg_layer import factory as sg_factory
 
     sg_factory.clear_mcp_discovery_cache()
     calls = {"n": 0}

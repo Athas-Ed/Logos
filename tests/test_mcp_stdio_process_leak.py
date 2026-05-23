@@ -9,7 +9,7 @@ import pytest
 
 psutil = pytest.importorskip("psutil")
 
-from logos.harness.mcp_stdio import call_mcp_tool_sync, mcp_server_argv, resolve_repo_root
+from logos.platform.mcp_stdio import call_mcp_tool_sync, mcp_server_argv, resolve_repo_root
 
 
 def test_repeated_mcp_calls_do_not_accumulate_children() -> None:

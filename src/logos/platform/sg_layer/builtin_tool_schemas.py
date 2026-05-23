@@ -1,4 +1,4 @@
-"""V0.1 内置工具参数 JSON Schema（与 :mod:`logos.harness.sg_layer.factory` 及 MCP Skill 同源）。"""
+"""V0.1 内置工具参数 JSON Schema（与 :mod:`logos.platform.sg_layer.factory` 及 MCP Skill 同源）。"""
 
 from __future__ import annotations
 

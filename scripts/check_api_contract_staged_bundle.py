@@ -12,8 +12,8 @@ from pathlib import Path
 # 任一命中即要求「契约文 + 契约测」同批暂存（不含二者自身作为唯一触发）
 BUNDLE_TRIGGER_PATHS: frozenset[str] = frozenset(
     {
-        "src/logos/harness/ii_layer/api_v1.py",
-        "src/logos/harness/ii_layer/deps.py",
+        "src/logos/platform/ii_layer/api_v1.py",
+        "src/logos/platform/ii_layer/deps.py",
         "src/gui/src/api/sseChat.ts",
         "src/gui/src/api/bootstrap.ts",
         "src/gui/src/api/developer.ts",

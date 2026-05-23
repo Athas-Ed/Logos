@@ -1,16 +1,16 @@
 """观测（Obs）：统一日志、``logs/`` 目录初始化，以及 ``logos`` 命名空间下的结构化格式。"""
 
-from logos.harness.obs.logging_setup import (
+from logos.platform.obs.logging_setup import (
     configure_logging,
     ensure_logs_directory,
     get_obs_logger,
 )
-from logos.harness.obs.structured_formatter import (
+from logos.platform.obs.structured_formatter import (
     JsonLineFormatter,
     log_record_to_payload,
     make_formatter,
 )
-from logos.harness.obs.tool_chain import (
+from logos.platform.obs.tool_chain import (
     TOOL_CHAIN_EVENT_V1,
     classify_tool_observation,
     clear_obs_log_profile_tls,

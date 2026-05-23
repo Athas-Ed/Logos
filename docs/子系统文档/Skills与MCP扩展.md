@@ -6,7 +6,7 @@
 
 - 展示名称、说明、UI 指引
 - 允许的**进程内工具**与 **MCP 工具** 子集
-- `paradigm`（对话 / ReAct / Plan / Pipeline）
+- `paradigm`（对话 / ReAct / Plan / HITL Plan-and-Execute，代码值 `pipeline`）
 - 持久化档位 `persistence_tier`（p0 / p1 / p2）
 - 可选 `input_schema` 约束任务输入
 
@@ -30,7 +30,7 @@ manifest 位于 `skills/manifests/<skill_id>.yaml`，与 `skills/<name>/` 下的
 外部能力以 **本地 MCP Server（stdio）** 为主：
 
 1. 在 `config/local.yaml` 的 `skills.mcp_servers` 注册 `id`、`entrypoint`、`env`。
-2. Harness **S&G** 层负责进程启动、沙箱与回收。
+2. 支撑层 **S&G** 负责进程启动、沙箱与回收。
 3. 仅当某 Skill manifest **显式允许** 时，对应 MCP 工具才会进入该次任务的工具列表。
 
 示例目录：`skills/example-stdio-mcp/`、`skills/amap-weather-mcp/`。

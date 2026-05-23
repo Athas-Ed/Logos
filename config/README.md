@@ -15,7 +15,7 @@
 
 ## 大模型（`llm`）
 
-- **用途**：`scripts/run_backend_stub.py` 在检测到 `llm.api_key` 非空时，通过 **OpenAI 兼容** `POST …/chat/completions` 调用远程模型（如 DeepSeek）。
+- **用途**：**开发用组合根后端**（`scripts/run_backend_stub.py`）在检测到 `llm.api_key` 非空时，通过 **OpenAI 兼容** API 调用远程模型（如 DeepSeek）。
 - **基础配置**：`defaults.yaml` 提供默认 `base_url` / `model`；密钥与覆盖写在 `local.yaml`，或使用 `LOGOS_LLM__API_KEY` 等环境变量。
 - **TLS / 代理**（统一走配置合并，与 `paths` 等一致）：
   - `verify_ssl`：是否校验 HTTPS 证书（`false` / `0` 关闭，不推荐）。
@@ -41,7 +41,7 @@
 ## 日志目录（`logs/`）
 
 - **配置位置**：`defaults.yaml` → `paths.logs_root`（默认 `./logs`）；可用 `local.yaml` 覆盖，或用环境变量 `LOGOS_PATHS__LOGS_ROOT`。
-- **生效方式**：在进程启动时调用 `logos.harness.obs.configure_logging`（会读取合并后的配置）；内部会**自动创建** `logs_root`、`daily/`、`maint/`。
-- **落盘约定**：**日常**为 `daily/YYYY-MM/YYYY-MM-DD.log`（固定 `>= INFO`，与 `obs.log_profile` 解耦）；**维护**为 `maint/<子系统>.log`（级别随 `obs.log_profile`），子系统路由见 `src/logos/harness/obs/path_handlers.py`。`config/logging.yaml` 的 `logging.format` 同时作用于控制台与上述文件；`logging.file_name` 已废弃。
+- **生效方式**：在进程启动时调用 `logos.platform.obs.configure_logging`（会读取合并后的配置）；内部会**自动创建** `logs_root`、`daily/`、`maint/`。
+- **落盘约定**：**日常**为 `daily/YYYY-MM/YYYY-MM-DD.log`（固定 `>= INFO`，与 `obs.log_profile` 解耦）；**维护**为 `maint/<子系统>.log`（级别随 `obs.log_profile`），子系统路由见 `src/logos/platform/obs/path_handlers.py`。`config/logging.yaml` 的 `logging.format` 同时作用于控制台与上述文件；`logging.file_name` 已废弃。
 - **Electron 壳**：后端崩溃/重启审计写入 **`maint/electron-shell.log`**（与 `paths.logs_root` 同根，优先 `LOGOS_REPO_ROOT`）。
 - **测试**：`pytest` 会在临时目录下创建 `…/logs/_pytest/` 子目录写入测试日志，避免污染你本机 `./logs`。

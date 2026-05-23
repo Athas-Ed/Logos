@@ -36,7 +36,7 @@ def create_app(
         from fastapi.staticfiles import StaticFiles
     except ImportError as e:
         raise ImportError(
-            "使用 logos.harness.ii_layer.create_app 请先安装依赖：pip install fastapi"
+            "使用 logos.platform.ii_layer.create_app 请先安装依赖：pip install fastapi"
         ) from e
 
     app = FastAPI(title="Logos I&I", lifespan=_app_lifespan)

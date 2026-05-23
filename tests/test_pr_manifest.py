@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from logos.agent.pr import select_paradigm
-from logos.harness.skills_registry import SkillManifestNotFoundError
+from logos.platform.skills_registry import SkillManifestNotFoundError
 
 
 def test_select_paradigm_lint_zh_dialogue() -> None:

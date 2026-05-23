@@ -13,8 +13,8 @@ from pathlib import Path
 # 与 .cursor/rules/logos-api-contract.mdc 对齐；用 POSIX 风格路径与 git 输出比对
 CONTRACT_PATHS: frozenset[str] = frozenset(
     {
-        "src/logos/harness/ii_layer/api_v1.py",
-        "src/logos/harness/ii_layer/deps.py",
+        "src/logos/platform/ii_layer/api_v1.py",
+        "src/logos/platform/ii_layer/deps.py",
         "original_docs/重要子系统开发文档/API-V0.2.md",
         "tests/test_stream5_api.py",
         "src/gui/src/api/sseChat.ts",

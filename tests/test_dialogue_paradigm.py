@@ -12,9 +12,9 @@ pytest.importorskip("fastapi")
 from fastapi.testclient import TestClient
 
 from logos.agent.cb import REACT_JSON_MANDATE_MARKERS
-from logos.harness.ii_layer.app import create_app
-from logos.harness.ii_layer.container import AppPorts
-from logos.harness.ii_layer.developer import DeveloperToggles
+from logos.platform.ii_layer.app import create_app
+from logos.platform.ii_layer.container import AppPorts
+from logos.platform.ii_layer.developer import DeveloperToggles
 from tests.test_stream5_api import _StubLLM, _make_ports
 
 

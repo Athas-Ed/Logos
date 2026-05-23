@@ -13,7 +13,7 @@ from logos.ports.llm import ChatMessage, LLMClient
 from logos.agent import cb, json_tools
 from logos.agent.prompt_echo import format_messages_for_prompt_echo
 from logos.agent.tool_registry import ToolRegistry
-from logos.harness.obs.tool_chain import (
+from logos.platform.obs.tool_chain import (
     classify_tool_observation,
     current_obs_profile,
     emit_tool_chain_v1,

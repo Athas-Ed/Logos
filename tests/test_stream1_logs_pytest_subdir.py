@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from logos.harness.obs import configure_logging, get_obs_logger
+from logos.platform.obs import configure_logging, get_obs_logger
 
 
 def test_logs_subdir_auto_created_and_written(

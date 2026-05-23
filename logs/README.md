@@ -10,7 +10,7 @@
 
 ## `maint/` — 维护轨
 
-- **路径形态**：按子系统分文件，例如 `api.log`、`mcp.log`、`harness.log`、`core.log` 等（路由规则见 `src/logos/harness/obs/path_handlers.py`）。
+- **路径形态**：按子系统分文件，例如 `api.log`、`mcp.log`、`platform.log`、`core.log` 等（路由规则见 `src/logos/platform/obs/path_handlers.py`）。
 - **内容**：工程侧细节；**级别**随 **`obs.log_profile`**（及控制台）变化，可为 DEBUG / 审计向。
 - **Electron**：后端崩溃与自动重启审计写在 **`electron-shell.log`**（与 Python 同根，不落系统 userData）。
 

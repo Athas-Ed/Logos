@@ -7,13 +7,13 @@ from pathlib import Path
 
 import pytest
 
-from logos.harness.mcp_stdio import (
+from logos.platform.mcp_stdio import (
     call_mcp_tool_sync,
     discover_mcp_tools_sync,
     mcp_server_argv,
     resolve_repo_root,
 )
-from logos.harness.sg_layer import build_v01_guarded_tool_registry
+from logos.platform.sg_layer import build_v01_guarded_tool_registry
 from logos.ports import AppSettings, McpServerEntry
 
 
@@ -31,7 +31,7 @@ def _amap_entry(*, enabled: bool, key: str) -> McpServerEntry:
 
 
 def test_resolve_repo_root_finds_marker_server() -> None:
-    from logos.harness.mcp_stdio import _marker_skill_server, resolve_repo_root
+    from logos.platform.mcp_stdio import _marker_skill_server, resolve_repo_root
 
     assert _marker_skill_server(resolve_repo_root()).is_file()
 

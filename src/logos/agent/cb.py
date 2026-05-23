@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from logos.harness.mcp_stdio import resolve_repo_root
+from logos.platform.mcp_stdio import resolve_repo_root
 from logos.ports.llm import ChatMessage
 
 from logos.agent.tool_registry import ToolRegistry
@@ -59,7 +59,7 @@ def build_plan_system_message(
     extra_system: str | None = None,
 ) -> str:
     """Plan Phase A system：要求输出含步骤列表的 JSON 或 Markdown（无 ReAct JSON 协议）。"""
-    from logos.harness.skills_registry import get_skill_manifest
+    from logos.platform.skills_registry import get_skill_manifest
 
     manifest = get_skill_manifest(skill_id)
     parts = [
@@ -100,7 +100,7 @@ def build_dialogue_system_message(
     extra_system: str | None = None,
 ) -> str:
     """对话范式 system：无 ReAct JSON-only 条令。"""
-    from logos.harness.skills_registry import get_skill_manifest
+    from logos.platform.skills_registry import get_skill_manifest
 
     manifest = get_skill_manifest(skill_id)
     parts = [

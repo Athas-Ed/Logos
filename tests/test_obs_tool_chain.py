@@ -8,8 +8,8 @@ from pathlib import Path
 
 import pytest
 
-from logos.harness.obs import configure_logging
-from logos.harness.obs.tool_chain import (
+from logos.platform.obs import configure_logging
+from logos.platform.obs.tool_chain import (
     TOOL_CHAIN_EVENT_V1,
     clear_obs_log_profile_tls,
     emit_tool_chain_v1,

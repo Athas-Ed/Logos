@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from logos.harness.skills_registry import (
+from logos.platform.skills_registry import (
     SkillManifestError,
     SkillManifestNotFoundError,
     get_skill_manifest,
@@ -68,7 +68,7 @@ def test_list_builtin_includes_samples() -> None:
 
 
 def test_dialogue_manifest_rejects_stray_pipeline_profile() -> None:
-    from logos.harness.skills_registry import _validate_manifest_dict
+    from logos.platform.skills_registry import _validate_manifest_dict
 
     raw = {
         "skill_id": "x",

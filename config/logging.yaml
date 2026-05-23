@@ -1,4 +1,4 @@
-# Harness / Obs：可经 local.yaml 或 LOGOS_LOGGING__FORMAT 等覆盖。
+# Platform / Obs：可经 local.yaml 或 LOGOS_LOGGING__FORMAT 等覆盖。
 # 日常：logs_root/daily/YYYY-MM/YYYY-MM-DD.log（仅 >= INFO，与 obs.log_profile 解耦）
 # 维护：logs_root/maint/<子系统>.log（级别随 obs.log_profile；子系统见 path_handlers.MaintSubsystemFileHandler）
 logging:

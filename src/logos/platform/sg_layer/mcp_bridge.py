@@ -1,11 +1,11 @@
-"""将 MCP ``tools/list`` 中的工具以受控名称注册到 :class:`~logos.harness.sg_layer.guarded_registry.GuardedToolRegistry`。"""
+"""将 MCP ``tools/list`` 中的工具以受控名称注册到 :class:`~logos.platform.sg_layer.guarded_registry.GuardedToolRegistry`。"""
 
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
 from typing import Any
 
-from logos.harness.sg_layer.guarded_registry import GuardedToolRegistry
+from logos.platform.sg_layer.guarded_registry import GuardedToolRegistry
 
 from .mcp_stdio_sync import McpStdioJsonRpcSession
 

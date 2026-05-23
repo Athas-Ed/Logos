@@ -11,13 +11,13 @@ from logos.agent import cb, plan
 from logos.agent.dialogue import DialogueStreamDone
 from logos.agent.cb import REACT_JSON_MANDATE_MARKERS
 from logos.agent.pr import select_paradigm
-from logos.harness.skills_registry import get_skill_manifest
+from logos.platform.skills_registry import get_skill_manifest
 
 pytest.importorskip("fastapi")
 
 from fastapi.testclient import TestClient
 
-from logos.harness.ii_layer.app import create_app
+from logos.platform.ii_layer.app import create_app
 from tests.test_stream5_api import _make_ports
 
 _PLAN_JSON = json.dumps(
@@ -75,7 +75,7 @@ def test_run_plan_phase_a_returns_steps_json() -> None:
 
 def test_api_v1_outline_plan_sse(tmp_path: Path) -> None:
     ports = _make_ports(tmp_path)
-    from logos.harness.ii_layer.container import AppPorts
+    from logos.platform.ii_layer.container import AppPorts
 
     ports = AppPorts(
         settings=ports.settings,

@@ -3,4 +3,5 @@
 - 可导入的 Python 包根为 **`logos`**（`import logos`、`from logos.ports import TextEmbedder`）。
 - `ARCHITECTURE.md` 中的 `src/ports/`、`src/agent/` 等，在仓库里对应为 **`src/logos/ports/`**、`**src/logos/agent/**`（同一逻辑路径，符合 setuptools 单包惯例）。
 - **`src/gui/`**：V0.1 前端（Vite + React + TS，Stream 6）：`npm run dev` 通过 Vite 代理调用 `/api/v1/*`。
-- **`src/logos/tools/promote_draft.py`**：草稿 → KSFS 晋升 CLI（`python -m logos.tools.promote_draft`）；说明见仓库根 **`README.md`** 与 **`original_docs/重要子系统开发文档/KSFS开发.md`** §7。
+- **`src/logos/platform/`**：支撑层（Platform layer）：I&I、S&G、Obs、Config。
+- **`src/logos/tools/promote_draft.py`**：草稿 → KSFS 晋升 CLI；说明见 **`docs/子系统文档/KSFS与叙事知识库.md`**。

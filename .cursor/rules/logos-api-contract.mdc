@@ -1,8 +1,8 @@
 ---
 description: 修改 I&I HTTP/SSE 时同步契约文档、单测与 GUI（与 API终极文档 4.1 一致）
 globs:
-  - "src/logos/harness/ii_layer/api_v1.py"
-  - "src/logos/harness/ii_layer/deps.py"
+  - "src/logos/platform/ii_layer/api_v1.py"
+  - "src/logos/platform/ii_layer/deps.py"
   - "original_docs/重要子系统开发文档/API-V0.2.md"
   - "tests/test_stream5_api.py"
   - "src/gui/src/api/sseChat.ts"

@@ -72,13 +72,13 @@ class MaintSubsystemFileHandler(logging.Handler):
     """写入 ``<logs_root>/maint/<name>.log``；按 logger 名最长前缀匹配子系统。"""
 
     ROUTES: ClassVar[tuple[tuple[str, str], ...]] = (
-        ("logos.harness.mcp", "mcp.log"),
+        ("logos.platform.mcp", "mcp.log"),
         ("logos.infrastructure.llm", "llm.log"),
         ("logos.api", "api.log"),
         ("logos.agent", "agent.log"),
         ("logos.retrieval", "retrieval.log"),
         ("logos.persistence", "persistence.log"),
-        ("logos.harness", "harness.log"),
+        ("logos.platform", "platform.log"),
     )
 
     def __init__(self, logs_root: Path, *, encoding: str = "utf-8") -> None:

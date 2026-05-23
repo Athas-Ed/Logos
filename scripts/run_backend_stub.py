@@ -1,18 +1,18 @@
-"""本地开发：启动 FastAPI（`http://127.0.0.1:8000`）。
+"""开发用组合根后端（Development backend）：本地 FastAPI ``http://127.0.0.1:8000``。
 
-- 若在 ``config/local.yaml`` 中配置了 ``llm.api_key``（及可选 ``base_url`` / ``model``），
-  则使用 **OpenAI 兼容** HTTP 客户端调用远程模型（如 DeepSeek）。
-- 否则 LLM 为内存桩。
-- **检索**：装配 ``FusedRetrievalService``；默认 **每次 ``retrieve``** 前按 ``paths.sync_hsi_on_retrieve``
-  扫描 KSFS 并增量刷新 HSI/SVS（``sync_hsi_on_retrieve: false`` 时退化为进程内仅首次懒登记）。
-  若 ``paths.sync_hsi_on_startup: true`` 则进程启动时额外登记一次。
-  若已安装 ``chromadb``，则检索前走 **SVS 增量**（内含 HSI）；启动时另有一次全量 Chroma 预热（可选）。
+装配 ``AppPorts``（组合根）：配置、LLM、检索、KSFS、MCP、Obs 等，供 GUI / Electron 调用 ``/api/v1/*``。
+
+- 若在 ``config/local.yaml`` 中配置了 ``llm.api_key``，则使用 **OpenAI 兼容** HTTP 客户端（如 DeepSeek）。
+- 否则 **LLM** 使用内存桩（回复前缀「桩后端」，便于测试辨认）。
+- **检索**：``FusedRetrievalService``；默认每次 ``retrieve`` 前按 ``paths.sync_hsi_on_retrieve`` 同步 KSFS→HSI/SVS。
 
 用法（仓库根、已激活 venv）::
 
     python scripts/run_backend_stub.py
 
-若 ``config`` 中 ``skills.mcp_servers`` 有 ``enabled: true`` 的项，请确认当前解释器已安装 ``mcp``（``pip install "mcp>=1.2.0"`` 或 ``pip install -e .``）；否则 MCP 无法挂载。
+一键脚本 ``scripts/start_logos.*`` 亦会拉起本进程。若已由其他终端启动，请设 ``LOGOS_ELECTRON_SKIP_BACKEND=1`` 以免占用 8000 端口。
+
+若 ``skills.mcp_servers`` 有 ``enabled: true`` 的项，请确认已安装 ``mcp``（``pip install -e ".[dev]"``）。
 """
 
 from __future__ import annotations
@@ -40,10 +40,10 @@ def main() -> None:
     os.chdir(_REPO_ROOT)
     os.environ.setdefault("LOGOS_REPO_ROOT", str(_REPO_ROOT))
 
-    from logos.harness.config import load_app_settings
-    from logos.harness.ii_layer.app import create_app
-    from logos.harness.ii_layer.container import AppPorts
-    from logos.harness.ii_layer.developer import DeveloperToggles
+    from logos.platform.config import load_app_settings
+    from logos.platform.ii_layer.app import create_app
+    from logos.platform.ii_layer.container import AppPorts
+    from logos.platform.ii_layer.developer import DeveloperToggles
     from logos.infrastructure.llm import build_chat_llm_from_settings
     from logos.infrastructure.retrieval.fused import FusedRetrievalService
     from logos.persistence import SqliteMetadataIndex
@@ -188,7 +188,7 @@ def main() -> None:
         developer=DeveloperToggles(prompt_echo=settings.developer_prompt_echo),
     )
     app = create_app(ports)
-    _log.info("索引准备完毕，开始监听 http://127.0.0.1:8000")
+    _log.info("索引准备完毕，开发用组合根后端开始监听 http://127.0.0.1:8000")
     uvicorn.run(app, host="127.0.0.1", port=8000, log_level="info")
 
 

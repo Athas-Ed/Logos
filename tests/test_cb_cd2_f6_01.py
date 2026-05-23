@@ -11,7 +11,7 @@ from logos.agent.cb import (
     load_prompt_fragment,
 )
 from logos.agent.tool_registry import ToolRegistry
-from logos.harness.ii_layer.api_v1 import _operating_mode_suffix
+from logos.platform.ii_layer.api_v1 import _operating_mode_suffix
 
 
 def test_react_base_loads_from_resource() -> None:

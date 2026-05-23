@@ -1,6 +1,6 @@
 """配置：合并 ``defaults.yaml`` 与 ``local.yaml``，并支持 ``LOGOS_*`` 环境变量覆盖。"""
 
-from logos.harness.config.loader import (
+from logos.platform.config.loader import (
     apply_env_overrides,
     deep_merge,
     load_app_settings,

@@ -12,7 +12,7 @@ from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any
 
-_log = logging.getLogger("logos.harness.mcp_stdio")
+_log = logging.getLogger("logos.platform.mcp_stdio")
 
 try:
     from mcp import ClientSession

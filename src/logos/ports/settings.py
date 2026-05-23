@@ -53,7 +53,7 @@ class AppSettings:
     obs_show_log_root_in_gui: bool = False
     #: 为 true 时 GUI 可展示开发者控件并允许 PUT 切换 prompt 回显
     developer_show_dev_tools_ui: bool = False
-    #: 启动初值；运行时可由 :class:`~logos.harness.ii_layer.developer.DeveloperToggles` 改写
+    #: 启动初值；运行时可由 :class:`~logos.platform.ii_layer.developer.DeveloperToggles` 改写
     developer_prompt_echo: bool = False
     #: 进程启动时是否在 FastAPI lifespan 内执行一次 KSFS→HSI 登记（默认关闭）
     sync_hsi_on_startup: bool = False

@@ -13,7 +13,7 @@ pytest.importorskip("fastapi")
 from fastapi.testclient import TestClient
 
 from logos.agent.pipeline import PipelineRunner, PipelineWarningEvent
-from logos.harness.ii_layer.app import create_app
+from logos.platform.ii_layer.app import create_app
 from logos.persistence import SqliteMetadataIndex
 from logos.persistence.setting_import import scan_import_overlap, validate_import_batch
 from logos.persistence.setting_import.profile import load_entity_template_profile

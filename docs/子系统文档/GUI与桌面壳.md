@@ -17,14 +17,14 @@
 
 ## Electron 职责
 
-- 启动或跳过内置桩后端（`LOGOS_ELECTRON_SKIP_BACKEND`）。
+- 启动或跳过开发用组合根后端（`LOGOS_ELECTRON_SKIP_BACKEND`）。
 - 解析仓库根（`LOGOS_REPO_ROOT`、便携包向上查找等）。
 - 会话 JSON 的 **IPC 读写**（`conversations/*.json`）。
 - 子进程日志写入 `logs/maint/electron-shell.log` 等。
 
 ## 开发启动顺序
 
-1. 后端 `:8000`（一键脚本或 `run_backend_stub.py`）。
+1. 开发用组合根后端 `:8000`（一键脚本或 `run_backend_stub.py`）。
 2. `cd src/gui && npm run dev`。
 3. `cd src/electron && npm run electron:dev`（需 Vite 已就绪）。
 

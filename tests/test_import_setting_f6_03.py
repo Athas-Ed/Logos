@@ -12,10 +12,10 @@ pytest.importorskip("fastapi")
 
 from fastapi.testclient import TestClient
 
-from logos.harness.ii_layer.app import create_app
-from logos.harness.ii_layer.sse_contract import iter_chat_sse_events, validate_chat_sse_payload
-from logos.harness.mcp_stdio import resolve_repo_root
-from logos.harness.skills_registry import get_skill_manifest
+from logos.platform.ii_layer.app import create_app
+from logos.platform.ii_layer.sse_contract import iter_chat_sse_events, validate_chat_sse_payload
+from logos.platform.mcp_stdio import resolve_repo_root
+from logos.platform.skills_registry import get_skill_manifest
 from tests.test_stream5_api import _make_ports
 
 

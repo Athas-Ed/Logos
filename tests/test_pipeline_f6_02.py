@@ -14,8 +14,8 @@ from logos.agent import react as react_mod
 from logos.agent.pipeline import PipelineRunner, PipelineStreamDone
 from logos.agent.shell import AgentShell
 from logos.agent.tool_registry import ToolRegistry
-from logos.harness.mcp_stdio import resolve_repo_root
-from logos.harness.skills_registry import (
+from logos.platform.mcp_stdio import resolve_repo_root
+from logos.platform.skills_registry import (
     SkillManifestError,
     get_skill_manifest,
 )
@@ -60,7 +60,7 @@ def test_pipeline_spec_loads_default_import_v0() -> None:
 
 
 def test_manifest_pipeline_requires_profile_field() -> None:
-    from logos.harness.skills_registry import _validate_manifest_dict
+    from logos.platform.skills_registry import _validate_manifest_dict
 
     base = {
         "skill_id": "bad_pipe",
