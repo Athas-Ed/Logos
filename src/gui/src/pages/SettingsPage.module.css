@@ -1,11 +1,15 @@
 .page {
-  max-width: 40rem;
+  width: 100%;
+  max-width: min(48rem, 100%);
   margin: 0 auto;
   padding: 1rem 1.25rem 2rem;
+  min-width: 0;
+  overflow-x: clip;
 }
 
 .header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
@@ -110,6 +114,7 @@
   color: var(--text);
   font-size: 0.82rem;
   min-width: 10rem;
+  max-width: 100%;
 }
 
 .output {
@@ -169,6 +174,33 @@
   border-top: 1px dashed var(--border);
 }
 
-.cacheNavBtn {
-  align-self: flex-start;
+@media (max-width: 480px) {
+  .page {
+    padding: 0.85rem 0.65rem 1.5rem;
+  }
+
+  .title {
+    font-size: 1.05rem;
+  }
+
+  .backLink {
+    width: 100%;
+    text-align: center;
+  }
+
+  .select {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ghostBtn,
+  .primaryBtn {
+    width: 100%;
+    text-align: center;
+  }
 }

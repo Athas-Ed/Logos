@@ -26,6 +26,9 @@ export function TaskPage() {
   const toolTraceLog = conv?.toolTraceLog ?? [];
   const pipelineSteps = conv?.pipelineSteps ?? [];
   const pipelineWarnings = conv?.pipelineWarnings ?? [];
+  const pipelineWrittenPaths = conv?.pipelineWrittenPaths ?? [];
+  const promoteMessage = conv?.promoteMessage ?? null;
+  const promoteBusy = Boolean(conv?.promoteBusy);
   const presentation = conv?.presentation ?? "work";
   const streaming = Boolean(conv?.streaming);
   const queued = Boolean(conv?.queued);
@@ -226,6 +229,28 @@ export function TaskPage() {
               : null}
               {phase === "done" ?
                 <>
+                  {isPipeline && pipelineWrittenPaths.length > 0 ?
+                    <button
+                      type="button"
+                      className={styles.primaryBtn}
+                      data-testid="task-promote-ksfs"
+                      disabled={promoteBusy}
+                      onClick={() =>
+                        void actions.promotePipelineDrafts(conversationId)
+                      }
+                    >
+                      {promoteBusy ? "晋升中…" : "晋升至 KSFS"}
+                    </button>
+                  : null}
+                  {promoteMessage ?
+                    <p
+                      className={styles.promoteHint}
+                      data-testid="task-promote-message"
+                      role="status"
+                    >
+                      {promoteMessage}
+                    </p>
+                  : null}
                   {resultText ?
                     <button
                       type="button"

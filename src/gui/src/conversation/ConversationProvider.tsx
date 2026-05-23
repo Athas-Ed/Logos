@@ -11,6 +11,7 @@ import {
 } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { fetchBootstrap } from "../api/bootstrap";
+import { promoteSettingEntry } from "../api/promoteSettingEntry";
 import { streamChat, type StreamChatEvent } from "../api/sseChat";
 import type { ChatMessage } from "../types/chat";
 import {
@@ -77,6 +78,8 @@ export type ConversationActions = {
   submitTaskRun: (id: string, text: string) => void;
   /** 完成后回到输入步（保留 skill，清空本轮消息） */
   resetTaskToInput: (id: string) => void;
+  /** import_setting：将 setting_entry 草稿晋升至 KSFS（F6-08） */
+  promotePipelineDrafts: (id: string) => Promise<void>;
   stopStream: (id: string) => void;
 };
 
@@ -327,6 +330,18 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
               }));
               return;
             }
+            if (ev.kind === "done") {
+              const raw = ev.payload.written_paths;
+              const written =
+                Array.isArray(raw) ? raw.map((p) => String(p)) : [];
+              if (written.length > 0) {
+                patchConversation(conversationId, (s) => ({
+                  ...s,
+                  pipelineWrittenPaths: written,
+                }));
+              }
+              return;
+            }
             if (
               ev.kind === "delta" ||
               ev.kind === "reasoning_summary" ||
@@ -446,6 +461,9 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
         toolTraceLog: [],
         pipelineSteps: [],
         pipelineWarnings: [],
+        pipelineWrittenPaths: [],
+        promoteMessage: null,
+        promoteBusy: false,
         title: deriveConversationTitle([userMsg]),
       }));
       const after = byIdRef.current[conversationId];
@@ -543,6 +561,9 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
             toolTraceLog: [],
             pipelineSteps: [],
             pipelineWarnings: [],
+            pipelineWrittenPaths: [],
+            promoteMessage: null,
+            promoteBusy: false,
             streamError: null,
             streaming: false,
             queued: false,
@@ -551,6 +572,47 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
       );
     },
     [patchConversation, stopStream],
+  );
+
+  const promotePipelineDrafts = useCallback(
+    async (conversationId: string) => {
+      const cur = byIdRef.current[conversationId];
+      if (!cur?.skillId || cur.promoteBusy) {
+        return;
+      }
+      const rels = cur.pipelineWrittenPaths
+        .map((p) => p.replace(/^setting_entry\//, ""))
+        .filter((p) => p.length > 0);
+      patchConversation(conversationId, (s) => ({
+        ...s,
+        promoteBusy: true,
+        promoteMessage: null,
+      }));
+      try {
+        const report = await promoteSettingEntry(
+          rels.length > 0 ? { draftRelpaths: rels } : undefined,
+        );
+        const msg =
+          report.ok
+            ? report.applied.length > 0
+              ? `已晋升 ${report.applied.length} 个文件至 KSFS：${report.applied.join("、")}`
+              : report.notes || "无文件被晋升"
+            : `晋升失败：${report.notes}`;
+        patchConversation(conversationId, (s) => ({
+          ...s,
+          promoteBusy: false,
+          promoteMessage: msg,
+        }));
+      } catch (err) {
+        patchConversation(conversationId, (s) => ({
+          ...s,
+          promoteBusy: false,
+          promoteMessage:
+            err instanceof Error ? err.message : String(err),
+        }));
+      }
+    },
+    [patchConversation],
   );
 
   const archiveTab = useCallback(
@@ -854,6 +916,7 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
       clearUnread,
       patchConversation,
       resetTaskToInput,
+      promotePipelineDrafts,
       sendMessage,
       submitTaskRun,
       stopStream,
@@ -868,6 +931,7 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
       createInspireChat,
       ensureOpenTab,
       patchConversation,
+      promotePipelineDrafts,
       resetTaskToInput,
       sendMessage,
       submitTaskRun,

@@ -42,6 +42,12 @@
   - `conversations_cache_root`：字符串；档 B 会话 JSON 目录的**绝对路径**（来自 `paths.CONVERSATIONS_CACHE`，相对仓库根解析）
 - 与 `SPEC-DISPLAY-AND-LOGGING-V0.1.md` 正交：会话内切换展示档位 **不** 通过本接口写回配置。
 
+### 2.2 `POST /api/v1/setting-entry/promote`（F6-08）
+
+- **Body（JSON）**：`draft_relpaths`（可选 string[]，相对 `workspace/setting_entry/` 根；省略则晋升全部候选 Markdown）
+- **Response（JSON）**：`ok`（bool）、`applied`（string[]，已写入 KSFS 的相对路径）、`skipped`（string[]）、`notes`（string）
+- 语义：与 `python -m logos.tools.promote_draft --apply` 一致（mtime 校验、禁止覆盖、复制后 HSI 同步）
+
 ---
 
 ## 3. `POST /api/v1/chat`（**SSE**，主路径）

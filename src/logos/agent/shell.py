@@ -126,6 +126,7 @@ class AgentShell:
         task_input: dict[str, Any] | None = None,
         stream_assistant: bool = True,
         workspace_root: str | Path | None = None,
+        ksfs_root: str | Path | None = None,
     ) -> Iterator[
         DialogueStreamText
         | DialogueStreamDone
@@ -178,6 +179,7 @@ class AgentShell:
                 self.llm,
                 profile_id=profile,
                 workspace_root=workspace_root,
+                ksfs_root=ksfs_root,
                 user_text=merged_user,
                 extra_system=extra_system,
             )

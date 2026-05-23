@@ -1,11 +1,15 @@
 .page {
-  max-width: 36rem;
+  width: 100%;
+  max-width: min(42rem, 100%);
   margin: 0 auto;
   padding: 1rem 1.25rem 2rem;
+  min-width: 0;
+  overflow-x: clip;
 }
 
 .header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
@@ -187,4 +191,39 @@
 .itemBody {
   flex: 1;
   min-width: 0;
+}
+
+@media (max-width: 480px) {
+  .page {
+    padding: 0.85rem 0.65rem 1.5rem;
+  }
+
+  .title {
+    font-size: 1.05rem;
+  }
+
+  .backLink {
+    width: 100%;
+    text-align: center;
+  }
+
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .toolbarActions {
+    width: 100%;
+  }
+
+  .primaryBtn,
+  .secondaryBtn,
+  .dangerBtn {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .usage {
+    font-size: 0.9rem;
+  }
 }

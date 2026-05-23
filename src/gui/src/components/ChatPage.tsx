@@ -607,11 +607,7 @@ export function ChatPage({ lab = false }: ChatPageProps) {
 
                 </button>
 
-              ) : (
-
-                <span className={styles.muted}>仅 SSE，无同路径 JSON 降级</span>
-
-              )}
+              ) : null}
 
               <button
 

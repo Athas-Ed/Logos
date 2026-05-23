@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { getApiOrigin } from "../api/apiBase";
 import { fetchBootstrap } from "../api/bootstrap";
@@ -7,11 +7,16 @@ import {
   putPromptEcho,
 } from "../api/developer";
 import { fetchHealth } from "../api/health";
-import { DEFAULT_CONVERSATION_ID } from "../conversation/constants";
 import {
   useConversationActions,
   useConversationMeta,
+  useConversationState,
 } from "../conversation/ConversationProvider";
+import { conversationNavPath } from "../skills/routing";
+import {
+  persistCacheWarnThresholdBytes,
+  resolveEffectiveCacheWarnUi,
+} from "../preferences/cacheWarnPrefs";
 import {
   MODE_LABELS,
   PRESENTATION_LABELS,
@@ -69,6 +74,25 @@ export function SettingsPage() {
   const navigate = useNavigate();
   const convActions = useConversationActions();
   const convMeta = useConversationMeta();
+  const lastOpenTabId =
+    convMeta.openTabIds.length > 0
+      ? convMeta.openTabIds[convMeta.openTabIds.length - 1]
+      : undefined;
+  const lastOpenConv = useConversationState(lastOpenTabId ?? "");
+  const settingsBackPath = useMemo(() => {
+    if (!convMeta.ready || convMeta.openTabIds.length === 0) {
+      return "/";
+    }
+    if (lastOpenConv) {
+      return conversationNavPath(lastOpenConv);
+    }
+    return `/chat/${lastOpenTabId}`;
+  }, [
+    convMeta.openTabIds.length,
+    convMeta.ready,
+    lastOpenConv,
+    lastOpenTabId,
+  ]);
   const [healthOk, setHealthOk] = useState<boolean | null>(null);
   const [logProfile, setLogProfile] = useState<LogProfile | null>(null);
   const [obsShowLogRootInGui, setObsShowLogRootInGui] = useState(false);
@@ -82,9 +106,6 @@ export function SettingsPage() {
   const [dryErr, setDryErr] = useState<string | null>(null);
   const [copyHint, setCopyHint] = useState<string | null>(null);
   const [uiLimits, setUiLimits] = useState<BootstrapUi>(BOOTSTRAP_UI_DEFAULTS);
-  const [uiLimitsSource, setUiLimitsSource] = useState<"bootstrap" | "default">(
-    "default",
-  );
   const [operatingMode, setOperatingMode] = useState<OperatingMode>(
     () => readStoredOperatingMode() ?? "author",
   );
@@ -118,8 +139,7 @@ export function SettingsPage() {
             ? b.obs_logs_root
             : null,
         );
-        setUiLimits(resolveBootstrapUi(b.ui));
-        setUiLimitsSource(b.ui ? "bootstrap" : "default");
+        setUiLimits(resolveEffectiveCacheWarnUi(resolveBootstrapUi(b.ui)));
         const storedOp = readStoredOperatingMode();
         const storedPres = readStoredPresentation();
         const op = storedOp ?? normalizeOperatingFromServer(b.operating_mode);
@@ -300,11 +320,8 @@ export function SettingsPage() {
         <h1 id={titleId} className={styles.title}>
           设置与诊断
         </h1>
-        <Link
-          className={styles.backLink}
-          to={`/chat/${DEFAULT_CONVERSATION_ID}`}
-        >
-          返回对话
+        <Link className={styles.backLink} to={settingsBackPath}>
+          返回
         </Link>
       </header>
 
@@ -392,13 +409,6 @@ export function SettingsPage() {
           <h2 id={`${titleId}-ui`} className={styles.sectionTitle}>
             GUI 限制（G2）
           </h2>
-          <p className={styles.muted}>
-            来自 <code className={styles.mono}>GET /api/v1/bootstrap</code> 的{" "}
-            <code className={styles.mono}>ui</code> 段（
-            {uiLimitsSource === "bootstrap" ? "已连接后端" : "使用本地默认"}）。
-            写回配置须改 <code className={styles.mono}>config/local.yaml</code>
-            ；会话内覆盖策略在 G5 完善。
-          </p>
           <div className={styles.field}>
             <label className={styles.fieldLabel} htmlFor={`${titleId}-sse`}>
               SSE_maxNum（后台并发上限）
@@ -429,10 +439,12 @@ export function SettingsPage() {
                 if (!Number.isFinite(mb) || mb < 0) {
                   return;
                 }
+                const bytes = Math.round(mb * BYTES_PER_MB);
                 setUiLimits((prev) => ({
                   ...prev,
-                  cache_warn_bytes: Math.round(mb * BYTES_PER_MB),
+                  cache_warn_bytes: bytes,
                 }));
+                persistCacheWarnThresholdBytes(bytes);
               }}
             />
           </div>
@@ -451,7 +463,7 @@ export function SettingsPage() {
           </p>
           <button
             type="button"
-            className={`${styles.primaryBtn} ${styles.cacheNavBtn}`}
+            className={styles.primaryBtn}
             data-testid="archived-sessions-btn"
             onClick={() => navigate("/cache")}
           >

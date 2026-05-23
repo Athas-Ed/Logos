@@ -1,12 +1,13 @@
 .tabBar {
   display: flex;
   align-items: flex-end;
-  gap: 0.25rem;
+  gap: 0.35rem;
   padding: 0.45rem 0.75rem 0;
   border-bottom: 1px solid var(--border);
   background: color-mix(in srgb, var(--surface) 92%, var(--bg));
-  overflow-x: auto;
   flex-shrink: 0;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .tabList {
@@ -15,6 +16,21 @@
   gap: 0.25rem;
   flex: 1;
   min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  flex-wrap: nowrap;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--muted) 45%, transparent) transparent;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tabList::-webkit-scrollbar {
+  height: 4px;
+}
+
+.tabList::-webkit-scrollbar-thumb {
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--muted) 45%, transparent);
 }
 
 .tab {
@@ -111,4 +127,21 @@
   font-size: 0.72rem;
   color: var(--muted);
   white-space: nowrap;
+}
+
+@media (max-width: 520px) {
+  .tabBar {
+    padding: 0.4rem 0.5rem 0;
+    gap: 0.25rem;
+  }
+
+  .tab {
+    max-width: 9rem;
+    padding: 0.3rem 0.4rem 0.3rem 0.5rem;
+    font-size: 0.76rem;
+  }
+
+  .meta {
+    display: none;
+  }
 }

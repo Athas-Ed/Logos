@@ -38,6 +38,11 @@ export type ConversationState = {
   toolTraceLog: string[];
   pipelineSteps: PipelineStepEntry[];
   pipelineWarnings: string[];
+  /** pipeline ``done`` 事件中的 ``written_paths``（F6-08 晋升用） */
+  pipelineWrittenPaths: string[];
+  /** 晋升 KSFS 结果摘要（Task 页展示） */
+  promoteMessage: string | null;
+  promoteBusy: boolean;
   operatingMode: OperatingMode;
   presentation: PresentationMode;
   streaming: boolean;

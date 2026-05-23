@@ -13,6 +13,7 @@ from logos.persistence.setting_import import (
     PipelineValidationError,
     load_entity_template_profile,
     render_batch_to_setting_entry,
+    scan_import_overlap,
     validate_import_batch,
 )
 from logos.persistence.setting_import.pipeline_spec import (
@@ -61,10 +62,14 @@ class PipelineRunner:
         *,
         profile_id: str,
         workspace_root: Path | str,
+        ksfs_root: Path | str | None = None,
         llm: LLMClient | None = None,
     ) -> None:
         self.profile_id = profile_id.strip()
         self.workspace_root = Path(workspace_root)
+        self._ksfs_root = (
+            Path(ksfs_root) if ksfs_root is not None else self.workspace_root
+        )
         self.llm = llm
         self._profile = load_entity_template_profile(self.profile_id)
         self._spec = load_pipeline_spec(self.profile_id)
@@ -109,7 +114,12 @@ class PipelineRunner:
                     validate_import_batch(batch, self._profile.schema_path)
                     summary = "ok"
                 elif step.type == "overlap_scan":
-                    overlap_warnings = self._run_overlap_scan(batch or {})
+                    overlap_warnings = scan_import_overlap(
+                        batch or {},
+                        profile=self._profile,
+                        workspace_root=self.workspace_root,
+                        ksfs_root=self._ksfs_root,
+                    )
                     warnings.extend(overlap_warnings)
                     if overlap_warnings:
                         yield PipelineWarningEvent(warnings=tuple(overlap_warnings))
@@ -126,7 +136,7 @@ class PipelineRunner:
                     written_paths = [r.rel_path for r in rendered]
                     summary = f"files={len(written_paths)}"
                 elif step.type == "promote_gate":
-                    summary = "deferred (F6-08)"
+                    summary = "请在 Task 页确认后点击「晋升至 KSFS」"
                 else:
                     msg = f"unsupported step type: {step.type!r}"
                     raise RuntimeError(msg)
@@ -201,17 +211,12 @@ class PipelineRunner:
             raise ValueError(msg)
         return batch
 
-    def _run_overlap_scan(self, batch: dict[str, Any]) -> list[str]:
-        """F6-08：本地只读重叠扫描；未启用阶段时由 spec ``enabled: false`` 跳过。"""
-        _ = batch
-        return []
-
-
 def iter_run_pipeline(
     llm: LLMClient | None,
     *,
     profile_id: str,
     workspace_root: Path | str,
+    ksfs_root: Path | str | None = None,
     user_text: str,
     batch_json: dict[str, Any] | None = None,
     extra_system: str | None = None,
@@ -219,6 +224,7 @@ def iter_run_pipeline(
     runner = PipelineRunner(
         profile_id=profile_id,
         workspace_root=workspace_root,
+        ksfs_root=ksfs_root,
         llm=llm,
     )
     yield from runner.iter_run(
@@ -233,6 +239,7 @@ def run_pipeline(
     *,
     profile_id: str,
     workspace_root: Path | str,
+    ksfs_root: Path | str | None = None,
     user_text: str,
     batch_json: dict[str, Any] | None = None,
     extra_system: str | None = None,
@@ -240,6 +247,7 @@ def run_pipeline(
     runner = PipelineRunner(
         profile_id=profile_id,
         workspace_root=workspace_root,
+        ksfs_root=ksfs_root,
         llm=llm,
     )
     return runner.run(user_text, batch_json=batch_json, extra_system=extra_system)
