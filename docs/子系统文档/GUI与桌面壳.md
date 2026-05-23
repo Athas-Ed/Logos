@@ -24,7 +24,7 @@
 
 ## 开发启动顺序
 
-1. 开发用组合根后端 `:8000`（一键脚本或 `run_backend_stub.py`）。
+1. 开发用组合根后端 `:8000`（一键脚本或 `run_dev_backend.py`）。
 2. `cd src/gui && npm run dev`。
 3. `cd src/electron && npm run electron:dev`（需 Vite 已就绪）。
 

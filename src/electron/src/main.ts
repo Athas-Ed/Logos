@@ -140,11 +140,11 @@ async function waitForBackendHealth(healthUrl: string): Promise<boolean> {
   return false;
 }
 
-/** 自 ``startDir`` 起沿父目录查找含 ``scripts/run_backend_stub.py`` 的仓库根。 */
+/** 自 ``startDir`` 起沿父目录查找含 ``scripts/run_dev_backend.py`` 的仓库根。 */
 function findRepoRootContainingStub(startDir: string): string | null {
   let dir = path.resolve(startDir);
   for (let i = 0; i < 20; i++) {
-    const marker = path.join(dir, "scripts", "run_backend_stub.py");
+    const marker = path.join(dir, "scripts", "run_dev_backend.py");
     if (existsSync(marker)) {
       return dir;
     }
@@ -173,12 +173,12 @@ function resolveRepoRoot(): string {
   const envRoot = process.env.LOGOS_REPO_ROOT?.trim();
   if (envRoot) {
     const resolved = path.resolve(envRoot);
-    const marker = path.join(resolved, "scripts", "run_backend_stub.py");
+    const marker = path.join(resolved, "scripts", "run_dev_backend.py");
     if (existsSync(marker)) {
       return resolved;
     }
     console.error(
-      `[logos-electron] LOGOS_REPO_ROOT=${JSON.stringify(resolved)} 下未找到 scripts/run_backend_stub.py，将尝试自动推断仓库根。`,
+      `[logos-electron] LOGOS_REPO_ROOT=${JSON.stringify(resolved)} 下未找到 scripts/run_dev_backend.py，将尝试自动推断仓库根。`,
     );
   }
   if (app.isPackaged) {
@@ -535,13 +535,13 @@ function startPythonBackend(repoRoot: string): void {
     return;
   }
 
-  const script = path.join(repoRoot, "scripts", "run_backend_stub.py");
+  const script = path.join(repoRoot, "scripts", "run_dev_backend.py");
   if (!existsSync(script)) {
     const detail = [
       `解析到的目录：${repoRoot}`,
       "",
       "请任选其一：",
-      "· 将应用（便携 exe 或 win-unpacked）放在完整克隆的仓库目录树内，使向上若干级能到达含 scripts/run_backend_stub.py 的仓库根；或",
+      "· 将应用（便携 exe 或 win-unpacked）放在完整克隆的仓库目录树内，使向上若干级能到达含 scripts/run_dev_backend.py 的仓库根；或",
       "· 在启动前设置环境变量 LOGOS_REPO_ROOT 指向该仓库根；或",
       "· 仅使用外部后端时设置 LOGOS_ELECTRON_SKIP_BACKEND=1。",
     ].join("\n");
@@ -549,7 +549,7 @@ function startPythonBackend(repoRoot: string): void {
     void dialog.showMessageBox({
       type: "error",
       title: "Logos",
-      message: "未找到 scripts/run_backend_stub.py",
+      message: "未找到 scripts/run_dev_backend.py",
       detail,
     });
     return;

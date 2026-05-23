@@ -29,7 +29,7 @@ fi
 
 echo "仓库根: ${ROOT}"
 echo "启动后端 http://127.0.0.1:8000 …"
-"${PY}" "${ROOT}/scripts/run_backend_stub.py" &
+"${PY}" "${ROOT}/scripts/run_dev_backend.py" &
 BACK_PID=$!
 
 (

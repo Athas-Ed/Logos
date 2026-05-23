@@ -21,7 +21,7 @@ if (-not $npmCmd) {
     exit 1
 }
 
-$BackendScript = Join-Path $RepoRoot "scripts\run_backend_stub.py"
+$BackendScript = Join-Path $RepoRoot "scripts\run_dev_backend.py"
 if (-not (Test-Path -LiteralPath $BackendScript)) {
     Write-Host "未找到后端脚本：$BackendScript" -ForegroundColor Red
     exit 1

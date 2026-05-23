@@ -1,7 +1,7 @@
 """A8a：后端 KSFS→HSI→（可选 SVS/Chroma）→FusedRetrievalService 全链路 E2E。
 
 - 使用 ``tmp_path`` 独立目录，不依赖仓库 ``resources/ksfs``、Electron 或 HTTP。
-- 与 ``scripts/run_backend_stub.py`` 装配思路对齐：``SqliteMetadataIndex`` +
+- 与 ``scripts/run_dev_backend.py`` 装配思路对齐：``SqliteMetadataIndex`` +
   ``FusedRetrievalService``（懒登记或 ``lazy_svs_state_db`` 触发 SVS 增量）。
 """
 

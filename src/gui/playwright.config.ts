@@ -19,7 +19,7 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: "python scripts/run_backend_stub.py",
+      command: "python scripts/run_dev_backend.py",
       cwd: repoRoot,
       url: "http://127.0.0.1:8000/api/v1/health",
       timeout: 120_000,

@@ -8,7 +8,7 @@
 
 用法（仓库根、已激活 venv）::
 
-    python scripts/run_backend_stub.py
+    python scripts/run_dev_backend.py
 
 一键脚本 ``scripts/start_logos.*`` 亦会拉起本进程。若已由其他终端启动，请设 ``LOGOS_ELECTRON_SKIP_BACKEND=1`` 以免占用 8000 端口。
 
@@ -27,7 +27,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(_REPO_ROOT / "src") not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT / "src"))
 
-_log = logging.getLogger("logos.run_backend_stub")
+_log = logging.getLogger("logos.run_dev_backend")
 
 
 def main() -> None:

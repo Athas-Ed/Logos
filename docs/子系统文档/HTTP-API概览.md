@@ -1,6 +1,6 @@
 # HTTP API 概览
 
-Logos 对外以 **`/api/v1`** 为前缀（实现于 `src/logos/platform/ii_layer/api_v1.py`）。本地由**开发用组合根后端**（`scripts/run_backend_stub.py`）提供，默认 `http://127.0.0.1:8000`。
+Logos 对外以 **`/api/v1`** 为前缀（实现于 `src/logos/platform/ii_layer/api_v1.py`）。本地由**开发用组合根后端**（`scripts/run_dev_backend.py`）提供，默认 `http://127.0.0.1:8000`。
 
 > 本文为**对外摘要**。字段增删以代码与 `tests/test_stream5_api.py` 为准；客户端应**忽略未知 SSE 事件名**。
 

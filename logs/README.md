@@ -17,3 +17,7 @@
 ## Git 与忽略
 
 - 仓库内保留 **`README.md`** 与子目录 **`.gitkeep`** 作为占位；所有 **`*.log`** 由根目录 `.gitignore` 忽略，避免误提交运行产物。
+
+## 旧文件名（platform 重命名后）
+
+- 支撑层维护轨已由 **`harness.log`** 改为 **`platform.log`**。若本机 `maint/` 下仍有 `harness.log`，可手动删除或重命名；新日志写入 `platform.log`。
