@@ -243,3 +243,56 @@ def append_format_nudge(messages: list[ChatMessage], detail: str) -> None:
             ),
         )
     )
+
+
+def _split_message_turns(
+    history: list[ChatMessage],
+) -> list[tuple[ChatMessage, ChatMessage | None]]:
+    turns: list[tuple[ChatMessage, ChatMessage | None]] = []
+    i = 0
+    while i < len(history):
+        m = history[i]
+        if m.role != "user":
+            i += 1
+            continue
+        assistant = history[i + 1] if i + 1 < len(history) and history[i + 1].role == "assistant" else None
+        turns.append((m, assistant))
+        i += 2 if assistant is not None else 1
+    return turns
+
+
+def _one_line_turn_title(user_text: str, turn_index: int) -> str:
+    t = user_text.strip().replace("\n", " ")
+    while "  " in t:
+        t = t.replace("  ", " ")
+    preview = t if len(t) <= 40 else t[:39] + "…"
+    return f"【第{turn_index + 1}轮】用户问：{preview or '（空）'}"
+
+
+def clip_turn_history(
+    history: list[ChatMessage],
+    *,
+    max_full_rounds: int = 5,
+) -> list[ChatMessage]:
+    """连续问答：最近 *max_full_rounds* 轮全文，更早轮仅一行 title。"""
+    turns = _split_message_turns(history)
+    if not turns:
+        return []
+    n = max(1, max_full_rounds)
+    out: list[ChatMessage] = []
+    older_count = max(0, len(turns) - n)
+    for i in range(older_count):
+        title = _one_line_turn_title(turns[i][0].content, i)
+        out.append(ChatMessage(role="user", content=title))
+        out.append(
+            ChatMessage(
+                role="assistant",
+                content="（该轮详情已省略，见后续轮次或档 B 归档。）",
+            )
+        )
+    for i in range(older_count, len(turns)):
+        user_m, asst_m = turns[i]
+        out.append(user_m)
+        if asst_m is not None:
+            out.append(ChatMessage(role="assistant", content=asst_m.content))
+    return out

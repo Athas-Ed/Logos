@@ -26,6 +26,18 @@ import {
   createEmptyConversationState,
   messagesForApi,
 } from "./createEmptyConversation";
+import { skillSupportsContinuousQa } from "../skills/continuousQa";
+import {
+  appendToolTraceToTurn,
+  applyCitationToTurn,
+  applyReactStepLimitToTurn,
+  beginNewQaTurn,
+  finalizeTurnTrace,
+} from "./turnState";
+import {
+  finalizeStreamAssistantMessage,
+  lastQaTurnHitStepLimit,
+} from "./reactStepLimit";
 import { generateConversationId } from "./generateId";
 import {
   isConversationIpcAvailable,
@@ -34,10 +46,13 @@ import {
 } from "./ipc";
 import { deriveConversationTitle } from "./record";
 import {
+  bindConversationPersistGuard,
+  bindConversationPersistSource,
   cancelConversationPersist,
   flushConversationPersist,
   scheduleConversationPersist,
 } from "./persistScheduler";
+import { notifyConversationsStorageChanged } from "./storageNotify";
 import { currentAppPath, isConversationRoute } from "./routeUtils";
 import {
   clearSessionDismissed,
@@ -47,6 +62,7 @@ import {
 import type { ConversationState } from "./storeTypes";
 import { buildConversationRecord } from "./record";
 import { writeConversationIpc } from "./ipc";
+import { normalizeInterruptedConversationState } from "./streamLifecycle";
 import {
   notifyAllConversations,
   notifyConversation,
@@ -76,6 +92,10 @@ export type ConversationActions = {
   sendMessage: (id: string, text: string) => void;
   /** 任务向导：提交第二步输入并启动 SSE（须已绑定 skillId） */
   submitTaskRun: (id: string, text: string) => void;
+  /** 任务页统一发送：连续问答同会话追加；触顶后自动新开 tab 并作为首问 */
+  submitTaskSend: (id: string, text: string) => void;
+  /** 检索问答：新开 tab（不归档当前会话） */
+  createNewTopicTask: (skillId: string) => string;
   /** 完成后回到输入步（保留 skill，清空本轮消息） */
   resetTaskToInput: (id: string) => void;
   /** import_setting：将 setting_entry 草稿晋升至 KSFS（F6-08） */
@@ -121,12 +141,10 @@ function applyStreamEventToMessages(
     acc.reasoningText += ev.text;
     copy[last] = { ...copy[last], reasoning: acc.reasoningText };
   } else if (ev.kind === "delta") {
-    const prevContent = copy[last].content ?? "";
-    const nextContent = prevContent + ev.text;
-    acc.assistantText = nextContent;
+    acc.assistantText += ev.text;
     copy[last] = {
       ...copy[last],
-      content: nextContent,
+      content: acc.assistantText,
       reasoning: acc.reasoningText || copy[last].reasoning,
     };
   }
@@ -140,6 +158,7 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [, setById] = useState<Record<string, ConversationState>>({});
   const [openTabIds, setOpenTabIds] = useState<string[]>([]);
+  const openTabIdsRef = useRef<string[]>([]);
   const [sseMaxNum, setSseMaxNum] = useState(3);
 
   /** 须在 setById updater 内同步写入；勿在 render 中用 React state 覆盖（会冲掉未提交的 SSE patch）。 */
@@ -150,6 +169,8 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
   const queueRef = useRef<string[]>([]);
   const abortControllersRef = useRef<Map<string, AbortController>>(new Map());
   const pendingSendRef = useRef<Set<string>>(new Set());
+  /** 已占用 SSE 槽位的会话 id（与 activeStreamCountRef 一一对应） */
+  const streamSlotOwnersRef = useRef<Set<string>>(new Set());
   /** 归档/关闭过程中，禁止 ensureOpenTab 把标签重新加回顶栏 */
   const closingTabsRef = useRef<Set<string>>(new Set());
   const runStreamRef = useRef<(conversationId: string) => Promise<void>>(
@@ -173,6 +194,7 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
   });
 
   const publishMeta = useCallback(() => {
+    openTabIdsRef.current = openTabIds;
     metaSnapshotRef.current = {
       ready,
       openTabIds,
@@ -183,9 +205,61 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
     notifyAllConversations();
   }, [ready, openTabIds, sseMaxNum]);
 
+  const commitConversationState = useCallback(
+    (
+      id: string,
+      updater: (prev: ConversationState) => ConversationState,
+    ) => {
+      setById((prev) => {
+        const merged = { ...prev, ...byIdRef.current };
+        const cur = merged[id];
+        if (!cur) {
+          return prev;
+        }
+        const nextState = updater(cur);
+        const next = { ...merged, [id]: nextState };
+        byIdRef.current = next;
+        notifyConversation(id);
+        return next;
+      });
+    },
+    [],
+  );
+
   const syncQueueMeta = useCallback(() => {
     publishMeta();
   }, [publishMeta]);
+
+  const tryAcquireStreamSlot = useCallback(
+    (conversationId: string): boolean => {
+      if (streamSlotOwnersRef.current.has(conversationId)) {
+        return true;
+      }
+      if (activeStreamCountRef.current >= sseMaxNumRef.current) {
+        return false;
+      }
+      streamSlotOwnersRef.current.add(conversationId);
+      activeStreamCountRef.current += 1;
+      syncQueueMeta();
+      return true;
+    },
+    [syncQueueMeta],
+  );
+
+  const releaseStreamSlotFor = useCallback(
+    (conversationId: string) => {
+      if (!streamSlotOwnersRef.current.delete(conversationId)) {
+        return false;
+      }
+      activeStreamCountRef.current = Math.max(
+        0,
+        activeStreamCountRef.current - 1,
+      );
+      syncQueueMeta();
+      return true;
+    },
+    [syncQueueMeta],
+  );
 
   const patchConversation = useCallback(
     (
@@ -195,12 +269,19 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
         | ((prev: ConversationState) => ConversationState),
     ) => {
       setById((prev) => {
-        const cur = prev[id] ?? createEmptyConversationState(id);
+        if (
+          !prev[id] &&
+          (closingTabsRef.current.has(id) || isSessionDismissed(id))
+        ) {
+          return prev;
+        }
+        const merged = { ...prev, ...byIdRef.current };
+        const cur = merged[id] ?? createEmptyConversationState(id);
         const nextState =
           typeof patch === "function"
             ? patch(cur)
             : { ...cur, ...patch, id };
-        const next = { ...prev, [id]: nextState };
+        const next = { ...merged, [id]: nextState };
         byIdRef.current = next;
         if (
           nextState.hydrated &&
@@ -217,10 +298,31 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const drainStreamQueue = useCallback(() => {
+    while (
+      queueRef.current.length > 0 &&
+      activeStreamCountRef.current < sseMaxNumRef.current
+    ) {
+      const nextId = queueRef.current.shift()!;
+      if (!tryAcquireStreamSlot(nextId)) {
+        queueRef.current.unshift(nextId);
+        break;
+      }
+      patchConversation(nextId, (s) => ({
+        ...s,
+        streaming: true,
+        queued: false,
+        streamError: null,
+      }));
+      void runStreamRef.current(nextId);
+    }
+  }, [patchConversation, tryAcquireStreamSlot]);
+
   const runStream = useCallback(
     async (conversationId: string) => {
       const state = byIdRef.current[conversationId];
       if (!state) {
+        releaseStreamSlotFor(conversationId);
         pendingSendRef.current.delete(conversationId);
         return;
       }
@@ -228,9 +330,21 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
         pendingSendRef.current.delete(conversationId);
         return;
       }
-
-      activeStreamCountRef.current += 1;
-      syncQueueMeta();
+      if (!streamSlotOwnersRef.current.has(conversationId)) {
+        if (!tryAcquireStreamSlot(conversationId)) {
+          pendingSendRef.current.delete(conversationId);
+          if (!queueRef.current.includes(conversationId)) {
+            queueRef.current.push(conversationId);
+          }
+          patchConversation(conversationId, (s) => ({
+            ...s,
+            streaming: false,
+            queued: true,
+            streamError: null,
+          }));
+          return;
+        }
+      }
 
       const ac = new AbortController();
       abortControllersRef.current.set(conversationId, ac);
@@ -244,11 +358,9 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
       pendingSendRef.current.delete(conversationId);
 
       const acc = { assistantText: "", reasoningText: "" };
+      let streamReactHitStepLimit = false;
 
       try {
-        const apiMessages = messagesForApi(
-          byIdRef.current[conversationId]?.messages ?? [],
-        );
         const st = byIdRef.current[conversationId]!;
         const taskInput =
           st.taskInputText?.trim() ?
@@ -257,7 +369,7 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
         const skillForApi =
           st.skillId ?? (st.labMode ? "lint_zh" : undefined);
         await streamChat({
-          messages: apiMessages,
+          messages: messagesForApi(st.messages),
           operatingMode: st.operatingMode,
           presentation: st.presentation,
           skillId: skillForApi,
@@ -268,7 +380,7 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
             if (ev.kind === "citations") {
               patchConversation(conversationId, (s) => ({
                 ...s,
-                citations: ev.items,
+                ...applyCitationToTurn(s, ev.items),
               }));
               return;
             }
@@ -276,7 +388,7 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
               const line = `[${ev.status}] ${ev.tool}: ${ev.detail}`;
               patchConversation(conversationId, (s) => ({
                 ...s,
-                toolTraceLog: [...s.toolTraceLog, line],
+                ...appendToolTraceToTurn(s, line),
               }));
               return;
             }
@@ -293,7 +405,7 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
               );
               patchConversation(conversationId, (s) => ({
                 ...s,
-                toolTraceLog: [...s.toolTraceLog, block],
+                ...appendToolTraceToTurn(s, block),
               }));
               return;
             }
@@ -334,12 +446,14 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
               const raw = ev.payload.written_paths;
               const written =
                 Array.isArray(raw) ? raw.map((p) => String(p)) : [];
-              if (written.length > 0) {
-                patchConversation(conversationId, (s) => ({
-                  ...s,
-                  pipelineWrittenPaths: written,
-                }));
-              }
+              streamReactHitStepLimit =
+                ev.payload.react_hit_step_limit === true;
+              patchConversation(conversationId, (s) => ({
+                ...s,
+                ...(written.length > 0 ? { pipelineWrittenPaths: written } : {}),
+                ...applyReactStepLimitToTurn(s, streamReactHitStepLimit),
+                ...finalizeTurnTrace(s),
+              }));
               return;
             }
             if (
@@ -380,39 +494,40 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
         }
       } finally {
         abortControllersRef.current.delete(conversationId);
-        activeStreamCountRef.current = Math.max(
-          0,
-          activeStreamCountRef.current - 1,
-        );
-        patchConversation(conversationId, (s) => {
-          const next: typeof s = {
-            ...s,
-            streaming: false,
-            queued: false,
-          };
-          if (
-            s.skillId &&
-            s.taskPhase === "running" &&
-            !s.streamError &&
-            !ac.signal.aborted
-          ) {
-            next.taskPhase = "done";
-          }
+        releaseStreamSlotFor(conversationId);
+        const teardown = (s: ConversationState): ConversationState => {
+          const messages = finalizeStreamAssistantMessage(s.messages, acc, {
+            stripSuffix: streamReactHitStepLimit,
+          });
+          const stepLimitPatch =
+            streamReactHitStepLimit ?
+              applyReactStepLimitToTurn(s, true)
+            : {};
+          const next: ConversationState = normalizeInterruptedConversationState(
+            {
+              ...s,
+              ...stepLimitPatch,
+              messages,
+              ...finalizeTurnTrace(s),
+            },
+          );
           return next;
-        });
-        syncQueueMeta();
-
-        while (
-          queueRef.current.length > 0 &&
-          activeStreamCountRef.current < sseMaxNumRef.current
-        ) {
-          const nextId = queueRef.current.shift()!;
-          syncQueueMeta();
-          void runStreamRef.current(nextId);
+        };
+        if (byIdRef.current[conversationId]) {
+          commitConversationState(conversationId, teardown);
         }
+        syncQueueMeta();
+        drainStreamQueue();
       }
     },
-    [patchConversation, syncQueueMeta],
+    [
+      commitConversationState,
+      drainStreamQueue,
+      patchConversation,
+      releaseStreamSlotFor,
+      tryAcquireStreamSlot,
+      syncQueueMeta,
+    ],
   );
 
   useEffect(() => {
@@ -421,19 +536,36 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
 
   const enqueueOrRunStream = useCallback(
     (conversationId: string) => {
-      if (activeStreamCountRef.current < sseMaxNumRef.current) {
+      if (tryAcquireStreamSlot(conversationId)) {
+        patchConversation(conversationId, (s) => ({
+          ...s,
+          streaming: true,
+          queued: false,
+          streamError: null,
+        }));
         void runStream(conversationId);
         return;
       }
-      queueRef.current.push(conversationId);
-      patchConversation(conversationId, (s) => ({ ...s, queued: true }));
+      if (!queueRef.current.includes(conversationId)) {
+        queueRef.current.push(conversationId);
+      }
+      patchConversation(conversationId, (s) => ({
+        ...s,
+        streaming: false,
+        queued: true,
+        streamError: null,
+      }));
       syncQueueMeta();
     },
-    [patchConversation, runStream, syncQueueMeta],
+    [patchConversation, runStream, syncQueueMeta, tryAcquireStreamSlot],
   );
 
-  const submitTaskRun = useCallback(
-    (conversationId: string, text: string) => {
+  const startTaskRun = useCallback(
+    (
+      conversationId: string,
+      text: string,
+      mode: "first" | "follow-up",
+    ) => {
       const trimmed = text.trim();
       if (!trimmed) {
         return;
@@ -445,35 +577,52 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
       if (cur.streaming || cur.queued) {
         return;
       }
-
       pendingSendRef.current.add(conversationId);
-
       const userMsg: ChatMessage = { role: "user", content: trimmed };
-      patchConversation(conversationId, (s) => ({
-        ...s,
-        taskPhase: "running",
-        taskInputText: trimmed,
-        streamError: null,
-        streaming: true,
-        queued: false,
-        messages: [userMsg, { role: "assistant", content: "", reasoning: "" }],
-        citations: [],
-        toolTraceLog: [],
-        pipelineSteps: [],
-        pipelineWarnings: [],
-        pipelineWrittenPaths: [],
-        promoteMessage: null,
-        promoteBusy: false,
-        title: deriveConversationTitle([userMsg]),
-      }));
-      const after = byIdRef.current[conversationId];
-      if (!after?.streaming) {
-        pendingSendRef.current.delete(conversationId);
-        return;
-      }
+      const continuous = skillSupportsContinuousQa(cur.skillId);
+
+      patchConversation(conversationId, (s) => {
+        const turnReset =
+          continuous ? beginNewQaTurn(s) : { citations: [], toolTraceLog: [] };
+        const assistantPlaceholder: ChatMessage = {
+          role: "assistant",
+          content: "",
+          reasoning: "",
+        };
+        const nextMessages: ChatMessage[] =
+          continuous && mode === "follow-up" ?
+            [...s.messages, userMsg, assistantPlaceholder]
+          : [userMsg, assistantPlaceholder];
+        return {
+          ...s,
+          ...turnReset,
+          taskPhase: "running",
+          taskInputText: trimmed,
+          streamError: null,
+          streaming: false,
+          queued: false,
+          reactHitStepLimit: false,
+          messages: nextMessages,
+          pipelineSteps: [],
+          pipelineWarnings: [],
+          pipelineWrittenPaths: [],
+          promoteMessage: null,
+          promoteBusy: false,
+          title: deriveConversationTitle(
+            continuous && mode === "follow-up" ? nextMessages : [userMsg],
+          ),
+        };
+      });
       enqueueOrRunStream(conversationId);
     },
     [enqueueOrRunStream, patchConversation],
+  );
+
+  const submitTaskRun = useCallback(
+    (conversationId: string, text: string) => {
+      startTaskRun(conversationId, text, "first");
+    },
+    [startTaskRun],
   );
 
   const sendMessage = useCallback(
@@ -507,7 +656,7 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
         const nextMessages = [...s.messages, userMsg];
         return {
           ...s,
-          streaming: true,
+          streaming: false,
           queued: false,
           messages: [
             ...nextMessages,
@@ -520,12 +669,6 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
         };
       });
 
-      const after = byIdRef.current[conversationId];
-      if (!after?.streaming) {
-        pendingSendRef.current.delete(conversationId);
-        return;
-      }
-
       enqueueOrRunStream(conversationId);
     },
     [enqueueOrRunStream, patchConversation],
@@ -533,18 +676,23 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
 
   const stopStream = useCallback(
     (conversationId: string) => {
+      const hadActiveStream = abortControllersRef.current.has(conversationId);
       const ac = abortControllersRef.current.get(conversationId);
       ac?.abort();
       abortControllersRef.current.delete(conversationId);
       queueRef.current = queueRef.current.filter((id) => id !== conversationId);
-      patchConversation(conversationId, (s) => ({
-        ...s,
-        streaming: false,
-        queued: false,
-      }));
+      if (!hadActiveStream) {
+        releaseStreamSlotFor(conversationId);
+      }
+      patchConversation(conversationId, (s) =>
+        normalizeInterruptedConversationState(s),
+      );
       syncQueueMeta();
+      if (!hadActiveStream) {
+        drainStreamQueue();
+      }
     },
-    [patchConversation, syncQueueMeta],
+    [drainStreamQueue, patchConversation, releaseStreamSlotFor, syncQueueMeta],
   );
 
   const resetTaskToInput = useCallback(
@@ -559,6 +707,8 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
             messages: [],
             citations: [],
             toolTraceLog: [],
+            citationTurns: [],
+            toolTraceTurns: [],
             pipelineSteps: [],
             pipelineWarnings: [],
             pipelineWrittenPaths: [],
@@ -624,14 +774,21 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
       cancelConversationPersist(conversationId);
       syncQueueMeta();
 
-      const state =
+      markSessionDismissed(conversationId);
+
+      const stateRaw =
         byIdRef.current[conversationId] ??
         createEmptyConversationState(conversationId);
+      const state = normalizeInterruptedConversationState({
+        ...stateRaw,
+        ...finalizeTurnTrace(stateRaw),
+      });
       const record = buildConversationRecord({
         id: state.id,
         messages: state.messages,
-        citations: state.citations,
-        toolTraceLog: state.toolTraceLog,
+        citationTurns: state.citationTurns,
+        toolTraceTurns: state.toolTraceTurns,
+        reactStepLimitTurns: state.reactStepLimitTurns,
         operatingMode: state.operatingMode,
         presentation: state.presentation,
         status: "archived",
@@ -644,15 +801,15 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
       const path = currentAppPath();
       const onArchivedRoute = isConversationRoute(path, conversationId);
 
-      markSessionDismissed(conversationId);
-
       void (async () => {
         if (isConversationIpcAvailable()) {
           await writeConversationIpc(conversationId, record);
+          notifyConversationsStorageChanged();
         }
 
         setOpenTabIds((prev) => {
           const next = prev.filter((x) => x !== conversationId);
+          openTabIdsRef.current = next;
           if (onArchivedRoute) {
             if (next.length === 0) {
               navigate("/", { replace: true });
@@ -670,6 +827,10 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
         });
 
         setById((prev) => {
+          if (openTabIdsRef.current.includes(conversationId)) {
+            closingTabsRef.current.delete(conversationId);
+            return prev;
+          }
           const next = { ...prev };
           delete next[conversationId];
           byIdRef.current = next;
@@ -687,34 +848,61 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
       if (!isConversationIpcAvailable()) {
         return false;
       }
+      closingTabsRef.current.delete(conversationId);
+      pendingSendRef.current.delete(conversationId);
+      const staleAc = abortControllersRef.current.get(conversationId);
+      staleAc?.abort();
+      abortControllersRef.current.delete(conversationId);
+      queueRef.current = queueRef.current.filter((id) => id !== conversationId);
+
       const read = await readConversationIpc(conversationId);
       if (!read.ok) {
         return false;
       }
-      const record = {
-        ...read.record,
-        status: "idle" as const,
-        updated_at: new Date().toISOString(),
-      };
+      const state = normalizeInterruptedConversationState(
+        conversationStateFromRecord({
+          ...read.record,
+          status: "idle",
+        }),
+      );
+      const record = buildConversationRecord({
+        id: state.id,
+        messages: state.messages,
+        citationTurns: state.citationTurns,
+        toolTraceTurns: state.toolTraceTurns,
+        reactStepLimitTurns: state.reactStepLimitTurns,
+        operatingMode: state.operatingMode,
+        presentation: state.presentation,
+        status: "idle",
+        title: state.title,
+        skillId: state.skillId,
+        taskPhase: state.taskPhase,
+        taskInputText: state.taskInputText,
+      });
+      record.updated_at = new Date().toISOString();
       const written = await writeConversationIpc(conversationId, record);
       if (!written.ok) {
         return false;
       }
+      notifyConversationsStorageChanged();
       clearSessionDismissed(conversationId);
-      const state = conversationStateFromRecord(record);
       setById((prev) => {
         const next = { ...prev, [conversationId]: state };
         byIdRef.current = next;
         return next;
       });
       notifyConversation(conversationId);
-      setOpenTabIds((prev) =>
-        prev.includes(conversationId) ? prev : [...prev, conversationId],
-      );
+      setOpenTabIds((prev) => {
+        const next =
+          prev.includes(conversationId) ? prev : [...prev, conversationId];
+        openTabIdsRef.current = next;
+        return next;
+      });
+      syncQueueMeta();
       navigate(conversationNavPath(state));
       return true;
     },
-    [navigate],
+    [navigate, syncQueueMeta],
   );
 
   const createTab = useCallback(() => {
@@ -787,6 +975,37 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
     [openConversationTab],
   );
 
+  const createNewTopicTask = useCallback(
+    (skillId: string) => createTask(skillId),
+    [createTask],
+  );
+
+  const submitTaskSend = useCallback(
+    (conversationId: string, text: string) => {
+      const trimmed = text.trim();
+      if (!trimmed) {
+        return;
+      }
+      const cur = byIdRef.current[conversationId];
+      if (!cur?.skillId || cur.streaming || cur.queued) {
+        return;
+      }
+      if (lastQaTurnHitStepLimit(cur.reactStepLimitTurns)) {
+        const newId = createTask(cur.skillId);
+        startTaskRun(newId, trimmed, "first");
+        return;
+      }
+      const continuous = skillSupportsContinuousQa(cur.skillId);
+      const hasPriorUser = cur.messages.some((m) => m.role === "user");
+      if (continuous && hasPriorUser) {
+        startTaskRun(conversationId, trimmed, "follow-up");
+      } else {
+        startTaskRun(conversationId, trimmed, "first");
+      }
+    },
+    [createTask, startTaskRun],
+  );
+
   const createInspireChat = useCallback(
     (skillId: string) => {
       const card = getSkillMeta(skillId);
@@ -856,6 +1075,16 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
   }, [publishMeta]);
 
   useEffect(() => {
+    bindConversationPersistSource((id) => byIdRef.current[id]);
+    bindConversationPersistGuard(
+      (id, state) =>
+        !closingTabsRef.current.has(id) &&
+        state.status !== "archived" &&
+        !isSessionDismissed(id),
+    );
+  }, []);
+
+  useEffect(() => {
     void (async () => {
       const b = await fetchBootstrap();
       const fromApi = panelSkillsFromBootstrap(b?.skills);
@@ -919,6 +1148,8 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
       promotePipelineDrafts,
       sendMessage,
       submitTaskRun,
+      submitTaskSend,
+      createNewTopicTask,
       stopStream,
     }),
     [
@@ -928,6 +1159,7 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
       createTab,
       createLabTab,
       createTask,
+      createNewTopicTask,
       createInspireChat,
       ensureOpenTab,
       patchConversation,
@@ -935,6 +1167,7 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
       resetTaskToInput,
       sendMessage,
       submitTaskRun,
+      submitTaskSend,
       stopStream,
     ],
   );

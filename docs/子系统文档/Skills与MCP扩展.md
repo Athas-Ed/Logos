@@ -19,7 +19,7 @@ manifest 位于 `skills/manifests/<skill_id>.yaml`，与 `skills/<name>/` 下的
 | `chat_inspire` | 长对话启发 |
 | `lint_zh` | 中文语病检查 |
 | `import_setting` | 结构化设定导入 |
-| `retrieve_qa` | 检索问答 |
+| `retrieve_qa` | 检索问答（同会话连续多轮；步数见 `agent.react.max_QA_steps`） |
 | `outline_plan` | 大纲规划 |
 | `pipeline_dev` | 流水线开发调试 |
 

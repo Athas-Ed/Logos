@@ -67,8 +67,18 @@ export function CacheStartupBanner() {
       aria-modal="true"
       aria-labelledby="cache-warn-title"
       data-testid="cache-startup-warn"
+      onClick={() => dismissLater()}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") {
+          dismissLater();
+        }
+      }}
     >
-      <div className={styles.panel}>
+      <div
+        className={styles.panel}
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
+      >
         <h2 id="cache-warn-title" className={styles.title}>
           会话缓存占用较高
         </h2>

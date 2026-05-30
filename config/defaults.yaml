@@ -19,6 +19,10 @@ paths:
   entity_template_profile: "default_import_v0"
   # 待落户设定草稿子目录（位于 workspace_root 下）；见 KSFS开发.md §2
   setting_entry_subdir: "setting_entry"
+  # 设定撰写（setting_write）专用草稿子目录
+  writing_entry_subdir: "writing_entry"
+  # 审核晋升（draft_review）专用草稿子目录
+  pending_review_subdir: "pending_review"
   index_root: "./.index"
   logs_root: "./logs"
   # 档 B 会话 JSON 根（相对仓库根）；Electron 与 bootstrap 共用，见 DECISIONS.md §13.4
@@ -45,9 +49,17 @@ skills:
 ui:
   default_presentation: "work"
   # 后台 SSE 并发上限（超额排队）；见 DECISIONS.md §13、GUI开发文档.md §12.4
-  SSE_maxNum: 3
+  SSE_maxNum: 1
   # 会话缓存占用告警阈值（字节）；默认 500 MiB
   cache_warn_bytes: 524288000
+  # 连续问答：CB 保留最近几轮 user/assistant 全文
+  max_history_full_text: 5
+
+agent:
+  react:
+    max_steps: 16
+    # 检索问答（retrieve_qa）每轮 user 问题的 ReAct 步数上限
+    max_QA_steps: 20
 
 obs:
   log_profile: "standard"

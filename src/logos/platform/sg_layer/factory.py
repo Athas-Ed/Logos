@@ -20,6 +20,9 @@ from logos.ports.retrieval import Citation, RetrievalService
 from logos.tools.ksfs_list import list_ksfs_entries
 
 from .builtin_tool_schemas import (
+    LIST_DRAFTS_PARAMETERS,
+    PROMOTE_DRAFT_PARAMETERS,
+    READ_DRAFT_PARAMETERS,
     READ_KSFS_PARAMETERS,
     RETRIEVE_PARAMETERS,
     WRITE_DRAFT_PARAMETERS,
@@ -238,6 +241,138 @@ def build_v01_guarded_tool_registry(
     def _write_draft(path: str, content: str) -> str:
         return write_draft_under_workspace(workspace, path, content)
 
+    def _list_drafts(
+        path: str = "",
+        recursive: bool = True,
+        max_entries: int = 200,
+    ) -> str:
+        root = workspace
+        base = root
+        raw = (path or "").strip().replace("\\", "/")
+        if raw:
+            from logos.platform.sg_layer.path_sandbox import resolve_path_under_root
+            try:
+                base = resolve_path_under_root(root, raw)
+            except ValueError as exc:
+                return json.dumps({"error": str(exc)}, ensure_ascii=False)
+        if not base.is_dir():
+            return json.dumps({"error": f"目录不存在：{raw or '.'!r}"}, ensure_ascii=False)
+        cap = max(1, min(int(max_entries), 1000))
+        out: list[dict[str, str | int]] = []
+
+        def _rel_of(p: Path) -> str:
+            return p.resolve().relative_to(root.resolve()).as_posix()
+
+        def _visit(d: Path) -> None:
+            if len(out) >= cap:
+                return
+            try:
+                children = sorted(d.iterdir(), key=lambda p: (not p.is_dir(), p.name))
+            except OSError:
+                return
+            for entry in children:
+                if len(out) >= cap:
+                    break
+                if entry.name.startswith("."):
+                    continue
+                if entry.name == "README.md":
+                    continue
+                if entry.is_dir():
+                    if _rel_of(entry) == "conversations":
+                        continue
+                    out.append({"kind": "dir", "name": entry.name, "path": _rel_of(entry)})
+                    if recursive:
+                        _visit(entry)
+                else:
+                    if entry.suffix.lower() not in (".md", ".markdown", ".txt"):
+                        continue
+                    st = entry.stat()
+                    out.append({
+                        "kind": "file",
+                        "name": entry.name,
+                        "path": _rel_of(entry),
+                        "size_bytes": st.st_size,
+                        "last_modified": st.st_mtime_ns,
+                    })
+
+        if recursive:
+            _visit(base)
+        else:
+            try:
+                for entry in sorted(base.iterdir(), key=lambda p: (not p.is_dir(), p.name)):
+                    if len(out) >= cap:
+                        break
+                    if entry.name.startswith("."):
+                        continue
+                    if entry.name == "README.md":
+                        continue
+                    if entry.is_dir():
+                        if _rel_of(entry) == "conversations":
+                            continue
+                        out.append({"kind": "dir", "name": entry.name, "path": _rel_of(entry)})
+                    else:
+                        if entry.suffix.lower() not in (".md", ".markdown", ".txt"):
+                            continue
+                        st = entry.stat()
+                        out.append({
+                            "kind": "file",
+                            "name": entry.name,
+                            "path": _rel_of(entry),
+                            "size_bytes": st.st_size,
+                            "last_modified": st.st_mtime_ns,
+                        })
+            except OSError as exc:
+                return json.dumps({"error": str(exc)}, ensure_ascii=False)
+        return json.dumps({"entries": out, "truncated": len(out) >= cap}, ensure_ascii=False)
+
+    def _read_draft(path: str) -> str:
+        return read_text_under_root(
+            workspace,
+            path,
+            context_label="workspace 根",
+            denied_operation="read_draft",
+        )
+
+    def _promote_draft(items: list[str]) -> str:
+        from logos.ports.draft_promotion import PromotionItem
+        from logos.tools.draft_promotion_fs import FilesystemDraftPromotionPort
+
+        if not items:
+            return json.dumps({"error": "items 不能为空"}, ensure_ascii=False)
+        hsi_db = Path(settings.hsi_sqlite_path).resolve()
+        port = FilesystemDraftPromotionPort(hsi_db=hsi_db)
+        candidate_items: list[PromotionItem] = []
+        for rel in items:
+            src = (workspace / rel).resolve()
+            try:
+                src.relative_to(workspace)
+            except ValueError:
+                return json.dumps(
+                    {"error": f"路径越界：{rel!r}"}, ensure_ascii=False
+                )
+            if not src.is_file():
+                return json.dumps(
+                    {"error": f"草稿不存在：{rel!r}"}, ensure_ascii=False
+                )
+            st = src.stat()
+            candidate_items.append(
+                PromotionItem(
+                    draft_relpath=rel,
+                    proposed_ksfs_relpath=rel,
+                    draft_mtime_ns=st.st_mtime_ns,
+                )
+            )
+        report = port.apply_promotion(workspace, ksfs_root, candidate_items)
+        return json.dumps(
+            {
+                "ok": report.ok,
+                "promoted": list(report.applied),
+                "skipped": list(report.skipped),
+                "notes": report.notes,
+            },
+            ensure_ascii=False,
+        )
+
     if _tool_in_skill_scope("retrieve", scoped):
         reg.register(
             "retrieve",
@@ -285,6 +420,27 @@ def build_v01_guarded_tool_registry(
             description="将完整草稿内容写入 workspace 下的相对路径（禁止写出 workspace 外）。",
             parameters=WRITE_DRAFT_PARAMETERS,
             handler=_write_draft,
+        )
+    if _tool_in_skill_scope("list_drafts", scoped):
+        reg.register(
+            "list_drafts",
+            description="列出 workspace 根下某目录中的草稿（仅 .md/.txt 与目录名；排除 conversations/ 与 README.md）。",
+            parameters=LIST_DRAFTS_PARAMETERS,
+            handler=_list_drafts,
+        )
+    if _tool_in_skill_scope("read_draft", scoped):
+        reg.register(
+            "read_draft",
+            description="只读打开 workspace 根下的相对路径草稿（禁止绝对路径与 ..）。",
+            parameters=READ_DRAFT_PARAMETERS,
+            handler=_read_draft,
+        )
+    if _tool_in_skill_scope("promote_draft", scoped):
+        reg.register(
+            "promote_draft",
+            description="将 workspace 下的草稿晋升至 KSFS（复制后触发 HSI 同步）。调用前请确认用户已审阅同意。",
+            parameters=PROMOTE_DRAFT_PARAMETERS,
+            handler=_promote_draft,
         )
     for t, cmd, child_env in mcp_handlers:
         if not _tool_in_skill_scope(t.name, scoped):

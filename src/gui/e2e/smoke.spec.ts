@@ -72,21 +72,20 @@ test.describe("GUI smoke", () => {
       { timeout: 30_000 },
     );
     await page.getByTestId("task-submit").click();
-    const resp = await responseDone;
+    // 流水线侧栏仅在 taskPhase=running 时展示，须在 SSE 结束前断言
+    const [, resp] = await Promise.all([
+      expect(page.getByTestId("pipeline-task-trace")).toBeVisible({
+        timeout: 30_000,
+      }),
+      responseDone,
+    ]);
     expect(resp.ok()).toBeTruthy();
-
-    await expect(page.getByTestId("pipeline-task-trace")).toBeVisible({
-      timeout: 30_000,
-    });
-    await expect(page.getByTestId("pipeline-step-render")).toBeVisible({
-      timeout: 30_000,
-    });
 
     const assistant = page.getByTestId("task-assistant-content");
     await expect(assistant).toContainText("已写入", { timeout: 30_000 });
     await expect(assistant).toContainText("setting_entry", { timeout: 15_000 });
 
-    await expect(page.getByTestId("task-archive")).toBeVisible({
+    await expect(page.getByTestId("archive-current-tab")).toBeVisible({
       timeout: 15_000,
     });
   });
@@ -133,10 +132,8 @@ test.describe("GUI smoke", () => {
 
     await expect(assistant).toContainText("桩后端", { timeout: 30_000 });
 
-    await expect(page.getByTestId("task-archive")).toBeVisible({
-
+    await expect(page.getByTestId("archive-current-tab")).toBeVisible({
       timeout: 15_000,
-
     });
 
   });

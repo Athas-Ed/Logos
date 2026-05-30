@@ -1,0 +1,27 @@
+skill_id: draft_review
+display_name: 审核晋升
+description: 列出工作区中的待审核草稿，供用户预览后晋升至 KSFS（ReAct）。
+ui_instructions: |
+  本技能集中管理 workspace/pending_review/ 下的待审核文件。
+  助手将：
+  1. 列出所有待审核草稿（路径、大小、修改时间）
+  2. 按你的要求预览内容
+  3. 在你确认后晋升至 KSFS 并同步索引
+
+  你也可以主动告知要晋升的草稿路径（不限于 pending_review 目录）。
+persistence_tier: p1
+paradigm: react
+turn_policy: single
+allowed_tools:
+  - list_drafts
+  - read_draft
+  - promote_draft
+prompt_runtime_key: skills/draft_review
+input_schema:
+  type: object
+  properties:
+    text:
+      type: string
+      title: 操作描述（如「列出待审核草稿」「晋升某文件」）
+  required:
+    - text

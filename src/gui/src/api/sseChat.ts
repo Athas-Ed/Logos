@@ -170,21 +170,21 @@ export async function streamChat({
   signal,
   onEvent,
 }: StreamChatOptions): Promise<void> {
-  const body: Record<string, unknown> = {
+  const requestBody: Record<string, unknown> = {
     messages,
     operating_mode: operatingMode,
   };
   if (presentation !== undefined) {
-    body.presentation = presentation;
+    requestBody.presentation = presentation;
   }
   if (skillId !== undefined && skillId !== "") {
-    body.skill_id = skillId;
+    requestBody.skill_id = skillId;
   }
   if (taskInput !== undefined) {
-    body.task_input = taskInput;
+    requestBody.task_input = taskInput;
   }
   if (paradigmOverride !== undefined && paradigmOverride !== "") {
-    body.paradigm_override = paradigmOverride;
+    requestBody.paradigm_override = paradigmOverride;
   }
 
   const url = apiUrl(CHAT_PATH);
@@ -210,7 +210,7 @@ export async function streamChat({
           Accept: "text/event-stream",
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(body),
+        body: JSON.stringify(requestBody),
         signal,
       });
     } catch (e) {
@@ -262,9 +262,59 @@ export async function streamChat({
     return;
   }
 
-  let raw: string;
+  const responseBody = res.body;
+  if (!responseBody) {
+    onEvent({
+      kind: "error",
+      code: "no_body",
+      message: "响应无 body",
+    });
+    return;
+  }
+
+  const reader = responseBody.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  const dispatchBlock = (block: string) => {
+    const trimmed = block.trim();
+    if (!trimmed) {
+      return false;
+    }
+    const ev = parseSseBlock(trimmed);
+    if (!ev) {
+      return false;
+    }
+    onEvent(ev);
+    return ev.kind === "done" || ev.kind === "error";
+  };
+
   try {
-    raw = await res.text();
+    while (true) {
+      if (signal?.aborted) {
+        onEvent({
+          kind: "error",
+          code: "aborted",
+          message: "已中断",
+        });
+        return;
+      }
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+      buffer += decoder.decode(value, { stream: true });
+      const parts = buffer.split(/\n\n+/);
+      buffer = parts.pop() ?? "";
+      for (const part of parts) {
+        if (dispatchBlock(part)) {
+          return;
+        }
+      }
+    }
+    if (buffer.trim()) {
+      dispatchBlock(buffer);
+    }
   } catch (e) {
     if (signal?.aborted) {
       onEvent({
@@ -280,30 +330,7 @@ export async function streamChat({
       message: e instanceof Error ? e.message : String(e),
     });
     return;
-  }
-
-  if (!raw.trim()) {
-    onEvent({
-      kind: "error",
-      code: "empty_body",
-      message: "空响应",
-    });
-    return;
-  }
-
-  const blocks = raw.split(/\n\n+/);
-  for (const block of blocks) {
-    const trimmed = block.trim();
-    if (!trimmed) {
-      continue;
-    }
-    const ev = parseSseBlock(trimmed);
-    if (!ev) {
-      continue;
-    }
-    onEvent(ev);
-    if (ev.kind === "done" || ev.kind === "error") {
-      return;
-    }
+  } finally {
+    reader.releaseLock();
   }
 }

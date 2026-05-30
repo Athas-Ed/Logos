@@ -20,8 +20,9 @@
 
 从 KSFS 扫描构建两层索引（默认在 `.index/`，可重建）：
 
-- **HSI**：SQLite 元数据（路径、mtime、正文哈希、`id` 等）。
+- **HSI**：SQLite 元数据（路径、mtime、正文哈希、`id`、title 等）。
 - **SVS**：Chroma 向量库，按正文分块嵌入，供语义检索。
+- **Sparse / Hybrid / KG**：规划中；路线见作者本机 **`original_docs/重要子系统开发文档/检索子系统开发.md`**（R1～R4）。
 
 检索前通常会增量同步 KSFS → HSI → SVS。各目录下的 `README.md` **不**作为实体扫描。
 

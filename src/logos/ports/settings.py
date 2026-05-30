@@ -30,6 +30,10 @@ class AppSettings:
     chroma_collection: str
     embedding_provider: str
     embedding_model_path: str
+    #: ``paths.writing_entry_subdir``：设定撰写草稿子目录（相对 workspace_root）
+    writing_entry_subdir: str = "writing_entry"
+    #: ``paths.pending_review_subdir``：审核晋升草稿子目录（相对 workspace_root）
+    pending_review_subdir: str = "pending_review"
     operating_mode: str = "author"
     # OpenAI 兼容对话 API（DeepSeek、OpenAI 等）；api_key 为空则走桩实现
     llm_api_key: str = ""
@@ -47,6 +51,12 @@ class AppSettings:
     ui_sse_max_num: int = 3
     #: ``ui.cache_warn_bytes``：会话缓存占用告警阈值（字节，默认 500 MiB）
     ui_cache_warn_bytes: int = 524288000
+    #: ``ui.max_history_full_text``：连续问答 CB 保留最近几轮全文（默认 5）
+    ui_max_history_full_text: int = 5
+    #: ``agent.react.max_steps``：ReAct 范式默认步数上限（默认 16）
+    react_max_steps: int = 16
+    #: ``agent.react.max_QA_steps``：检索问答每轮 user 问题的步数上限（默认 20）
+    react_max_qa_steps: int = 20
     #: ``obs.log_profile``：minimal | standard | verbose | audit
     obs_log_profile: str = "standard"
     #: ``obs.show_log_root_in_gui``：为 True 时 ``GET /api/v1/bootstrap`` 暴露 ``obs_logs_root``，供 GUI 展示日志根（Obs O4）；默认 False

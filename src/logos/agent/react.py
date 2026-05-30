@@ -23,12 +23,72 @@ from logos.platform.obs.tool_chain import (
 
 _log = logging.getLogger("logos.agent.react")
 
+_STEP_CAP_SYNTHESIS_NUDGE = (
+    "【系统】本轮 ReAct 步数已达上限，请勿再调用工具。"
+    "请仅依据上文中已有的工具观测与用户问题，给出尽可能完整的自然语言作答。"
+    "未在观测中出现的内容请勿编造；信息不足请明确说明。"
+)
+
+
+def _last_assistant_text(messages: list[ChatMessage]) -> str | None:
+    for msg in reversed(messages):
+        if msg.role == "assistant" and msg.content.strip():
+            return msg.content
+    return None
+
+
+def _coerce_natural_answer(text: str) -> str:
+    stripped = text.strip()
+    if not stripped:
+        return ""
+    step = json_tools.parse_react_json(stripped)
+    if step.final_answer and step.final_answer.strip():
+        return step.final_answer.strip()
+    return stripped
+
+
+def _synthesize_on_step_cap(
+    llm: LLMClient,
+    messages: list[ChatMessage],
+) -> str:
+    """步数触顶时基于已有 observation 强制收束一轮作答。"""
+    synth_messages = list(messages)
+    synth_messages.append(
+        ChatMessage(role="user", content=_STEP_CAP_SYNTHESIS_NUDGE),
+    )
+    try:
+        text = llm.complete(synth_messages, json_mode=False)
+    except Exception as exc:  # noqa: BLE001
+        _log.warning("步数触顶收束作答失败：%s", exc)
+        return ""
+    return text.strip()
+
+
+def _answer_on_step_cap(
+    llm: LLMClient,
+    messages: list[ChatMessage],
+) -> str:
+    last = _last_assistant_text(messages)
+    if last:
+        extracted = _coerce_natural_answer(last)
+        if extracted and not extracted.lstrip().startswith("{"):
+            return extracted
+    body = _synthesize_on_step_cap(llm, messages)
+    if body:
+        coerced = _coerce_natural_answer(body)
+        if coerced:
+            return coerced
+    if last:
+        return _coerce_natural_answer(last)
+    return ""
+
 
 @dataclass(frozen=True, slots=True)
 class ReActResult:
     answer: str
     steps: int
     messages: list[ChatMessage]
+    hit_step_limit: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -170,11 +230,13 @@ def iter_react_loop(
         cb.append_format_nudge(messages, detail)
 
     _log.warning("ReAct 达到最大步数上限（%d），仍未结束。", max_steps)
+    answer = _answer_on_step_cap(llm, messages)
     yield ReActStreamDone(
         ReActResult(
-            answer="已停止：达到 ReAct 最大步数上限。",
+            answer=answer,
             steps=steps,
-            messages=messages,
+            messages=list(messages),
+            hit_step_limit=True,
         )
     )
 

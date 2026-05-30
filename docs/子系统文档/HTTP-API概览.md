@@ -27,7 +27,7 @@ GUI 首屏数据，字段包括（节选）：
 | `llm_mode` | `stub` \| `remote` |
 | `skills` | Skill 列表（面板与会话页元数据；含 `paradigm`） |
 | `conversations_cache_root` | 档 B JSON 目录绝对路径 |
-| `ui` | 含 `SSE_maxNum`、`cache_warn_bytes` 等 |
+| `ui` | 含 `SSE_maxNum`、`cache_warn_bytes`、`max_history_full_text`、`react_max_steps`、`react_max_qa_steps` 等 |
 
 ### `POST /api/v1/chat`（SSE）
 
@@ -37,15 +37,26 @@ GUI 首屏数据，字段包括（节选）：
 |------|------|
 | `skill_id` | 产品 Skill 标识（推荐必填） |
 | `task_input` | 任务向导输入（对象，依 Skill 而定） |
-| `messages` | 多轮消息数组 |
+| `messages` | 多轮消息数组；连续问答 Skill 可含历史 user/assistant |
 | `operating_mode` | 如 `author` / `director` |
 
 响应为 SSE 流，常见事件包括（名称随展示档位变化）：
 
-- 助手正文增量
+- 助手正文增量（`delta`）
 - `reasoning_summary` / `reasoning_full`（开发者档）
 - `tool_trace_*`、`citations_*`
 - Pipeline 步骤：`pipeline_step` 等
+- 结束：`done`（见下）
+
+**`done` 载荷（ReAct 节选）**
+
+| 字段 | 说明 |
+|------|------|
+| `react_hit_step_limit` | 可选；为 `true` 表示本轮 ReAct 因步数触顶收束（正文由 synthesis，触顶说明由 GUI 展示） |
+
+已移除：`react_can_continue`、`react_resume_messages`、`react_step_wave` 及请求体中的续跑字段。
+
+**步数配置**：`retrieve_qa` 使用 `agent.react.max_QA_steps`（按**当前 user 消息**计数）；其余 `react` Skill 使用 `agent.react.max_steps`。详见 [配置说明](../配置说明.md)。
 
 未知 `skill_id` 返回 **400** JSON（不开启 SSE）。
 

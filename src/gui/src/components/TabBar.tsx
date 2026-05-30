@@ -27,9 +27,7 @@ function TabItem({ id, active }: { id: string; active: boolean }) {
         onClick={() => {
           if (conv) {
             navigate(conversationNavPath(conv));
-            return;
           }
-          navigate(`/chat/${id}`);
         }}
       >
         {conv?.streaming ? "… " : null}

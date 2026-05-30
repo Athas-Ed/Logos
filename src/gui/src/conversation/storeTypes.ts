@@ -6,9 +6,10 @@ import type {
 } from "../types/chat";
 import type { SkillCardMeta } from "../skills/catalog";
 import type { ConversationStatus } from "./types";
+import type { ReactStepLimitTurnMeta } from "./reactStepLimit";
 
 /** 任务向导阶段（单任务 Skill；F5-06 落盘） */
-export type TaskPhase = "input" | "running" | "done";
+export type TaskPhase = "input" | "running";
 
 /** pipeline SSE ``pipeline_step`` 条目（内存态，F6-07） */
 export type PipelineStepEntry = {
@@ -36,6 +37,14 @@ export type ConversationState = {
   messages: ChatMessage[];
   citations: CitationItem[];
   toolTraceLog: string[];
+  /** schema v3：按轮次 citations（归档全量） */
+  citationTurns: CitationItem[][];
+  /** schema v3：按轮次 ReAct 工具轨迹（归档全量） */
+  toolTraceTurns: string[][];
+  /** 本轮 ReAct 是否因步数触顶结束 */
+  reactHitStepLimit: boolean;
+  /** 按轮 ReAct 步数触顶元数据（归档；ReAct 范式） */
+  reactStepLimitTurns: ReactStepLimitTurnMeta[];
   pipelineSteps: PipelineStepEntry[];
   pipelineWarnings: string[];
   /** pipeline ``done`` 事件中的 ``written_paths``（F6-08 晋升用） */

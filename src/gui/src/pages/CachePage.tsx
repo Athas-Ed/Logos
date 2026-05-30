@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { fetchBootstrap } from "../api/bootstrap";
 import { useConversationActions } from "../conversation/ConversationProvider";
 import {
@@ -8,6 +8,10 @@ import {
   listConversationsIpc,
   totalConversationBytesIpc,
 } from "../conversation/ipc";
+import {
+  notifyConversationsStorageChanged,
+  subscribeConversationsStorageChanged,
+} from "../conversation/storageNotify";
 import type { ConversationMeta } from "../conversation/types";
 import { formatByteSize } from "./cacheFormat";
 import styles from "./CachePage.module.css";
@@ -29,6 +33,7 @@ async function resolveStorageRoot(): Promise<string | null> {
 }
 
 export function CachePage() {
+  const location = useLocation();
   const actions = useConversationActions();
   const [archived, setArchived] = useState<ConversationMeta[]>([]);
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
@@ -73,6 +78,15 @@ export function CachePage() {
       return;
     }
     void refresh();
+  }, [location.pathname, refresh]);
+
+  useEffect(() => {
+    return subscribeConversationsStorageChanged(() => {
+      if (!isConversationIpcAvailable()) {
+        return;
+      }
+      void refresh();
+    });
   }, [refresh]);
 
   const toggleSelect = (id: string) => {
@@ -133,6 +147,7 @@ export function CachePage() {
     for (const id of selected) {
       await deleteConversationIpc(id);
     }
+    notifyConversationsStorageChanged();
     await refresh();
     setSelected(new Set());
     setBusy(false);

@@ -1,0 +1,25 @@
+skill_id: setting_write
+display_name: 设定撰写
+description: 基于 KSFS 已有设定，撰写新的角色/地点/势力等条目草稿（ReAct）。
+ui_instructions: |
+  输入想撰写的设定主题（如「藏骨堂的守护者」「沙漠商队组织架构」）。
+  助手会先检索 KSFS 了解上下文，再撰写完整条目到 workspace/writing_entry/。
+  草稿写入后可用「审核晋升」技能统一审查和晋升至 KSFS。
+persistence_tier: p1
+paradigm: react
+turn_policy: single
+allowed_tools:
+  - retrieve
+  - read_ksfs
+  - list_ksfs
+  - write_draft
+  - list_drafts
+prompt_runtime_key: skills/setting_write
+input_schema:
+  type: object
+  properties:
+    text:
+      type: string
+      title: 要撰写的设定主题
+  required:
+    - text

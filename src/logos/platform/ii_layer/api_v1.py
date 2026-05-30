@@ -136,6 +136,9 @@ class PromptEchoBody(BaseModel):
 class BootstrapUiPayload(BaseModel):
     SSE_maxNum: int
     cache_warn_bytes: int
+    max_history_full_text: int
+    react_max_steps: int
+    react_max_qa_steps: int
 
 
 class BootstrapSkillPayload(BaseModel):
@@ -367,6 +370,9 @@ def build_v1_router() -> Any:
             ui=BootstrapUiPayload(
                 SSE_maxNum=ports.settings.ui_sse_max_num,
                 cache_warn_bytes=ports.settings.ui_cache_warn_bytes,
+                max_history_full_text=ports.settings.ui_max_history_full_text,
+                react_max_steps=ports.settings.react_max_steps,
+                react_max_qa_steps=ports.settings.react_max_qa_steps,
             ),
             skills=skill_payloads,
         )
@@ -389,7 +395,19 @@ def build_v1_router() -> Any:
             reset_react_tool_steps()
             try:
                 try:
+                    from logos.agent import cb as cb_mod
+
+                    react_max_steps = (
+                        ports.settings.react_max_qa_steps
+                        if skill_id == "retrieve_qa"
+                        else ports.settings.react_max_steps
+                    )
                     client_sys, history, user_text = _split_request_messages(body.messages)
+                    if skill_id == "retrieve_qa" and history:
+                        history = cb_mod.clip_turn_history(
+                            history,
+                            max_full_rounds=ports.settings.ui_max_history_full_text,
+                        )
                     ut = user_text.strip()
                     if not ut:
                         yield _sse_frame(
@@ -524,10 +542,11 @@ def build_v1_router() -> Any:
 
                     answer_text = ""
                     reasoning_acc: dict[str, str] = {}
+                    react_done: ReActStreamDone | None = None
                     for item in shell.iter_paradigm_task(
                         skill_id,
                         ut,
-                        max_steps=16,
+                        max_steps=react_max_steps,
                         extra_system=extra,
                         history=history,
                         task_input=body.task_input,
@@ -543,9 +562,11 @@ def build_v1_router() -> Any:
                                 presentation, item.text, reasoning_acc
                             )
                         elif isinstance(item, ReActStreamToolTrace):
+                            reasoning_acc.pop("reasoning_buf", None)
                             yield from _yield_tool_trace_sse(presentation, item)
                         elif isinstance(item, ReActStreamDone):
                             answer_text = item.result.answer
+                            react_done = item
 
                     if not answer_text and not ports.developer.prompt_echo:
                         yield _sse_frame(
@@ -573,7 +594,14 @@ def build_v1_router() -> Any:
                         for piece in _chunk_text(answer_text):
                             if piece:
                                 yield _sse_frame("delta", {"text": piece})
-                    yield _sse_frame("done", {})
+                    done_payload: dict[str, Any] = {}
+                    if (
+                        paradigm == "react"
+                        and react_done is not None
+                        and react_done.result.hit_step_limit
+                    ):
+                        done_payload["react_hit_step_limit"] = True
+                    yield _sse_frame("done", done_payload)
                 except Exception as exc:  # noqa: BLE001 — 契约要求以 error 事件结束流
                     _log.exception("POST /api/v1/chat 流处理异常")
                     msg = str(exc)

@@ -226,6 +226,8 @@ def merged_dict_to_app_settings(data: Mapping[str, Any]) -> AppSettings:
     mcp_servers = _parse_mcp_servers(skills if isinstance(skills, Mapping) else {})
     ui = data.get("ui") if isinstance(data.get("ui"), dict) else {}
     obs = data.get("obs") if isinstance(data.get("obs"), dict) else {}
+    agent = data.get("agent") if isinstance(data.get("agent"), dict) else {}
+    react = agent.get("react") if isinstance(agent.get("react"), dict) else {}
     return AppSettings(
         workspace_root=str(paths.get("workspace_root", "./workspace")),
         example_ksfs_root=str(paths.get("example_ksfs_root", "./example_ksfs")),
@@ -238,6 +240,12 @@ def merged_dict_to_app_settings(data: Mapping[str, Any]) -> AppSettings:
             or "./workspace/conversations"
         ),
         hsi_sqlite_path=str(paths.get("hsi_sqlite_path", "./.index/.high-speed_index")),
+        writing_entry_subdir=str(
+            paths.get("writing_entry_subdir", "writing_entry")
+        ),
+        pending_review_subdir=str(
+            paths.get("pending_review_subdir", "pending_review")
+        ),
         chroma_persist_directory=str(
             chroma.get("persist_directory", "./.index/.vector_index")
         ),
@@ -260,6 +268,9 @@ def merged_dict_to_app_settings(data: Mapping[str, Any]) -> AppSettings:
             ui.get("SSE_maxNum", ui.get("sse_max_num"))
         ),
         ui_cache_warn_bytes=_normalize_cache_warn_bytes(ui.get("cache_warn_bytes")),
+        ui_max_history_full_text=max(1, _coerce_non_negative_int(ui.get("max_history_full_text"), default=5)),
+        react_max_steps=max(1, _coerce_non_negative_int(react.get("max_steps"), default=16)),
+        react_max_qa_steps=max(1, _coerce_non_negative_int(react.get("max_QA_steps"), default=20)),
         obs_log_profile=_normalize_log_profile(obs.get("log_profile")),
         obs_show_log_root_in_gui=_coerce_truthy(
             obs.get("show_log_root_in_gui"), default=False

@@ -8,6 +8,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.main.json && tsc -p tsconfig.preload.json",
     "electron:dev": "npm run build && electron .",
+    "electron:start": "electron .",
+    "electron:dev:fast": "node dev-fast.cjs",
     "gui:build": "npm --prefix ../gui run build",
     "package:win": "npm run gui:build && npm run build && electron-builder --win portable dir",
     "package:win:with-mirror": "npm run gui:build && npm run build && node package-electron-builder-with-mirror.cjs",

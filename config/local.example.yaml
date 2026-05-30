@@ -32,6 +32,12 @@
 #       strip_http_proxy: false
 #       env: {}
 
+# 可选：ReAct 步数（默认见 config/defaults.yaml）
+# agent:
+#   react:
+#     max_steps: 16
+#     max_QA_steps: 20
+
 # 可选：覆盖路径类
 # paths:
 #   workspace_root: "../workspace"

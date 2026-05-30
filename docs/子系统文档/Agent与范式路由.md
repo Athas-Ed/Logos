@@ -23,6 +23,15 @@
 
 PR **不**默认在运行时「智能猜范式」；Skill 作者在 manifest 中定好边界。开发者可在开启调试工具时用 `paradigm_override` 试验（见 API 文档）。
 
+### ReAct 步数上限
+
+| 配置键 | 适用 Skill | 计数范围 |
+|--------|------------|----------|
+| `agent.react.max_steps` | 所有 `paradigm: react`（除下表专用项外） | 单次执行内 ReAct 迭代次数 |
+| `agent.react.max_QA_steps` | `retrieve_qa` | **每个 user 问题**一轮 ReAct 的迭代次数 |
+
+触顶时循环停止，基于已有 tool observation 做收束作答；**不支持**同会话内步数续跑（无 `resume_messages` / 多 wave）。产品交互见 [任务与 Skill 界面](任务与Skill界面.md)。
+
 ## 一次执行的链路
 
 ```text

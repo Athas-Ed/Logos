@@ -139,6 +139,9 @@ def test_api_v1_bootstrap(tmp_path: Path) -> None:
     ui = body["ui"]
     assert ui["SSE_maxNum"] == 3
     assert ui["cache_warn_bytes"] == 524288000
+    assert ui["max_history_full_text"] == 5
+    assert ui["react_max_steps"] == 16
+    assert ui["react_max_qa_steps"] == 20
 
 
 def test_api_v1_bootstrap_skills(tmp_path: Path) -> None:

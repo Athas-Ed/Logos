@@ -31,7 +31,9 @@ import {
 
 /** 与 Renderer `conversation/types.ts` 的 `schema_version: 2` 对齐 */
 
-export const CONVERSATION_SCHEMA_VERSION = 2;
+export const CONVERSATION_SCHEMA_VERSION = 3;
+
+export const LEGACY_CONVERSATION_SCHEMA_VERSION_V2 = 2;
 
 export const LEGACY_CONVERSATION_SCHEMA_VERSION = 1;
 
@@ -276,11 +278,9 @@ function validateRecordForRead(
   const version = record.schema_version;
 
   if (
-
     version !== CONVERSATION_SCHEMA_VERSION &&
-
+    version !== LEGACY_CONVERSATION_SCHEMA_VERSION_V2 &&
     version !== LEGACY_CONVERSATION_SCHEMA_VERSION
-
   ) {
 
     return "schema_version_mismatch";

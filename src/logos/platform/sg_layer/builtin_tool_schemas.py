@@ -41,3 +41,51 @@ WRITE_DRAFT_PARAMETERS: JsonDict = {
     },
     "required": ["path", "content"],
 }
+
+
+LIST_DRAFTS_PARAMETERS: JsonDict = {
+    "type": "object",
+    "properties": {
+        "path": {
+            "type": "string",
+            "description": "相对于 workspace 根的路径，留空表示扫描全部非缓存草稿目录",
+            "default": "",
+        },
+        "recursive": {
+            "type": "boolean",
+            "description": "是否递归遍历子目录",
+            "default": True,
+        },
+        "max_entries": {
+            "type": "integer",
+            "description": "最多返回条数，默认 200，上限 1000",
+            "default": 200,
+        },
+    },
+    "required": [],
+}
+
+
+READ_DRAFT_PARAMETERS: JsonDict = {
+    "type": "object",
+    "properties": {
+        "path": {
+            "type": "string",
+            "description": "相对于 workspace 根的草稿路径，例如 drafts/ch1.md",
+        },
+    },
+    "required": ["path"],
+}
+
+
+PROMOTE_DRAFT_PARAMETERS: JsonDict = {
+    "type": "object",
+    "properties": {
+        "items": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "待晋升草稿的相对路径列表（相对于 workspace 根）",
+        },
+    },
+    "required": ["items"],
+}
