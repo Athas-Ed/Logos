@@ -201,13 +201,12 @@ def build_review_router() -> Any:
     ) -> DraftsReadResponse:
         """读取 pending_review 下某文件的正文。"""
         ws_root = _resolve_workspace_root(ports.settings)
-        pending_root = ws_root / ports.settings.pending_review_subdir
         from logos.platform.sg_layer.path_sandbox import read_text_under_root
 
         content = read_text_under_root(
-            pending_root,
+            ws_root,
             path,
-            context_label="pending_review",
+            context_label="workspace",
             denied_operation="drafts/read",
         )
         return DraftsReadResponse(path=path, content=content)
