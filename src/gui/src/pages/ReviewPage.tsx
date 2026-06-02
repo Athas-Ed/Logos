@@ -22,8 +22,9 @@ export function ReviewPage() {
   const { id: conversationId } = useParams<{ id: string }>();
   const { actions } = useConversation(conversationId ?? "");
   const [searchParams] = useSearchParams();
-  const scope = searchParams.get("scope") ?? "";
-  const scopeLabel = scope || "全部 pending_review";
+  // scope 为空时默认扫 setting_entry 子目录（pending_review 根只有 README）
+  const scope = searchParams.get("scope") ?? "setting_entry";
+  const scopeLabel = `pending_review/${scope}`;
 
   // ── 文件列表状态 ──
   const [fileList, setFileList] = useState<DraftFileEntry[]>([]);
@@ -237,10 +238,7 @@ export function ReviewPage() {
             type="button"
             className={styles.backBtn}
             data-testid="review-back"
-            onClick={() => {
-              if (conversationId) actions.archiveTab(conversationId);
-              navigate("/skills");
-            }}
+            onClick={() => navigate("/skills")}
           >
             ← 返回
           </button>

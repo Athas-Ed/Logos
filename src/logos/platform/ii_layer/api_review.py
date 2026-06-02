@@ -180,7 +180,7 @@ def build_review_router() -> Any:
             return DraftsListResponse(files=[])
 
         files: list[dict[str, Any]] = []
-        for entry in sorted(target.iterdir(), key=lambda p: p.name):
+        for entry in sorted(target.rglob("*"), key=lambda p: p.name):
             if entry.name.startswith(".") or entry.name == "README.md":
                 continue
             if entry.is_file() and entry.suffix.lower() in (".md", ".markdown", ".txt", ".yaml", ".json"):
