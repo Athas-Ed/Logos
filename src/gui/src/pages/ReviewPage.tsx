@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 
 import { streamChat, type StreamChatEvent } from "../api/sseChat";
 
@@ -18,9 +18,8 @@ import styles from "./ReviewPage.module.css";
 
 /** 审核晋升 Skill 页面：左栏文件列表，右栏预览/对话，底部操作区。 */
 export function ReviewPage() {
-  const navigate = useNavigate();
   const { id: conversationId } = useParams<{ id: string }>();
-  const { actions } = useConversation(conversationId ?? "");
+  useConversation(conversationId ?? "");
   const [searchParams] = useSearchParams();
   // scope 为空时默认扫 setting_entry 子目录（pending_review 根只有 README）
   const scope = searchParams.get("scope") ?? "setting_entry";
@@ -233,17 +232,7 @@ export function ReviewPage() {
   return (
     <div className={styles.page} data-testid="review-page">
       <header className={styles.header}>
-        <div className={styles.headerLeft}>
-          <button
-            type="button"
-            className={styles.backBtn}
-            data-testid="review-back"
-            onClick={() => navigate("/skills")}
-          >
-            ← 返回
-          </button>
-          <h1 className={styles.title}>审核晋升</h1>
-        </div>
+        <h1 className={styles.title}>审核晋升</h1>
         <span className={styles.scopeHint}>{scopeLabel}</span>
         <button
           type="button"

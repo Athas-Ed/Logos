@@ -336,28 +336,6 @@
   font-size: 0.82rem;
 }
 
-.headerLeft {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.backBtn {
-  padding: 0.2rem 0.5rem;
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--muted);
-  cursor: pointer;
-  font-size: 0.78rem;
-  white-space: nowrap;
-}
-
-.backBtn:hover {
-  color: var(--accent);
-  border-color: var(--accent);
-}
-
 .refreshBtn {
   padding: 0.2rem 0.5rem;
   border-radius: var(--radius);

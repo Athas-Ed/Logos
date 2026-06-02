@@ -185,7 +185,8 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
     const m =
       location.pathname.match(/\/lab\/([^/]+)/) ??
       location.pathname.match(/\/chat\/([^/]+)/) ??
-      location.pathname.match(/\/task\/([^/]+)/);
+      location.pathname.match(/\/task\/([^/]+)/) ??
+      location.pathname.match(/\/review\/([^/]+)/);
     activeIdRef.current = m?.[1] ?? null;
   }, [location.pathname]);
 
@@ -822,8 +823,9 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
       const path = currentAppPath();
       const onArchivedRoute = isConversationRoute(path, conversationId);
 
+      const isReview = stateRaw.pageType === "review";
       void (async () => {
-        if (isConversationIpcAvailable()) {
+        if (!isReview && isConversationIpcAvailable()) {
           await writeConversationIpc(conversationId, record);
           notifyConversationsStorageChanged();
         }

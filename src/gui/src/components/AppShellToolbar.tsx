@@ -38,7 +38,9 @@ export function AppShellToolbar() {
 
     location.pathname.startsWith("/task/") ||
 
-    location.pathname.startsWith("/lab/");
+    location.pathname.startsWith("/lab/") ||
+
+    location.pathname.startsWith("/review/");
 
 
 

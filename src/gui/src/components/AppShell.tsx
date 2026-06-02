@@ -8,7 +8,8 @@ export function AppShell() {
   const onTaskRoute =
     location.pathname.startsWith("/chat/") ||
     location.pathname.startsWith("/task/") ||
-    location.pathname.startsWith("/lab/");
+    location.pathname.startsWith("/lab/") ||
+    location.pathname.startsWith("/review/");
 
   return (
     <div className={styles.shell}>
