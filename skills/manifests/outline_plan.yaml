@@ -8,6 +8,7 @@ ui_instructions: |
 persistence_tier: p1
 paradigm: plan
 turn_policy: single
+panel_visible: false
 allowed_tools: []
 prompt_runtime_key: skills/outline_plan
 blueprint_path: skills/outline_plan/DESIGN.md

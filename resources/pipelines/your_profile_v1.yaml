@@ -1,0 +1,14 @@
+# CD-3：your_profile_v1 8 分类设定导入流水线阶段表
+profile_id: your_profile_v1
+
+steps:
+  - id: llm_json
+    type: llm_json
+  - id: schema
+    type: json_schema
+  - id: overlap
+    type: overlap_scan
+  - id: render
+    type: render
+  - id: promote
+    type: promote_gate

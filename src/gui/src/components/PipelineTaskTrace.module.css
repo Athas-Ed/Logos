@@ -1,21 +1,46 @@
 .panel {
-  width: min(18rem, 38vw);
+  width: auto;
+  max-width: min(20rem, 38vw);
   min-height: 0;
   overflow-y: auto;
-  padding: 0.65rem 0.75rem;
+  padding: 0.45rem 0.75rem;
   border-radius: var(--radius);
   border: 1px solid var(--border);
   background: var(--surface);
+  align-self: flex-start;
+  transition: width 0.15s ease;
+}
+
+.panelExpanded {
+  width: min(20rem, 38vw);
+  padding: 0.65rem 0.75rem;
 }
 
 .title {
-  margin: 0 0 0.5rem;
+  margin: 0;
   font-size: 0.88rem;
   font-weight: 650;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.title:hover {
+  color: var(--accent);
+}
+
+.toggleIcon {
+  display: inline-block;
+  width: 0.85em;
+  font-size: 0.85em;
+  flex-shrink: 0;
 }
 
 .stepList {
-  margin: 0;
+  margin: 0.5rem 0 0;
   padding: 0;
   list-style: none;
   display: flex;

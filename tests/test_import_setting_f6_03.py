@@ -24,7 +24,7 @@ def _minimal_import_batch_text() -> str:
         resolve_repo_root()
         / "resources"
         / "entity_template"
-        / "default_import_v0"
+        / "your_profile_v1"
         / "examples"
         / "minimal_batch.json"
     )
@@ -52,7 +52,7 @@ class _ImportStubLLM:
 def test_import_setting_manifest() -> None:
     m = get_skill_manifest("import_setting")
     assert m.paradigm == "pipeline"
-    assert m.pipeline_profile == "default_import_v0"
+    assert m.pipeline_profile == "your_profile_v1"
     assert m.persistence_tier == "p0"
     assert "粘贴" in m.ui_instructions
 
@@ -85,8 +85,8 @@ def test_import_setting_chat_pipeline_sse(tmp_path: Path) -> None:
     done_payload = next(p for e, p in events if e == "done")
     assert done_payload.get("unit_count") == 1
     written = done_payload.get("written_paths") or []
-    assert any("setting_entry/characters/lin-dong.md" in str(p) for p in written)
+    assert any("setting_entry/人物/lin-dong.md" in str(p) for p in written)
 
-    out = tmp_path / "workspace" / "setting_entry" / "characters" / "lin-dong.md"
+    out = tmp_path / "workspace" / "setting_entry" / "人物" / "lin-dong.md"
     assert out.is_file()
     assert "林动" in out.read_text(encoding="utf-8")

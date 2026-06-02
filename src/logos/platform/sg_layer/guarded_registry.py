@@ -17,6 +17,7 @@ V01_SG_TOOL_WHITELIST: frozenset[str] = frozenset(
         "list_drafts",
         "read_draft",
         "promote_draft",
+        "kg_query",
     },
 )
 

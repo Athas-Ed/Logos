@@ -1,0 +1,158 @@
+{
+  "batch_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "source_label": "示例世界 —— 完整的 8 分类导入批次",
+  "units": [
+    {
+      "classification": "race",
+      "slug": "void-elves",
+      "title": "虚空精灵",
+      "aliases": ["暗裔", "裂隙民"],
+      "tags": ["精灵种", "虚空", "古老"],
+      "relations": [
+        { "target_slug": "shadow-council", "target_title": "暗影议会", "type": "member_of", "description": "少数精英加入议会" },
+        { "target_slug": "high-elves", "target_title": "高等精灵", "type": "related_to", "description": "远古同源，现关系紧张" }
+      ],
+      "body_markdown": "## 外观\n\n虚空精灵身材高挑，肤色从银白到深紫不等，眼眸呈星涡状。\n\n## 社会\n\n崇尚知识与秘术，社会结构基于灵能天赋等级。主要聚居地在裂隙城。\n\n## 历史\n\n千年前因一次虚空裂隙事故而变异，自此与高等精灵分道扬镳。",
+      "suggestions": [
+        { "message": "建议补充虚空精灵的寿命信息" }
+      ]
+    },
+    {
+      "classification": "race",
+      "slug": "high-elves",
+      "title": "高等精灵",
+      "aliases": ["光裔", "日精灵"],
+      "tags": ["精灵种", "光明", "古老"],
+      "relations": [
+        { "target_slug": "void-elves", "target_title": "虚空精灵", "type": "related_to", "description": "远古同源" }
+      ],
+      "body_markdown": "## 外观\n\n高等精灵肤色如象牙，金发碧眼，体态优雅。\n\n## 社会\n\n以日光为信仰，社会等级森严，由日冕议会统治。\n\n## 文化\n\n擅长诗歌、音乐与光明魔法。与虚空精灵的关系因历史裂痕而紧张。"
+    },
+    {
+      "classification": "character",
+      "slug": "morpheus-shadowblade",
+      "title": "墨菲斯·影刃",
+      "aliases": ["影刃", "暗影行者"],
+      "tags": ["暗影议会", "虚空精灵", "刺客"],
+      "relations": [
+        { "target_slug": "shadow-council", "target_title": "暗影议会", "type": "member_of", "description": "核心成员" },
+        { "target_slug": "void-elves", "target_title": "虚空精灵", "type": "race_of", "description": "虚空精灵" },
+        { "target_slug": "lin-dong", "target_title": "林冬", "type": "ally", "description": "旧识，曾共同探险" },
+        { "target_slug": "nightfall-dagger", "target_title": "夜幕匕首", "type": "owns", "description": "本命武器" }
+      ],
+      "body_markdown": "## 背景\n\n墨菲斯·影刃出身虚空精灵氏族，少年时便被暗影议会招募，经过严苛训练成为顶尖刺客。\n\n## 性格\n\n冷峻寡言，但对认定的盟友极其忠诚。内心深处对自身虚空血统有复杂情感。\n\n## 能力\n\n精通影遁术与短刃格斗，能在阴影间短距瞬移。夜幕匕首与他的灵魂绑定。"
+    },
+    {
+      "classification": "character",
+      "slug": "lin-dong",
+      "title": "林冬",
+      "aliases": [],
+      "tags": ["探险者", "地质学家"],
+      "relations": [
+        { "target_slug": "morpheus-shadowblade", "target_title": "墨菲斯·影刃", "type": "ally", "description": "旧识" },
+        { "target_slug": "crimson-mine", "target_title": "赤晶矿坑", "type": "discovered", "description": "矿坑发现者" }
+      ],
+      "body_markdown": "## 背景\n\n林冬是自由探险者兼地质学家，足迹遍布大陆各地。在一次北部山脉的勘探中与墨菲斯结识。\n\n## 性格\n\n开朗健谈，好奇心旺盛，有时过于冒进。\n\n## 专长\n\n地质勘探、矿物鉴定、野外生存。发现了赤晶矿坑的巨大矿脉。"
+    },
+    {
+      "classification": "location",
+      "slug": "crimson-mine",
+      "title": "赤晶矿坑",
+      "aliases": ["赤晶矿区"],
+      "tags": ["矿坑", "北境", "资源"],
+      "relations": [
+        { "target_slug": "lin-dong", "target_title": "林冬", "type": "discovered_by", "description": "发现者" },
+        { "target_slug": "shadow-council", "target_title": "暗影议会", "type": "controlled_by", "description": "实际控制方" }
+      ],
+      "body_markdown": "## 地理位置\n\n位于大陆北部山脉深处，林冬在一次地质勘探中意外发现。\n\n## 特征\n\n矿坑产出稀有的赤晶矿石，这种矿石蕴含高浓度虚空能量，是暗影议会的重要战略资源。\n\n## 现状\n\n目前由暗影议会秘密控制，有重兵把守。"
+    },
+    {
+      "classification": "location",
+      "slug": "rift-city",
+      "title": "裂隙城",
+      "aliases": ["虚空之城"],
+      "tags": ["城市", "虚空精灵", "主城"],
+      "relations": [
+        { "target_slug": "void-elves", "target_title": "虚空精灵", "type": "home_of", "description": "虚空精灵主城" },
+        { "target_slug": "shadow-council", "target_title": "暗影议会", "type": "headquarters_in", "description": "议会总部所在" }
+      ],
+      "body_markdown": "## 概述\n\n裂隙城建在一道巨大虚空裂隙周围，是虚空精灵文明的核心城市。\n\n## 建筑\n\n建筑风格融合了精灵传统与虚空能量驱动的几何结构，紫色晶体随处可见。\n\n## 重要场所\n\n暗影议会总部位于城市中心的裂隙塔，塔顶直通虚空裂隙。"
+    },
+    {
+      "classification": "faction",
+      "slug": "shadow-council",
+      "title": "暗影议会",
+      "aliases": ["影议会", "暗影评议会"],
+      "tags": ["组织", "虚空精灵", "统治"],
+      "relations": [
+        { "target_slug": "morpheus-shadowblade", "target_title": "墨菲斯·影刃", "type": "member_of", "description": "核心成员" },
+        { "target_slug": "void-elves", "target_title": "虚空精灵", "type": "leads", "description": "虚空精灵的最高权力机构" },
+        { "target_slug": "rift-city", "target_title": "裂隙城", "type": "headquartered_in", "description": "总部位于裂隙塔" },
+        { "target_slug": "crimson-mine", "target_title": "赤晶矿坑", "type": "controls", "description": "控制矿坑运营" }
+      ],
+      "body_markdown": "## 结构\n\n暗影议会由七位大议员组成，每位代表虚空精灵社会的一个方面（军事、秘术、外交等）。\n\n## 宗旨\n\n表面上是虚空精灵的最高治理机构，实则暗中收集虚空能量，意图打开通往虚空位面的永久通道。\n\n## 秘密\n\n议会中有一派系认为墨菲斯的潜力远超工具价值，试图拉拢他加入真正的核心。"
+    },
+    {
+      "classification": "item",
+      "slug": "nightfall-dagger",
+      "title": "夜幕匕首",
+      "aliases": ["暗夜刺"],
+      "tags": ["武器", "神器", "绑定"],
+      "relations": [
+        { "target_slug": "morpheus-shadowblade", "target_title": "墨菲斯·影刃", "type": "owned_by", "description": "现任持有者，灵魂绑定" },
+        { "target_slug": "void-elves", "target_title": "虚空精灵", "type": "created_by", "description": "虚空精灵古时锻造" }
+      ],
+      "body_markdown": "## 外观\n\n一把通体漆黑的短匕，刃身隐约有紫色纹路，在暗处会散发微光。\n\n## 来历\n\n由虚空精灵古时锻造，据说是以陨落的虚空领主脊骨打造。\n\n## 能力\n\n与持有者灵魂绑定，可吸收阴影能量增强持有者的影遁术。被它刺中的伤口极难愈合。"
+    },
+    {
+      "classification": "event",
+      "slug": "大裂隙事故",
+      "title": "大裂隙事故",
+      "aliases": ["虚空裂变"],
+      "tags": ["事件", "历史", "精灵分裂"],
+      "relations": [
+        { "target_slug": "void-elves", "target_title": "虚空精灵", "type": "caused", "description": "导致虚空精灵诞生的关键事件" },
+        { "target_slug": "high-elves", "target_title": "高等精灵", "type": "affected", "description": "导致两族分裂" }
+      ],
+      "body_markdown": "## 时间\n\n约一千年前。\n\n## 经过\n\n当时还统一的精灵帝国在一次实验性虚空仪式中失控，一道巨大虚空裂隙在城市中心展开。\n\n## 后果\n\n裂隙附近的精灵被虚空能量侵蚀，身体与灵魂发生变异，成为最初的虚空精灵。未被波及的精灵视其为诅咒，两族从此决裂。裂隙被封堵后形成了现在的裂隙城核心。"
+    },
+    {
+      "classification": "event",
+      "slug": "北境远征",
+      "title": "北境远征",
+      "aliases": [],
+      "tags": ["事件", "探险", "矿脉"],
+      "relations": [
+        { "target_slug": "lin-dong", "target_title": "林冬", "type": "participant", "description": "发起者与领队" },
+        { "target_slug": "morpheus-shadowblade", "target_title": "墨菲斯·影刃", "type": "participant", "description": "同行护卫" },
+        { "target_slug": "crimson-mine", "target_title": "赤晶矿坑", "type": "resulted_in", "description": "远征中发现了赤晶矿坑" }
+      ],
+      "body_markdown": "## 时间\n\n五年前。\n\n## 经过\n\n林冬组织了一支小型探险队深入北境山脉进行地质勘探，邀请了墨菲斯作为护卫。在勘探第三周时，林冬的探测仪发现异常能量读数，顺着线索找到了赤晶矿坑入口。\n\n## 影响\n\n这次远征不仅发现了重要矿脉，也让墨菲斯第一次接触到暗影议会的真正野心。"
+    },
+    {
+      "classification": "concept",
+      "slug": "虚空能量",
+      "title": "虚空能量",
+      "aliases": ["虚能", "裂隙之力"],
+      "tags": ["能量", "魔法", "虚空"],
+      "relations": [
+        { "target_slug": "void-elves", "target_title": "虚空精灵", "type": "used_by", "description": "虚空精灵的本质能量" },
+        { "target_slug": "shadow-council", "target_title": "暗影议会", "type": "studied_by", "description": "秘密研究的核心对象" },
+        { "target_slug": "crimson-mine", "target_title": "赤晶矿坑", "type": "sourced_from", "description": "赤晶矿石是虚空能量的固态形态" }
+      ],
+      "body_markdown": "## 定义\n\n虚空能量是来自虚空位面的原始力量，具有极强的侵蚀性与可塑性。\n\n## 性质\n\n- 可被灵能天赋者引导和塑形\n- 长期接触会导致生物变异\n- 固态形态为赤晶矿石\n- 与光明能量天然对立\n\n## 风险\n\n过度使用虚空能量会侵蚀使用者的心智，最终可能导致被虚空吞噬。"
+    },
+    {
+      "classification": "timeline",
+      "slug": "暗影纪元",
+      "title": "暗影纪元",
+      "aliases": [],
+      "tags": ["纪元", "当前"],
+      "relations": [
+        { "target_slug": "大裂隙事故", "target_title": "大裂隙事故", "type": "started_with", "description": "以该事件为纪元起点" },
+        { "target_slug": "shadow-council", "target_title": "暗影议会", "type": "defines", "description": "暗影议会主导了这个纪元" }
+      ],
+      "body_markdown": "## 定义\n\n暗影纪元，又称第四纪元，以大裂隙事故为起点，至今已逾千年。\n\n## 特征\n\n- 虚空能量成为大陆政治的核心议题\n- 精灵族分裂为虚空与高等两支\n- 暗影议会崛起为隐秘的跨国势力\n\n## 现状\n\n纪元末期，暗影议会的计划逐渐浮出水面，大陆各大势力开始警觉。"
+    }
+  ]
+}

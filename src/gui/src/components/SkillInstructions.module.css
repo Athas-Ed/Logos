@@ -1,21 +1,27 @@
 .block {
   margin: 0 0 0.85rem;
-  padding: 0.65rem 0.75rem;
   border-radius: var(--radius);
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--surface) 92%, var(--bg));
 }
 
-.title {
-  margin: 0 0 0.4rem;
+.summary {
+  cursor: pointer;
+  padding: 0.65rem 0.75rem;
   font-size: 0.82rem;
   font-weight: 650;
   color: var(--muted);
   letter-spacing: 0.02em;
+  user-select: none;
+}
+
+.summary::marker {
+  color: var(--muted);
 }
 
 .body {
   margin: 0;
+  padding: 0 0.75rem 0.65rem;
   font-size: 0.88rem;
   line-height: 1.55;
   color: var(--text);

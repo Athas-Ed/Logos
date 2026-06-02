@@ -1,4 +1,14 @@
-"""按 ``render_spec.yaml`` 将校验后的批次 JSON 写入 ``workspace/setting_entry/``。"""
+"""
+渲染管线：将校验后的 JSON 批次按 ``render_spec.yaml`` 写为 ``workspace/setting_entry/`` 下的 Markdown 文件。
+
+设计要点（求职 / 展示用）：
+- YAML front matter 与正文分离：front matter 承载结构化元数据（tags / aliases / relations），
+  供 HSI 索引和未来 KG 检索；正文供人阅读
+- 配置驱动：分类→路径模板、front matter 白名单、章节顺序均由 render_spec.yaml 定义，
+  不改代码即可新增实体类型
+- relations 块序列渲染：实体间关系写入 YAML 头，格式为 YAML block sequence，
+  确保被 HSI/Chroma 索引的同时保持人类可读
+"""
 
 from __future__ import annotations
 
@@ -23,7 +33,14 @@ def _format_front_matter(fm: dict[str, Any]) -> str:
     for key, value in fm.items():
         if value is None:
             continue
-        if isinstance(value, list):
+        if isinstance(value, list) and value and all(isinstance(v, dict) for v in value):
+            # YAML block sequence for dict items (relations, etc.)
+            lines.append(f"{key}:")
+            for item in value:
+                lines.append("  -")
+                for k, v in item.items():
+                    lines.append(f"    {k}: {v}")
+        elif isinstance(value, list):
             inner = ", ".join(str(v) for v in value)
             lines.append(f"{key}: [{inner}]")
         elif isinstance(value, str) and any(ch in value for ch in ('"', "\n", ":")):
@@ -58,13 +75,28 @@ def render_unit_markdown(
     fm: dict[str, Any] = {
         "id": draft_id,
         "title": unit.get("title") or unit["slug"],
-        "tags": [],
+        "tags": unit.get("tags") or [],
         "classification": class_key,
         "slug": unit["slug"],
         "batch_id": batch["batch_id"],
     }
     if batch.get("source_label"):
         fm["source_label"] = batch["source_label"]
+    if unit.get("aliases"):
+        fm["aliases"] = unit["aliases"]
+    if unit.get("relations"):
+        fm["relations"] = [
+            {
+                "target_slug": r["target_slug"],
+                "type": r["type"],
+            }
+            for r in unit["relations"]
+        ]
+        for r, src in zip(fm["relations"], unit["relations"]):
+            if src.get("target_title"):
+                r["target_title"] = src["target_title"]
+            if src.get("description"):
+                r["description"] = src["description"]
     fm = {k: v for k, v in fm.items() if k in allowlist}
 
     parts: list[str] = [_format_front_matter(fm), ""]
@@ -81,6 +113,37 @@ def render_unit_markdown(
             parts.append("")
         elif stype == "body_markdown":
             parts.append(str(unit.get("body_markdown", "")).strip())
+            parts.append("")
+        elif stype == "relations_section":
+            relations = unit.get("relations") or []
+            if not relations:
+                continue
+            heading = str(section.get("heading", "## 关联实体"))
+            parts.append(heading)
+            parts.append("")
+            line_tpl = str(section.get(
+                "line_template",
+                "- [{target_title}]({target_slug}) — {type}：{description}",
+            ))
+            line_fallback = str(section.get(
+                "line_title_fallback_template",
+                "- [{target_slug}]({target_slug}) — {type}：{description}",
+            ))
+            for rel in relations:
+                if not isinstance(rel, dict):
+                    continue
+                ts = str(rel.get("target_slug", ""))
+                tt = str(rel.get("target_title", "") or "")
+                rtype = str(rel.get("type", ""))
+                desc = str(rel.get("description", "") or "")
+                if tt:
+                    parts.append(line_tpl.format(
+                        target_title=tt, target_slug=ts, type=rtype, description=desc,
+                    ))
+                else:
+                    parts.append(line_fallback.format(
+                        target_slug=ts, type=rtype, description=desc,
+                    ))
             parts.append("")
         elif stype == "suggestions":
             suggestions = unit.get("suggestions") or []

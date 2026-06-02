@@ -16,7 +16,7 @@ paths:
   sync_hsi_on_retrieve: true
   # 实体模板契约根；见 resources/entity_template/README.md
   entity_template_root: "./resources/entity_template"
-  entity_template_profile: "default_import_v0"
+  entity_template_profile: "your_profile_v1"
   # 待落户设定草稿子目录（位于 workspace_root 下）；见 KSFS开发.md §2
   setting_entry_subdir: "setting_entry"
   # 设定撰写（setting_write）专用草稿子目录
@@ -24,6 +24,7 @@ paths:
   # 审核晋升（draft_review）专用草稿子目录
   pending_review_subdir: "pending_review"
   index_root: "./.index"
+  kg_db_path: "./.index/.kg_cozo.db"
   logs_root: "./logs"
   # 档 B 会话 JSON 根（相对仓库根）；Electron 与 bootstrap 共用，见 DECISIONS.md §13.4
   CONVERSATIONS_CACHE: "./workspace/conversations"

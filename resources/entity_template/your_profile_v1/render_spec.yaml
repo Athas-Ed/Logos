@@ -1,0 +1,59 @@
+# 渲染规格：将校验后的 JSON 转为 workspace/setting_entry/ 下 .md
+# YAML 头（结构化数据）与 body（叙事正文）分离设计
+version: "1.0.0"
+
+# 目标根 = {workspace_root}/{drafts_subdir}/ （drafts_subdir 见 manifest）
+# 下列 rel_path_template 均相对于该根
+classifications:
+  character:
+    rel_path_template: "人物/{slug}.md"
+  location:
+    rel_path_template: "地点/{slug}.md"
+  faction:
+    rel_path_template: "势力/{slug}.md"
+  item:
+    rel_path_template: "物品/{slug}.md"
+  event:
+    rel_path_template: "事件/{slug}.md"
+  concept:
+    rel_path_template: "概念/{slug}.md"
+  race:
+    rel_path_template: "种族/{slug}.md"
+  timeline:
+    rel_path_template: "时间线/{slug}.md"
+
+# 写入 YAML front matter 时允许的键（实现应拒绝列表外键）
+front_matter_keys_allowlist:
+  # 系统字段
+  - id
+  - classification
+  - slug
+  - batch_id
+  - source_label
+  # 展示与检索
+  - title
+  - tags
+  # 别名（实体搜索与关联）
+  - aliases
+  # 关系（KG 核心）
+  - relations
+
+# 草稿在晋升前的占位 id
+draft_id_placeholder: "待分配"
+
+# 正文结构顺序（实现按序拼装）
+sections:
+  - type: yaml_front_matter
+  - type: title_heading
+    heading_template: "# {title}"
+  - type: body_markdown
+  - type: relations_section
+    heading: "## 关联实体"
+    # 渲染所有 relations，格式：- [{target_title}]({target_slug}) — {type}：{description}
+    # title 缺失时直接用 slug 作显示名
+    line_template: "- [{target_title}]({target_slug}) — {type}：{description}"
+    line_title_fallback_template: "- [{target_slug}]({target_slug}) — {type}：{description}"
+  - type: suggestions
+    heading: "## 修改建议"
+    bullet_template: "- （摘）「{verbatim_quote}」 — {message}"
+    bullet_no_quote_template: "- {message}"

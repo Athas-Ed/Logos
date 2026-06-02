@@ -1,0 +1,352 @@
+.page {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  max-width: min(72rem, 100%);
+  margin: 0 auto;
+  width: 100%;
+  padding: 0 1rem 1rem;
+  overflow-x: clip;
+}
+
+.header {
+  padding: 0.75rem 0 0.5rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 650;
+}
+
+.scopeHint {
+  font-size: 0.78rem;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+
+.body {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  gap: 0.75rem;
+  min-height: 0;
+}
+
+@media (max-width: 720px) {
+  .body {
+    flex-direction: column;
+  }
+}
+
+.leftPanel {
+  width: min(18rem, 35vw);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 0.5rem;
+}
+
+@media (max-width: 720px) {
+  .leftPanel {
+    width: 100%;
+    max-height: 12rem;
+  }
+}
+
+.fileItem {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.4rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  border: 1px solid transparent;
+  user-select: none;
+}
+
+.fileItem:hover {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.fileItemActive {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.fileCheckbox {
+  accent-color: var(--accent);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.fileCheckbox:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.fileName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fileLocked {
+  opacity: 0.5;
+}
+
+.lockBadge {
+  font-size: 0.7rem;
+  color: var(--err);
+  flex-shrink: 0;
+}
+
+.rightPanel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.rightTabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.8rem;
+}
+
+.rightTab {
+  padding: 0.35rem 0.75rem;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  user-select: none;
+  color: var(--muted);
+}
+
+.rightTab:hover {
+  color: var(--text);
+}
+
+.rightTabActive {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+  font-weight: 600;
+}
+
+.previewArea {
+  flex: 1;
+  overflow: auto;
+  padding: 0.75rem;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.previewPlaceholder {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.conversationArea {
+  flex: 1;
+  overflow: auto;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.bubbleUser,
+.bubbleAssistant {
+  padding: 0.5rem 0.7rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  max-width: 92%;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.bubbleUser {
+  align-self: flex-end;
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+}
+
+.bubbleAssistant {
+  align-self: flex-start;
+  background: var(--bg);
+}
+
+.statusBar {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.inputPanel {
+  border-top: 1px solid var(--border);
+  padding: 0.65rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.textarea {
+  width: 100%;
+  resize: vertical;
+  padding: 0.5rem 0.65rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  overflow-y: auto;
+  font: inherit;
+  font-size: 0.88rem;
+}
+
+.textarea:focus {
+  outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.actionRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.primaryBtn {
+  padding: 0.4rem 0.9rem;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.primaryBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.secondaryBtn {
+  padding: 0.4rem 0.9rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.secondaryBtn:hover {
+  border-color: var(--accent);
+}
+
+.secondaryBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.promoteBtn {
+  padding: 0.4rem 0.9rem;
+  border-radius: var(--radius);
+  border: 1px solid color-mix(in srgb, #2d8a4e 50%, var(--border));
+  background: color-mix(in srgb, #2d8a4e 12%, transparent);
+  color: #2d8a4e;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.promoteBtn:hover {
+  background: color-mix(in srgb, #2d8a4e 20%, transparent);
+}
+
+.promoteBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.rejectBtn {
+  padding: 0.4rem 0.9rem;
+  border-radius: var(--radius);
+  border: 1px solid color-mix(in srgb, var(--err) 50%, var(--border));
+  background: color-mix(in srgb, var(--err) 10%, transparent);
+  color: var(--err);
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.rejectBtn:hover {
+  background: color-mix(in srgb, var(--err) 18%, transparent);
+}
+
+.rejectBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.muted {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.errorBanner {
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius);
+  border: 1px solid color-mix(in srgb, var(--err) 55%, var(--border));
+  background: color-mix(in srgb, var(--err) 10%, var(--surface));
+  font-size: 0.82rem;
+}
+
+.refreshBtn {
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+
+.refreshBtn:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}

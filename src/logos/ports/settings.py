@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Any
 
 
 @dataclass(frozen=True, slots=True)
@@ -69,5 +70,11 @@ class AppSettings:
     sync_hsi_on_startup: bool = False
     #: 每次 ``retrieve`` / 融合检索 ``query`` 前是否扫描 KSFS 并增量刷新 HSI/SVS（默认开启）
     sync_hsi_on_retrieve: bool = True
+    #: ``paths.kg_db_path``（默认 "./.index/.kg_cozo.db"；被 factory.py 中 kg_query 工具消费）
+    kg_db_path: str = "./.index/.kg_cozo.db"
+    #: ``paths.setting_entry_subdir``：相对 ``pending_review_subdir`` 的草稿子目录（默认 "setting_entry"）
+    setting_entry_subdir: str = "setting_entry"
+    #: per-skill deployment overrides（config/local.yaml → skills.overrides.<skill_id>）
+    skill_overrides: dict[str, dict[str, Any]] = field(default_factory=dict)
     #: MCP stdio 技能列表（``config`` 中 ``skills.mcp_servers``）；见 ``重要子系统开发文档/MCP开发.md``
     mcp_servers: tuple[McpServerEntry, ...] = field(default_factory=tuple)

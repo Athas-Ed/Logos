@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Literal
@@ -17,6 +17,7 @@ from logos.platform.mcp_stdio import resolve_repo_root
 
 PersistenceTier = Literal["p0", "p1", "p2"]
 TurnPolicy = Literal["single", "multi"]
+QaMode = Literal["normal", "continuous"]
 
 _REQUIRED_FIELDS = (
     "skill_id",
@@ -60,6 +61,16 @@ class SkillManifest:
     blueprint_path: str | None = None
     #: ``paradigm: pipeline`` 时必填；指向 ``resources/pipelines/<name>.yaml`` 与 entity_template profile
     pipeline_profile: str | None = None
+    #: 任务页是否支持在同一会话内连续追问/换题（默认普通单轮）
+    qa_mode: QaMode = "normal"
+    #: 是否在技能面板展示（默认展示；试制 Skill 可隐藏）
+    panel_visible: bool = True
+    #: 覆盖全局 react_max_steps（仅 ReAct 范式）
+    max_steps_override: int | None = None
+    #: 连续问答时对历史进行截断的完整轮次数（如 5）；None 表示不截断
+    history_clip_max_full_turns: int | None = None
+    #: 声明该技能需要从 config/local.yaml → skills.overrides.<id> 读取的配置键与默认值
+    config_requirements: dict[str, Any] = field(default_factory=dict)
 
 
 def manifests_dir() -> Path:
@@ -126,6 +137,42 @@ def _validate_manifest_dict(raw: dict[str, Any], *, source: str) -> SkillManifes
     if not isinstance(description, str):
         raise SkillManifestError(f"{source}: description must be a string")
 
+    qa_mode = raw.get("qa_mode", "normal")
+    if qa_mode is None:
+        qa_mode = "normal"
+    if qa_mode not in ("normal", "continuous"):
+        raise SkillManifestError(f"{source}: qa_mode must be 'normal' or 'continuous', got {qa_mode!r}")
+
+    panel_visible = raw.get("panel_visible", True)
+    if panel_visible is None:
+        panel_visible = True
+    if not isinstance(panel_visible, bool):
+        raise SkillManifestError(f"{source}: panel_visible must be a boolean")
+
+    max_steps_override = raw.get("max_steps_override")
+    if max_steps_override is not None:
+        if not isinstance(max_steps_override, int) or max_steps_override < 1:
+            raise SkillManifestError(
+                f"{source}: max_steps_override must be a positive int, got {max_steps_override!r}"
+            )
+
+    history_clip_max_full_turns = raw.get("history_clip_max_full_turns")
+    if history_clip_max_full_turns is not None:
+        if not isinstance(history_clip_max_full_turns, int) or history_clip_max_full_turns < 0:
+            raise SkillManifestError(
+                f"{source}: history_clip_max_full_turns must be a non-negative int, "
+                f"got {history_clip_max_full_turns!r}"
+            )
+
+    config_requirements_raw = raw.get("config_requirements")
+    if config_requirements_raw is not None:
+        if not isinstance(config_requirements_raw, dict):
+            raise SkillManifestError(f"{source}: config_requirements must be a mapping")
+        for ck in config_requirements_raw:
+            if not isinstance(ck, str):
+                raise SkillManifestError(f"{source}: config_requirements keys must be strings")
+    config_requirements = dict(config_requirements_raw) if config_requirements_raw else {}
+
     ui_instructions = raw.get("ui_instructions", "")
     if ui_instructions is None:
         ui_instructions = ""
@@ -163,6 +210,11 @@ def _validate_manifest_dict(raw: dict[str, Any], *, source: str) -> SkillManifes
         ui_instructions=ui_instructions.strip(),
         blueprint_path=blueprint_path,
         pipeline_profile=pipeline_profile,
+        qa_mode=qa_mode,
+        panel_visible=panel_visible,
+        max_steps_override=max_steps_override,
+        history_clip_max_full_turns=history_clip_max_full_turns,
+        config_requirements=config_requirements,
     )
 
 
@@ -201,6 +253,9 @@ class BootstrapSkillSummary:
     ui_instructions: str
     persistence_tier: PersistenceTier
     paradigm: Paradigm
+    turn_policy: TurnPolicy
+    qa_mode: QaMode = "normal"
+    panel_visible: bool = True
 
 
 def list_bootstrap_skill_summaries() -> tuple[BootstrapSkillSummary, ...]:
@@ -216,6 +271,9 @@ def list_bootstrap_skill_summaries() -> tuple[BootstrapSkillSummary, ...]:
                 ui_instructions=manifest.ui_instructions,
                 persistence_tier=manifest.persistence_tier,
                 paradigm=manifest.paradigm,
+                turn_policy=manifest.turn_policy,
+                qa_mode=manifest.qa_mode,
+                panel_visible=manifest.panel_visible,
             )
         )
     return tuple(summaries)

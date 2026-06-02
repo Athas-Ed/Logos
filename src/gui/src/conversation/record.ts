@@ -50,7 +50,7 @@ export function buildConversationRecord(args: {
   messages: ChatMessage[];
   citationTurns: CitationItem[][];
   toolTraceTurns: string[][];
-  reactStepLimitTurns?: { hit: boolean; canContinue: boolean }[];
+  reactStepLimitTurns?: { hit: boolean }[];
   operatingMode: OperatingMode;
   presentation: PresentationMode;
   status?: ConversationStatus;

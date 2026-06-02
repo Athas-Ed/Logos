@@ -7,7 +7,7 @@ ui_instructions: |
   完成后请在结果区查看写入路径；晋升至 KSFS 见后续步骤（F6-08）。
 persistence_tier: p0
 paradigm: pipeline
-pipeline_profile: default_import_v0
+pipeline_profile: your_profile_v1
 turn_policy: single
 allowed_tools: []
 prompt_runtime_key: skills/import_setting

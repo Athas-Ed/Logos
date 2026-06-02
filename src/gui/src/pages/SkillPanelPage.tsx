@@ -15,9 +15,6 @@ import { panelSkillsFromBootstrap } from "../types/bootstrap";
 
 import styles from "./SkillPanelPage.module.css";
 
-/** 面板隐藏、仅试验台保留（见 大纲规划skill.md） */
-const PAUSED_PANEL_SKILL_IDS = new Set(["outline_plan"]);
-
 export function SkillPanelPage() {
 
   const actions = useConversationActions();
@@ -129,7 +126,7 @@ export function SkillPanelPage() {
       <div className={styles.grid} role="list">
 
         {skills
-          .filter((skill) => !PAUSED_PANEL_SKILL_IDS.has(skill.skill_id))
+          .filter((skill) => skill.panel_visible !== false)
           .map((skill) => (
 
           <button

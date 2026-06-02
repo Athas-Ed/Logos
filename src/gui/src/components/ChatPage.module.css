@@ -342,12 +342,12 @@
 .textarea {
   width: 100%;
   resize: vertical;
-  min-height: 4.5rem;
   padding: 0.6rem 0.75rem;
   border-radius: var(--radius);
   border: 1px solid var(--border);
   background: var(--bg);
   color: var(--text);
+  overflow-y: auto;
 }
 
 .textarea:focus {

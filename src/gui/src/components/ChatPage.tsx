@@ -485,7 +485,7 @@ export function ChatPage({ lab = false }: ChatPageProps) {
 
                     (m.reasoning?.length ?? 0) > 0 ? (
 
-                      <details className={styles.reasoningFold} open>
+                      <details className={styles.reasoningFold}>
 
                         <summary className={styles.reasoningSummary}>
 

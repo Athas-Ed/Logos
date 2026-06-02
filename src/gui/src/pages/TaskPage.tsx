@@ -442,7 +442,7 @@ export function TaskPage() {
 
                     i === messages.length - 1 ?
 
-                      <details className={styles.inlineReasoning} open={streaming}>
+                      <details className={styles.inlineReasoning}>
 
                         <summary>推理片段</summary>
 
@@ -512,7 +512,7 @@ export function TaskPage() {
 
                 data-testid="task-input-textarea"
 
-                rows={isPipeline ? 10 : continuousQa ? 4 : 6}
+                rows={3}
 
                 placeholder={
 
@@ -594,23 +594,47 @@ export function TaskPage() {
 
                 {isPipeline && pipelineWrittenPaths.length > 0 && !streaming ?
 
-                  <button
+                  <>
 
-                    type="button"
+                    <button
 
-                    className={styles.primaryBtn}
+                      type="button"
 
-                    data-testid="task-promote-ksfs"
+                      className={styles.primaryBtn}
 
-                    disabled={promoteBusy}
+                      data-testid="task-promote-ksfs"
 
-                    onClick={() => void actions.promotePipelineDrafts(conversationId)}
+                      disabled={promoteBusy}
 
-                  >
+                      onClick={() => void actions.promotePipelineDrafts(conversationId)}
 
-                    {promoteBusy ? "晋升中…" : "晋升至 KSFS"}
+                    >
 
-                  </button>
+                      {promoteBusy ? "晋升中…" : "晋升至 KSFS"}
+
+                    </button>
+
+                    {promoteMessage && !promoteBusy ?
+
+                      <button
+
+                        type="button"
+
+                        className={styles.secondaryBtn}
+
+                        data-testid="task-go-review"
+
+                        onClick={() => actions.jumpToReview("setting_entry")}
+
+                      >
+
+                        进入审核
+
+                      </button>
+
+                    : null}
+
+                  </>
 
                 : null}
 

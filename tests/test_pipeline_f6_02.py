@@ -33,7 +33,7 @@ def _examples_dir() -> Path:
         resolve_repo_root()
         / "resources"
         / "entity_template"
-        / "default_import_v0"
+        / "your_profile_v1"
         / "examples"
     )
 
@@ -48,12 +48,12 @@ def _normalize_md(text: str) -> str:
 
 @pytest.fixture
 def profile():
-    return load_entity_template_profile("default_import_v0")
+    return load_entity_template_profile("your_profile_v1")
 
 
-def test_pipeline_spec_loads_default_import_v0() -> None:
-    spec = load_pipeline_spec("default_import_v0")
-    assert spec.profile_id == "default_import_v0"
+def test_pipeline_spec_loads_your_profile_v1() -> None:
+    spec = load_pipeline_spec("your_profile_v1")
+    assert spec.profile_id == "your_profile_v1"
     types = [s.type for s in spec.steps if s.enabled]
     assert "json_schema" in types
     assert "render" in types
@@ -79,24 +79,24 @@ def test_manifest_pipeline_requires_profile_field() -> None:
 def test_manifest_pipeline_dev_has_profile() -> None:
     m = get_skill_manifest("pipeline_dev")
     assert m.paradigm == "pipeline"
-    assert m.pipeline_profile == "default_import_v0"
+    assert m.pipeline_profile == "your_profile_v1"
 
 
 def test_validate_and_render_minimal_golden(tmp_path: Path, profile) -> None:
     batch = _load_batch("minimal_batch.json")
     validate_import_batch(batch, profile.schema_path)
     result = PipelineRunner(
-        profile_id="default_import_v0",
+        profile_id="your_profile_v1",
         workspace_root=tmp_path,
         llm=None,
     ).run("ignored", batch_json=batch, skip_step_types=frozenset({"llm_json"}))
     expected = _normalize_md(
         (_examples_dir() / "minimal_character_expected.md").read_text(encoding="utf-8")
     )
-    out_path = tmp_path / "setting_entry" / "characters" / "lin-dong.md"
+    out_path = tmp_path / "setting_entry" / "人物" / "lin-dong.md"
     assert out_path.is_file()
     assert _normalize_md(out_path.read_text(encoding="utf-8")) == expected
-    assert "setting_entry/characters/lin-dong.md" in result.written_paths
+    assert "setting_entry/人物/lin-dong.md" in result.written_paths
 
 
 def test_validate_and_render_with_suggestions_golden(tmp_path: Path, profile) -> None:
@@ -108,13 +108,13 @@ def test_validate_and_render_with_suggestions_golden(tmp_path: Path, profile) ->
     expected = _normalize_md(
         (_examples_dir() / "with_suggestions_expected.md").read_text(encoding="utf-8")
     )
-    out_path = tmp_path / "setting_entry" / "locations" / "qingyang-town.md"
+    out_path = tmp_path / "setting_entry" / "地点" / "qingyang-town.md"
     assert _normalize_md(out_path.read_text(encoding="utf-8")) == expected
 
 
 def test_validate_rejects_invalid_slug(profile) -> None:
     batch = _load_batch("minimal_batch.json")
-    batch["units"][0]["slug"] = "INVALID"
+    batch["units"][0]["slug"] = "带空格 slug"
     with pytest.raises(PipelineValidationError):
         validate_import_batch(batch, profile.schema_path)
 

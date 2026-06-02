@@ -6,8 +6,8 @@ schema: schema.json
 render: render_spec.yaml
 llm_instructions: llm_instructions.md
 
-# 相对 workspace_root；与 workspace/setting_entry/README.md 一致
-drafts_subdir: setting_entry
+# 相对 workspace_root（在 pending_review/ 下）
+drafts_subdir: pending_review/setting_entry
 
 notes: >
   首版用于 Schema 校验 + 本地渲染落盘到 workspace/setting_entry/ 下约定子树。

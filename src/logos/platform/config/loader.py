@@ -224,6 +224,12 @@ def merged_dict_to_app_settings(data: Mapping[str, Any]) -> AppSettings:
             )
             raise ValueError(msg)
     mcp_servers = _parse_mcp_servers(skills if isinstance(skills, Mapping) else {})
+    overrides_raw = skills.get("overrides") if isinstance(skills, Mapping) else {}
+    skill_overrides: dict[str, dict[str, Any]] = {}
+    if isinstance(overrides_raw, dict):
+        for k, v in overrides_raw.items():
+            if isinstance(k, str) and isinstance(v, dict):
+                skill_overrides[k] = dict(v)
     ui = data.get("ui") if isinstance(data.get("ui"), dict) else {}
     obs = data.get("obs") if isinstance(data.get("obs"), dict) else {}
     agent = data.get("agent") if isinstance(data.get("agent"), dict) else {}
@@ -240,6 +246,10 @@ def merged_dict_to_app_settings(data: Mapping[str, Any]) -> AppSettings:
             or "./workspace/conversations"
         ),
         hsi_sqlite_path=str(paths.get("hsi_sqlite_path", "./.index/.high-speed_index")),
+        kg_db_path=str(paths.get("kg_db_path", "./.index/.kg_cozo.db")),
+        setting_entry_subdir=str(
+            paths.get("setting_entry_subdir", "setting_entry")
+        ),
         writing_entry_subdir=str(
             paths.get("writing_entry_subdir", "writing_entry")
         ),
@@ -285,6 +295,7 @@ def merged_dict_to_app_settings(data: Mapping[str, Any]) -> AppSettings:
         sync_hsi_on_retrieve=_coerce_truthy(
             paths.get("sync_hsi_on_retrieve"), default=True
         ),
+        skill_overrides=skill_overrides,
         mcp_servers=mcp_servers,
     )
 

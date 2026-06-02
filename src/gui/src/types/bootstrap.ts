@@ -56,6 +56,12 @@ export type BootstrapSkill = {
 
   paradigm: SkillCardMeta["paradigm"];
 
+  turn_policy?: SkillCardMeta["turn_policy"];
+
+  qa_mode?: SkillCardMeta["qa_mode"];
+
+  panel_visible?: SkillCardMeta["panel_visible"];
+
 };
 
 
@@ -164,7 +170,7 @@ function isBootstrapSkill(raw: unknown): raw is BootstrapSkill {
 
 
 
-/** 将 bootstrap.skills 转为面板/页面元数据（补全 `turn_policy`） */
+/** 将 bootstrap.skills 转为面板/页面元数据 */
 
 export function panelSkillsFromBootstrap(
 
@@ -188,31 +194,37 @@ export function panelSkillsFromBootstrap(
 
     }
 
-    const fallback = FALLBACK_PANEL_SKILLS.find((c) => c.skill_id === item.skill_id);
+    const safe = item as BootstrapSkill;
+
+    const fallback = FALLBACK_PANEL_SKILLS.find((c) => c.skill_id === safe.skill_id);
 
     const ui =
 
-      typeof item.ui_instructions === "string" && item.ui_instructions.trim()
+      typeof safe.ui_instructions === "string" && safe.ui_instructions.trim()
 
-        ? item.ui_instructions.trim()
+        ? safe.ui_instructions.trim()
 
         : (fallback?.ui_instructions ?? "");
 
     out.push({
 
-      skill_id: item.skill_id,
+      skill_id: safe.skill_id,
 
-      display_name: item.display_name,
+      display_name: safe.display_name,
 
-      description: item.description,
+      description: safe.description,
 
       ui_instructions: ui,
 
-      persistence_tier: item.persistence_tier,
+      persistence_tier: safe.persistence_tier,
 
-      paradigm: item.paradigm,
+      paradigm: safe.paradigm,
 
-      turn_policy: fallback?.turn_policy ?? "single",
+      turn_policy: safe.turn_policy ?? fallback?.turn_policy ?? "single",
+
+      qa_mode: safe.qa_mode ?? fallback?.qa_mode ?? "normal",
+
+      panel_visible: safe.panel_visible ?? fallback?.panel_visible ?? true,
 
     });
 

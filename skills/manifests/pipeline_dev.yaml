@@ -1,12 +1,12 @@
 # F6-02 烟测：平台 pipeline 骨架（非产品竖切片；F6-03 以 import_setting 替代面板入口）
 skill_id: pipeline_dev
 display_name: Pipeline 烟测（开发）
-description: 校验 + 渲染 default_import_v0 金样（开发用，勿作产品入口）
+description: 校验 + 渲染 your_profile_v1 金样（开发用，勿作产品入口）
 ui_instructions: |
   开发烟测：注入金样 JSON 或粘贴设定正文。产品导入请用 import_setting（F6-03）。
 persistence_tier: p0
 paradigm: pipeline
-pipeline_profile: default_import_v0
+pipeline_profile: your_profile_v1
 turn_policy: single
 allowed_tools: []
 prompt_runtime_key: skills/lint_zh

@@ -1,0 +1,12 @@
+{
+  "batch_id": "01ARZ3NDEKTSV4RRFFQ69G5FAV",
+  "source_label": "fixture-minimal",
+  "units": [
+    {
+      "classification": "character",
+      "slug": "lin-dong",
+      "title": "林动",
+      "body_markdown": "出身青阳镇，性格执拗。"
+    }
+  ]
+}

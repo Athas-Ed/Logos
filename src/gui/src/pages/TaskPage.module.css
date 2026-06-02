@@ -136,7 +136,6 @@
 
 .textarea {
   width: 100%;
-  min-height: 7rem;
   padding: 0.65rem 0.75rem;
   border-radius: var(--radius);
   border: 1px solid var(--border);
@@ -145,6 +144,7 @@
   font: inherit;
   line-height: 1.5;
   resize: vertical;
+  overflow-y: auto;
 }
 
 .textarea:focus {

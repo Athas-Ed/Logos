@@ -442,6 +442,57 @@ def build_v01_guarded_tool_registry(
             parameters=PROMOTE_DRAFT_PARAMETERS,
             handler=_promote_draft,
         )
+    if _tool_in_skill_scope("kg_query", scoped):
+        _kg_db_lock_local = threading.Lock()
+        _kg_db_local = [None]
+
+        def _lazy_kg_db():
+            if _kg_db_local[0] is None:
+                with _kg_db_lock_local:
+                    if _kg_db_local[0] is None:
+                        from logos.persistence.kg import open_db
+                        db_path = settings.kg_db_path
+                        _kg_db_local[0] = open_db(db_path)
+            return _kg_db_local[0]
+
+        def _kg_query(
+            slug, query_type="neighbors", max_hops=1, target_slug="", relation_type=""
+        ):
+            db = _lazy_kg_db()
+            from logos.persistence.kg.query import neighbors as _nbrs, shortest_path as _sp
+            try:
+                if query_type == "shortest_path":
+                    if not target_slug:
+                        return json.dumps({"error": "shortest_path needs target_slug"}, ensure_ascii=False)
+                    path = _sp(db, slug, target_slug)
+                    return json.dumps({"path": path, "found": path is not None}, ensure_ascii=False)
+                else:
+                    rt = relation_type.strip() or None
+                    nbrs = _nbrs(db, slug, max_hops=max_hops, relation_type=rt)
+                    return json.dumps({"slug": slug, "neighbors": nbrs, "count": len(nbrs)}, ensure_ascii=False)
+            except Exception as exc:
+                return json.dumps({"error": str(exc)}, ensure_ascii=False)
+
+        reg.register(
+            "kg_query",
+            description="Query the knowledge graph (KG): return neighbors of an entity or shortest path between two entities. Data source: relations[] in KSFS front matter.",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "slug": {"type": "string", "description": "Entity slug (e.g. ye-hanyan)"},
+                    "query_type": {
+                        "type": "string", "enum": ["neighbors", "shortest_path"],
+                        "description": "neighbors=related entities; shortest_path=path to target",
+                        "default": "neighbors",
+                    },
+                    "max_hops": {"type": "integer", "description": "Expansion hops (neighbors only, default 1)", "default": 1},
+                    "target_slug": {"type": "string", "description": "Target slug (shortest_path only)", "default": ""},
+                    "relation_type": {"type": "string", "description": "Optional filter (e.g. owns, member_of)", "default": ""},
+                },
+                "required": ["slug"],
+            },
+            handler=_kg_query,
+        )
     for t, cmd, child_env in mcp_handlers:
         if not _tool_in_skill_scope(t.name, scoped):
             continue

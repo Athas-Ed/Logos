@@ -1,0 +1,21 @@
+# 自定义世界观实体模板（8 分类）
+# YAML 头（结构化元数据）与 body（叙事正文）分离设计
+# relations 为 KG 预留的一等公民字段
+profile_id: your_profile_v1
+version: "1.0.0"
+
+schema: schema.json
+render: render_spec.yaml
+llm_instructions: llm_instructions.md
+
+# 待落户草稿子目录（相对于 workspace_root，在 pending_review/ 下）
+drafts_subdir: pending_review/setting_entry
+
+notes: >
+  完整 8 分类模板：character / location / faction / item /
+  event / concept / race / timeline。
+  relations 字段通过 target_slug 交叉引用同一批次内或 KSFS 已有实体。
+
+extras:
+  kg_json_placeholder: null
+  prompt_allow_deny_lists: null

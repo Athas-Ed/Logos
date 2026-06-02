@@ -12,6 +12,10 @@ export type SkillCardMeta = {
   paradigm: "dialogue" | "react" | "plan" | "pipeline";
   persistence_tier: "p0" | "p1" | "p2";
   turn_policy: TurnPolicy;
+  /** 任务页是否支持在同一会话内连续追问/换题 */
+  qa_mode?: "normal" | "continuous";
+  /** 是否在技能面板展示（默认展示） */
+  panel_visible?: boolean;
 };
 
 const LINT_UI = `粘贴或输入一段中文正文；助手将指出语病与表达问题（单轮，无工具调用）。
@@ -66,7 +70,8 @@ export const PARADIGM_LABELS: Record<SkillCardMeta["paradigm"], string> = {
   pipeline: "pipeline（设定导入）",
 };
 
-export const BUILTIN_SKILL_CARDS: readonly SkillCardMeta[] = [
+/** bootstrap 请求失败时的面板 Skill 回退列表（只含核心技能；新增技能只需写 manifest YAML）。 */
+export const FALLBACK_PANEL_SKILLS: readonly SkillCardMeta[] = [
   {
     skill_id: "lint_zh",
     display_name: "中文语病检查",
@@ -75,6 +80,8 @@ export const BUILTIN_SKILL_CARDS: readonly SkillCardMeta[] = [
     paradigm: "dialogue",
     persistence_tier: "p2",
     turn_policy: "single",
+    qa_mode: "normal",
+    panel_visible: true,
   },
   {
     skill_id: "chat_inspire",
@@ -84,32 +91,48 @@ export const BUILTIN_SKILL_CARDS: readonly SkillCardMeta[] = [
     paradigm: "dialogue",
     persistence_tier: "p2",
     turn_policy: "multi",
+    qa_mode: "normal",
+    panel_visible: true,
   },
-] as const;
-
-const RETRIEVE_QA_CARD = LAB_SKILL_CARDS.find((c) => c.skill_id === "retrieve_qa")!;
-
-const IMPORT_SETTING_CARD: SkillCardMeta = {
-  skill_id: "import_setting",
-  display_name: "导入设定",
-  description: "粘贴设定 → 结构化 JSON → setting_entry 草稿（pipeline）。",
-  ui_instructions: IMPORT_UI,
-  paradigm: "pipeline",
-  persistence_tier: "p0",
-  turn_policy: "single",
-};
-
-/** bootstrap 请求失败时的面板 Skill 列表 */
-export const FALLBACK_PANEL_SKILLS: readonly SkillCardMeta[] = [
-  ...BUILTIN_SKILL_CARDS,
-  RETRIEVE_QA_CARD,
-  IMPORT_SETTING_CARD,
+  {
+    skill_id: "retrieve_qa",
+    display_name: "检索问答",
+    description: "react · retrieve + read_ksfs + ReAct",
+    ui_instructions: RETRIEVE_UI,
+    paradigm: "react",
+    persistence_tier: "p2",
+    turn_policy: "single",
+    qa_mode: "continuous",
+    panel_visible: true,
+  },
+  {
+    skill_id: "import_setting",
+    display_name: "导入设定",
+    description: "粘贴设定 → 结构化 JSON → setting_entry 草稿（pipeline）。",
+    ui_instructions: IMPORT_UI,
+    paradigm: "pipeline",
+    persistence_tier: "p0",
+    turn_policy: "single",
+    qa_mode: "normal",
+    panel_visible: true,
+  },
+  {
+    skill_id: "draft_review",
+    display_name: "审核晋升",
+    description: "审阅 pending_review 下草稿，晋升至 KSFS 或打回 LLM 重写。",
+    ui_instructions: "审阅 pending_review 目录下的草稿文件。勾选文件后可以晋升至 KSFS 或打回要求 LLM 重写。",
+    paradigm: "dialogue",
+    persistence_tier: "p1",
+    turn_policy: "single",
+    qa_mode: "normal",
+    panel_visible: true,
+  },
 ] as const;
 
 /** @deprecated 使用 {@link getSkillMeta}（registry） */
 export function getSkillCard(skillId: string): SkillCardMeta | undefined {
   return (
-    BUILTIN_SKILL_CARDS.find((c) => c.skill_id === skillId) ??
+    FALLBACK_PANEL_SKILLS.find((c) => c.skill_id === skillId) ??
     LAB_SKILL_CARDS.find((c) => c.skill_id === skillId)
   );
 }

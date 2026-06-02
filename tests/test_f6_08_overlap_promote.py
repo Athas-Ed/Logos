@@ -22,20 +22,20 @@ from tests.test_stream5_api import _make_ports
 
 
 def test_overlap_scan_warns_existing_draft_and_ksfs(tmp_path: Path) -> None:
-    profile = load_entity_template_profile("default_import_v0")
+    profile = load_entity_template_profile("your_profile_v1")
     batch = _load_batch("minimal_batch.json")
     validate_import_batch(batch, profile.schema_path)
 
     ws = tmp_path / "workspace"
     ws.mkdir()
-    drafts = ws / "setting_entry" / "characters"
+    drafts = ws / "setting_entry" / "人物"
     drafts.mkdir(parents=True)
     (drafts / "lin-dong.md").write_text("# existing draft\n", encoding="utf-8")
 
     ksfs = tmp_path / "ksfs"
     ksfs.mkdir()
-    (ksfs / "characters").mkdir(parents=True)
-    (ksfs / "characters" / "lin-dong.md").write_text("# existing ksfs\n", encoding="utf-8")
+    (ksfs / "人物").mkdir(parents=True)
+    (ksfs / "人物" / "lin-dong.md").write_text("# existing ksfs\n", encoding="utf-8")
 
     warnings = scan_import_overlap(
         batch,
@@ -49,16 +49,16 @@ def test_overlap_scan_warns_existing_draft_and_ksfs(tmp_path: Path) -> None:
 
 
 def test_pipeline_overlap_sse_warning(tmp_path: Path) -> None:
-    profile = load_entity_template_profile("default_import_v0")
+    profile = load_entity_template_profile("your_profile_v1")
     batch = _load_batch("minimal_batch.json")
     ws = tmp_path / "workspace"
-    (ws / "setting_entry" / "characters").mkdir(parents=True)
-    (ws / "setting_entry" / "characters" / "lin-dong.md").write_text("x", encoding="utf-8")
+    (ws / "setting_entry" / "人物").mkdir(parents=True)
+    (ws / "setting_entry" / "人物" / "lin-dong.md").write_text("x", encoding="utf-8")
     ksfs = tmp_path / "ksfs"
     ksfs.mkdir()
 
     runner = PipelineRunner(
-        profile_id="default_import_v0",
+        profile_id="your_profile_v1",
         workspace_root=ws,
         ksfs_root=ksfs,
         llm=None,

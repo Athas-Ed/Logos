@@ -62,3 +62,10 @@ export type ConversationState = {
   hydrated: boolean;
   persistError: string | null;
 };
+
+/** 非对话标签（如 ReviewPage），TabBar 用 id + title 渲染，不创建 ConversationState。 */
+export type NonConversationTab = {
+  id: string;
+  title: string;
+  path: string;
+};

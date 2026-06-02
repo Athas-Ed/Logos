@@ -6,6 +6,8 @@ import { ChatPage } from "../components/ChatPage";
 
 import { CachePage } from "../pages/CachePage";
 
+import { ReviewPage } from "../pages/ReviewPage";
+
 import { SettingsPage } from "../pages/SettingsPage";
 
 import { SkillPanelPage } from "../pages/SkillPanelPage";
@@ -29,6 +31,8 @@ export function AppRoutes() {
         <Route path="lab/:id" element={<ChatPage lab />} />
 
         <Route path="chat/:id" element={<ChatPage />} />
+
+        <Route path="review/:id" element={<ReviewPage />} />
 
         <Route path="settings" element={<SettingsPage />} />
 

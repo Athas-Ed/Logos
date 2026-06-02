@@ -31,7 +31,7 @@ _log = logging.getLogger("logos.run_dev_backend")
 
 
 def main() -> None:
-    logging.basicConfig(level=logging.INFO)
+    # 日志初始化推迟到 settings 加载后，见下方 configure_logging 调用
     try:
         import uvicorn
     except ImportError as e:
@@ -96,6 +96,12 @@ def main() -> None:
             return [[0.0] * 512 for _ in texts]
 
     settings = load_app_settings(config_dir=_REPO_ROOT / "config")
+
+    # ── 初始化 Obs 日志系统（文件落盘：daily/ + maint/） ──
+    from logos.platform.obs import configure_logging
+
+    configure_logging(settings)
+
     if any(s.enabled for s in settings.mcp_servers) and importlib.util.find_spec(
         "mcp"
     ) is None:

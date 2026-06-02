@@ -59,7 +59,7 @@ import {
   isSessionDismissed,
   markSessionDismissed,
 } from "./sessionDismissed";
-import type { ConversationState } from "./storeTypes";
+import type { ConversationState, NonConversationTab } from "./storeTypes";
 import { buildConversationRecord } from "./record";
 import { writeConversationIpc } from "./ipc";
 import { normalizeInterruptedConversationState } from "./streamLifecycle";
@@ -100,12 +100,17 @@ export type ConversationActions = {
   resetTaskToInput: (id: string) => void;
   /** import_setting：将 setting_entry 草稿晋升至 KSFS（F6-08） */
   promotePipelineDrafts: (id: string) => Promise<void>;
+  /** 从 import_setting 跳转到审核晋升页面（不归档当前会话）。 */
+  jumpToReview: (scope?: string) => void;
+  /** 关闭非对话标签（如 ReviewPage），从顶栏移除并导航。 */
+  closeNonConversationTab: (id: string) => void;
   stopStream: (id: string) => void;
 };
 
 export type ConversationMeta = {
   ready: boolean;
   openTabIds: string[];
+  nonConvoTabs: NonConversationTab[];
   sseMaxNum: number;
   activeStreamCount: number;
   queueLength: number;
@@ -159,6 +164,8 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
   const [, setById] = useState<Record<string, ConversationState>>({});
   const [openTabIds, setOpenTabIds] = useState<string[]>([]);
   const openTabIdsRef = useRef<string[]>([]);
+  const [nonConvoTabs, setNonConvoTabs] = useState<NonConversationTab[]>([]);
+  const nonConvoTabsRef = useRef<NonConversationTab[]>([]);
   const [sseMaxNum, setSseMaxNum] = useState(3);
 
   /** 须在 setById updater 内同步写入；勿在 render 中用 React state 覆盖（会冲掉未提交的 SSE patch）。 */
@@ -188,6 +195,7 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
   const metaSnapshotRef = useRef<ConversationMeta>({
     ready: false,
     openTabIds: [],
+    nonConvoTabs: [],
     sseMaxNum: 3,
     activeStreamCount: 0,
     queueLength: 0,
@@ -195,15 +203,17 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
 
   const publishMeta = useCallback(() => {
     openTabIdsRef.current = openTabIds;
+    nonConvoTabsRef.current = nonConvoTabs;
     metaSnapshotRef.current = {
       ready,
       openTabIds,
+      nonConvoTabs,
       sseMaxNum,
       activeStreamCount: activeStreamCountRef.current,
       queueLength: queueRef.current.length,
     };
     notifyAllConversations();
-  }, [ready, openTabIds, sseMaxNum]);
+  }, [ready, openTabIds, nonConvoTabs, sseMaxNum]);
 
   const commitConversationState = useCallback(
     (
@@ -724,6 +734,41 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
     [patchConversation, stopStream],
   );
 
+  const jumpToReview = useCallback(
+    (scope?: string) => {
+      const id = generateConversationId();
+      const params = scope ? `?scope=${encodeURIComponent(scope)}` : "";
+      const tab: NonConversationTab = {
+        id,
+        title: "审核晋升",
+        path: `/review/${id}${params}`,
+      };
+      setNonConvoTabs((prev) => {
+        if (prev.some((t) => t.id === id)) return prev;
+        return [...prev, tab];
+      });
+      navigate(`/review/${id}${params}`);
+    },
+    [navigate],
+  );
+
+  const closeNonConversationTab = useCallback(
+    (conversationId: string) => {
+      const path = currentAppPath();
+      const onRoute = path.startsWith(`/review/${conversationId}`);
+      setNonConvoTabs((prev) => {
+        const next = prev.filter((t) => t.id !== conversationId);
+        if (onRoute && next.length === 0) {
+          navigate("/", { replace: true });
+        } else if (onRoute && next.length > 0) {
+          navigate(next[next.length - 1].path, { replace: true });
+        }
+        return next;
+      });
+    },
+    [navigate],
+  );
+
   const promotePipelineDrafts = useCallback(
     async (conversationId: string) => {
       const cur = byIdRef.current[conversationId];
@@ -1146,6 +1191,8 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
       patchConversation,
       resetTaskToInput,
       promotePipelineDrafts,
+      jumpToReview,
+      closeNonConversationTab,
       sendMessage,
       submitTaskRun,
       submitTaskSend,
@@ -1164,6 +1211,8 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
       ensureOpenTab,
       patchConversation,
       promotePipelineDrafts,
+      jumpToReview,
+      closeNonConversationTab,
       resetTaskToInput,
       sendMessage,
       submitTaskRun,
