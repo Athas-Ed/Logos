@@ -31,6 +31,18 @@ const RETRIEVE_UI = `用自然语言提问；助手会先检索 KSFS，再按需
 const INSPIRE_UI = `多轮创作启发对话：在下方输入创作相关问题，按 Enter 发送。
 切换顶栏标签不会中断后台 SSE；超额请求将排队。`;
 
+const SETTING_WRITE_UI = `ReAct 设定撰写工具链：助手自动调 retrieve → read_ksfs → 设定写入等工具。
+执行阶段可查看 ReAct 轨迹。适用于基于 KSFS 知识的设定补充与撰写。`;
+
+const OUTLINE_PLAN_UI = `Plan 范式大纲规划：助手先规划步骤骨架，再按步执行。
+适用于需要结构化输出的大纲/规划类任务。`;
+
+const IMPORT_UI_LAB = `Pipeline 导入设定流水线：助手自动执行多步 pipeline（序列化 → 校验 → 写入草稿）。
+完成后结果展示在右侧阶段进度中。`;
+
+const DRAFT_REVIEW_UI_LAB = `审核晋升（dialogue 路线）：列出 pending_review 下草稿文件，助手辅助审阅。
+注意：产品模式走独立 ReviewPage 面板，试验台走通用对话页供核查 Prompt。`;
+
 /** 范式试验台可选 Skill（含 react 样例） */
 export const LAB_SKILL_CARDS: readonly SkillCardMeta[] = [
   {
@@ -58,6 +70,42 @@ export const LAB_SKILL_CARDS: readonly SkillCardMeta[] = [
     ui_instructions: RETRIEVE_UI,
     paradigm: "react",
     persistence_tier: "p2",
+    turn_policy: "single",
+  },
+  {
+    skill_id: "setting_write",
+    display_name: "设定撰写",
+    description: "react · 基于 KSFS 知识的设定撰写",
+    ui_instructions: SETTING_WRITE_UI,
+    paradigm: "react",
+    persistence_tier: "p1",
+    turn_policy: "single",
+  },
+  {
+    skill_id: "outline_plan",
+    display_name: "大纲规划",
+    description: "plan · 分步规划 + 执行",
+    ui_instructions: OUTLINE_PLAN_UI,
+    paradigm: "plan",
+    persistence_tier: "p1",
+    turn_policy: "single",
+  },
+  {
+    skill_id: "import_setting",
+    display_name: "导入设定（pipeline）",
+    description: "pipeline · 导入 + 校验 + 写入草稿",
+    ui_instructions: IMPORT_UI_LAB,
+    paradigm: "pipeline",
+    persistence_tier: "p0",
+    turn_policy: "single",
+  },
+  {
+    skill_id: "draft_review",
+    display_name: "审核晋升",
+    description: "dialogue · 草稿审阅 Prompt 核查",
+    ui_instructions: DRAFT_REVIEW_UI_LAB,
+    paradigm: "dialogue",
+    persistence_tier: "p1",
     turn_policy: "single",
   },
 ] as const;
