@@ -117,7 +117,7 @@ export const PARADIGM_LABELS: Record<SkillCardMeta["paradigm"], string> = {
   dialogue: "dialogue（自然语言 SSE）",
   react: "react（ReAct + 工具轨迹）",
   plan: "plan（Phase A）",
-  pipeline: "pipeline（设定导入）",
+  pipeline: "HITL Plan-and-Execute（设定导入流水线）",
 };
 
 /** bootstrap 请求失败时的面板 Skill 回退列表（只含核心技能；新增技能只需写 manifest YAML）。 */

@@ -76,12 +76,6 @@ def test_manifest_pipeline_requires_profile_field() -> None:
         _validate_manifest_dict(base, source="test")
 
 
-def test_manifest_pipeline_dev_has_profile() -> None:
-    m = get_skill_manifest("pipeline_dev")
-    assert m.paradigm == "pipeline"
-    assert m.pipeline_profile == "your_profile_v1"
-
-
 def test_validate_and_render_minimal_golden(tmp_path: Path, profile) -> None:
     batch = _load_batch("minimal_batch.json")
     validate_import_batch(batch, profile.schema_path)
@@ -119,10 +113,6 @@ def test_validate_rejects_invalid_slug(profile) -> None:
         validate_import_batch(batch, profile.schema_path)
 
 
-def test_select_paradigm_pipeline_dev() -> None:
-    assert pr_mod.select_paradigm("pipeline_dev") == "pipeline"
-
-
 def test_shell_pipeline_does_not_call_react_loop(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -140,7 +130,7 @@ def test_shell_pipeline_does_not_call_react_loop(
     shell = AgentShell(llm=llm, tools=ToolRegistry())
     items = list(
         shell.iter_paradigm_task(
-            "pipeline_dev",
+            "import_setting",
             "paste",
             workspace_root=tmp_path,
         )
@@ -167,7 +157,7 @@ def test_shell_pipeline_does_not_call_react_loop_via_runner(
     shell = AgentShell(llm=MagicMock(), tools=ToolRegistry())
     list(
         shell.iter_paradigm_task(
-            "pipeline_dev",
+            "import_setting",
             "x",
             workspace_root=tmp_path,
         )

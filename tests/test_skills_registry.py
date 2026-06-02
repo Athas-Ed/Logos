@@ -64,7 +64,6 @@ def test_list_builtin_includes_samples() -> None:
     assert "chat_inspire" in ids
     assert "retrieve_qa" in ids
     assert "outline_plan" in ids
-    assert "pipeline_dev" in ids
 
 
 def test_dialogue_manifest_rejects_stray_pipeline_profile() -> None:

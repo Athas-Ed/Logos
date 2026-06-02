@@ -21,7 +21,7 @@ manifest 位于 `skills/manifests/<skill_id>.yaml`，与 `skills/<name>/` 下的
 | `import_setting` | 结构化设定导入 |
 | `retrieve_qa` | 检索问答（同会话连续多轮；步数见 `agent.react.max_QA_steps`） |
 | `outline_plan` | 大纲规划 |
-| `pipeline_dev` | 流水线开发调试 |
+| `import_setting` | 导入设定（HITL Plan-and-Execute） |
 
 以 `skills/manifests/` 实际文件为准。
 
