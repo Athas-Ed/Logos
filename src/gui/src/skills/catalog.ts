@@ -16,6 +16,8 @@ export type SkillCardMeta = {
   qa_mode?: "normal" | "continuous";
   /** 是否在技能面板展示（默认展示） */
   panel_visible?: boolean;
+  /** 自定义独立页面路由（不走通用 TaskPage/ChatPage） */
+  customPage?: "review";
 };
 
 const LINT_UI = `粘贴或输入一段中文正文；助手将指出语病与表达问题（单轮，无工具调用）。
@@ -126,6 +128,7 @@ export const FALLBACK_PANEL_SKILLS: readonly SkillCardMeta[] = [
     turn_policy: "single",
     qa_mode: "normal",
     panel_visible: true,
+    customPage: "review",
   },
 ] as const;
 

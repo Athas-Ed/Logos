@@ -226,6 +226,8 @@ export function panelSkillsFromBootstrap(
 
       panel_visible: safe.panel_visible ?? fallback?.panel_visible ?? true,
 
+      customPage: fallback?.customPage,
+
     });
 
   }

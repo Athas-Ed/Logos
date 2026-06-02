@@ -143,7 +143,11 @@ export function SkillPanelPage() {
 
             onClick={() => {
 
-              if (skillUsesTaskWizard(skill.skill_id)) {
+              if (skill.customPage === "review") {
+
+                actions.jumpToReview();
+
+              } else if (skillUsesTaskWizard(skill.skill_id)) {
 
                 actions.createTask(skill.skill_id);
 
