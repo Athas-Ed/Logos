@@ -55,17 +55,12 @@ export type ConversationState = {
   operatingMode: OperatingMode;
   presentation: PresentationMode;
   streaming: boolean;
+  /** 页面类型：review = 审核晋升独立页面，缺省则走 chat/task 路由 */
+  pageType?: "review";
   /** 已提交发送但等待 SSE 槽位 */
   queued: boolean;
   streamError: string | null;
   unread: boolean;
   hydrated: boolean;
   persistError: string | null;
-};
-
-/** 非对话标签（如 ReviewPage），TabBar 用 id + title 渲染，不创建 ConversationState。 */
-export type NonConversationTab = {
-  id: string;
-  title: string;
-  path: string;
 };

@@ -53,53 +53,6 @@ function TabItem({ id, active }: { id: string; active: boolean }) {
   );
 }
 
-/** 非对话标签（如 ReviewPage）：只用 meta 中的信息渲染，不调 useConversationState。 */
-function NonConvoTabItem({
-  id,
-  title,
-  path,
-  active,
-}: {
-  id: string;
-  title: string;
-  path: string;
-  active: boolean;
-}) {
-  const navigate = useNavigate();
-  const actions = useConversationActions();
-
-  return (
-    <div
-      role="tab"
-      aria-selected={active}
-      className={`${styles.tab} ${active ? styles.tabActive : ""}`}
-    >
-      <button
-        type="button"
-        className={styles.tabLabel}
-        title={title}
-        onClick={() => {
-          navigate(path);
-        }}
-      >
-        {title}
-      </button>
-      <button
-        type="button"
-        className={styles.closeBtn}
-        aria-label={`关闭 ${title}`}
-        title="关闭标签"
-        onClick={(e) => {
-          e.stopPropagation();
-          actions.closeNonConversationTab(id);
-        }}
-      >
-        ×
-      </button>
-    </div>
-  );
-}
-
 export function TabBar() {
   const { id: routeId } = useParams<{ id: string }>();
   const meta = useConversationMeta();
@@ -113,15 +66,6 @@ export function TabBar() {
       <div className={styles.tabList} role="tablist">
         {meta.openTabIds.map((id) => (
           <TabItem key={id} id={id} active={id === routeId} />
-        ))}
-        {meta.nonConvoTabs.map((tab) => (
-          <NonConvoTabItem
-            key={tab.id}
-            id={tab.id}
-            title={tab.title}
-            path={tab.path}
-            active={tab.id === routeId}
-          />
         ))}
         <TabNewButton />
       </div>

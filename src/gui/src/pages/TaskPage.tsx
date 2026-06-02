@@ -624,7 +624,7 @@ export function TaskPage() {
 
                         data-testid="task-go-review"
 
-                        onClick={() => actions.jumpToReview("setting_entry")}
+                        onClick={() => actions.createReviewSession("setting_entry")}
 
                       >
 

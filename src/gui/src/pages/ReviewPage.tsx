@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { streamChat, type StreamChatEvent } from "../api/sseChat";
+
+import { useConversation } from "../conversation/ConversationProvider";
 
 import {
   fetchDraftsList,
@@ -16,7 +18,9 @@ import styles from "./ReviewPage.module.css";
 
 /** 审核晋升 Skill 页面：左栏文件列表，右栏预览/对话，底部操作区。 */
 export function ReviewPage() {
-  const { id: _conversationId } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { id: conversationId } = useParams<{ id: string }>();
+  const { actions } = useConversation(conversationId ?? "");
   const [searchParams] = useSearchParams();
   const scope = searchParams.get("scope") ?? "";
   const scopeLabel = scope || "全部 pending_review";
@@ -228,7 +232,20 @@ export function ReviewPage() {
   return (
     <div className={styles.page} data-testid="review-page">
       <header className={styles.header}>
-        <h1 className={styles.title}>审核晋升</h1>
+        <div className={styles.headerLeft}>
+          <button
+            type="button"
+            className={styles.backBtn}
+            data-testid="review-back"
+            onClick={() => {
+              if (conversationId) actions.archiveTab(conversationId);
+              navigate("/skills");
+            }}
+          >
+            ← 返回
+          </button>
+          <h1 className={styles.title}>审核晋升</h1>
+        </div>
         <span className={styles.scopeHint}>{scopeLabel}</span>
         <button
           type="button"

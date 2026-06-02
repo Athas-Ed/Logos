@@ -11,9 +11,12 @@ export function skillUsesTaskWizard(skillId: string): boolean {
 }
 
 export function conversationNavPath(
-  state: Pick<ConversationState, "id" | "labMode" | "skillId" | "taskPhase">,
+  state: Pick<ConversationState, "id" | "labMode" | "skillId" | "taskPhase" | "pageType">,
 ): string {
-  const { id, labMode, skillId, taskPhase } = state;
+  const { id, labMode, skillId, taskPhase, pageType } = state;
+  if (pageType === "review") {
+    return `/review/${id}`;
+  }
   if (labMode) {
     return `/lab/${id}`;
   }

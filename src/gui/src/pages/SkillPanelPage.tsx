@@ -145,7 +145,7 @@ export function SkillPanelPage() {
 
               if (skill.customPage === "review") {
 
-                actions.jumpToReview();
+                actions.createReviewSession();
 
               } else if (skillUsesTaskWizard(skill.skill_id)) {
 

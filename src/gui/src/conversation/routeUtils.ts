@@ -11,6 +11,8 @@ export function isConversationRoute(
   return (
     path === `/chat/${conversationId}` ||
     path === `/task/${conversationId}` ||
-    path === `/lab/${conversationId}`
+    path === `/lab/${conversationId}` ||
+    path === `/review/${conversationId}` ||
+    path.startsWith(`/review/${conversationId}?`)
   );
 }
