@@ -1,0 +1,13 @@
+# Normalize line endings to LF on checkout
+* text=auto eol=lf
+
+# Binary files — no line-ending conversion
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary
+*.woff2 binary
+*.eot binary
+*.ttf binary
+*.otf binary
+*.lock binary
