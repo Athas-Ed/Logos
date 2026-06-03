@@ -11,14 +11,15 @@ ui_instructions: |
 persistence_tier: p2
 paradigm: react
 turn_policy: single
-qa_mode: continuous
-max_steps_override: 20
-history_clip_max_full_turns: 5
 allowed_tools:
   - retrieve
   - read_ksfs
   - kg_query
 prompt_runtime_key: skills/retrieve_qa
+config_requirements:
+  max_steps: 20
+  history_clip_max_full_turns: 5
+  qa_mode: continuous
 input_schema:
   type: object
   properties:

@@ -13,6 +13,7 @@ from typing import Any, Literal, cast
 
 from pydantic import BaseModel, Field
 
+from logos.platform.skills_config import resolve_skill_config
 from .api_v1 import (
     _effective_presentation,
     _resolve_ksfs_root,
@@ -238,19 +239,6 @@ def build_chat_router() -> Any:
         except SkillManifestNotFoundError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-        if skill_manifest.config_requirements:
-            overrides = ports.settings.skill_overrides.get(skill_id, {})
-            missing = [
-                k for k in skill_manifest.config_requirements
-                if k not in overrides
-            ]
-            if missing:
-                _log.warning(
-                    "Skill %s 声明了 config_requirements: %s，"
-                    "但 config/local.yaml → skills.overrides.%s 中缺失: %s。"
-                    "技能将继续使用 manifest 默认值。",
-                    skill_id, skill_id, ", ".join(missing),
-                )
 
         def event_stream() -> Iterator[str]:
             prime_obs_log_profile_for_chat(str(ports.settings.obs_log_profile or "standard"))
@@ -259,16 +247,16 @@ def build_chat_router() -> Any:
                 try:
                     from logos.agent import cb as cb_mod
 
-                    react_max_steps = (
-                        skill_manifest.max_steps_override
-                        if skill_manifest.max_steps_override is not None
-                        else ports.settings.react_max_steps
+                    skill_cfg = resolve_skill_config(
+                        skill_id, skill_manifest, ports.settings
                     )
+                    react_max_steps = int(skill_cfg.get("max_steps", ports.settings.react_max_steps))
+                    clip = skill_cfg.get("history_clip_max_full_turns")
                     client_sys, history, user_text = _split_request_messages(body.messages)
-                    if skill_manifest.history_clip_max_full_turns is not None and history:
+                    if clip is not None and history:
                         history = cb_mod.clip_turn_history(
                             history,
-                            max_full_rounds=skill_manifest.history_clip_max_full_turns,
+                            max_full_rounds=int(clip),
                         )
                     ut = user_text.strip()
                     if not ut:

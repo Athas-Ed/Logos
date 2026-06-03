@@ -1,9 +1,11 @@
-"""技能运行时配置合并：manifest config_requirements 默认值 × deployment overrides。
+"""技能运行时配置合并：三层优先级链。
 
-约定：
-- manifest 通过 ``config_requirements`` 声明该技能需要的配置键及其默认值。
-- 部署者在 ``config/local.yaml → skills.overrides.<skill_id>`` 中覆盖这些值。
-- 本模块提供唯一的合并入口，供技能执行代码消费。
+优先级（低→高）：
+1. ``config/defaults.yaml → skills.config``（全局默认值）
+2. ``skills/manifests/<id>.yaml → config_requirements``（技能出厂默认值）
+3. ``config/local.yaml → skills.overrides.<skill_id>``（部署环境覆写）
+
+所有消费端应通过 :func:`resolve_skill_config` 取值，而非直接读 manifest 字段。
 """
 
 from __future__ import annotations
@@ -20,16 +22,16 @@ def resolve_skill_config(
     manifest: SkillManifest,
     settings: AppSettings,
 ) -> dict[str, Any]:
-    """合并 manifest config_requirements 默认值与 deployment overrides。
+    """合并三层配置，返回该技能的最终运行时参数字典。
 
-    Deployment overrides（``settings.skill_overrides[skill_id]``）优先级
-    高于 manifest 默认值。
+    - 第 1 层：``settings.skill_config_defaults``（全局，对应 defaults.yaml skills.config）
+    - 第 2 层：``manifest.config_requirements``（技能特化的出厂默认值）
+    - 第 3 层：``settings.skill_overrides[skill_id]``（部署覆写，优先级最高）
 
-    返回的字典可直接传给技能执行逻辑（如工具参数、LLM 采样参数等）。
-
-    若技能未声明 ``config_requirements``，返回空字典。
+    返回的字典可直接传给技能执行逻辑。
     """
-    base = dict(manifest.config_requirements)
+    base = dict(settings.skill_config_defaults)
+    base.update(manifest.config_requirements)
     overrides = settings.skill_overrides.get(skill_id, {})
     base.update(overrides)
     return base

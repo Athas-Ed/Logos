@@ -35,7 +35,7 @@ def test_load_lint_zh_dialogue_p2() -> None:
 
 def test_load_chat_inspire_multi() -> None:
     m = get_skill_manifest("chat_inspire")
-    assert m.paradigm == "dialogue"
+    assert m.paradigm == "react"
     assert m.persistence_tier == "p2"
     assert m.turn_policy == "multi"
 

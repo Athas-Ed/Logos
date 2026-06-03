@@ -5,9 +5,9 @@ ui_instructions: |
   多轮创作启发对话：在下方输入创作相关问题，按 Enter 发送。
   切换顶栏标签不会中断后台 SSE；超额请求将排队。
 persistence_tier: p2
-paradigm: dialogue
+paradigm: react
 turn_policy: multi
-allowed_tools: []
+allowed_tools: [retrieve, read_ksfs, list_ksfs]
 prompt_runtime_key: skills/chat_inspire
 blueprint_path: skills/chat_inspire/DESIGN.md
 input_schema:

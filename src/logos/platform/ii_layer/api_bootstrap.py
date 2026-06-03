@@ -65,7 +65,8 @@ def build_bootstrap_router() -> Any:
     def bootstrap_v1(ports: AppPortsDep) -> BootstrapResponse:
         from logos.platform.config.paths_resolve import resolve_conversations_cache_abs
         from logos.platform.mcp_stdio import resolve_repo_root
-        from logos.platform.skills_registry import list_bootstrap_skill_summaries
+        from logos.platform.skills_config import resolve_skill_config
+        from logos.platform.skills_registry import get_skill_manifest, list_bootstrap_skill_summaries
 
         pres = _effective_presentation(None, ports.settings.ui_default_presentation)
         prof = str(ports.settings.obs_log_profile or "standard").strip().lower()
@@ -75,20 +76,23 @@ def build_bootstrap_router() -> Any:
         logs_abs: str | None = None
         if show_root:
             logs_abs = str(Path(ports.settings.logs_root).expanduser().resolve())
-        skill_payloads = [
-            BootstrapSkillPayload(
-                skill_id=s.skill_id,
-                display_name=s.display_name,
-                description=s.description,
-                ui_instructions=s.ui_instructions,
-                persistence_tier=s.persistence_tier,
-                paradigm=s.paradigm,
-                turn_policy=s.turn_policy,
-                qa_mode=s.qa_mode,
-                panel_visible=s.panel_visible,
+        skill_payloads = []
+        for s in list_bootstrap_skill_summaries():
+            manifest = get_skill_manifest(s.skill_id)
+            cfg = resolve_skill_config(s.skill_id, manifest, ports.settings)
+            skill_payloads.append(
+                BootstrapSkillPayload(
+                    skill_id=s.skill_id,
+                    display_name=s.display_name,
+                    description=s.description,
+                    ui_instructions=s.ui_instructions,
+                    persistence_tier=s.persistence_tier,
+                    paradigm=s.paradigm,
+                    turn_policy=s.turn_policy,
+                    qa_mode=cfg.get("qa_mode", "normal"),
+                    panel_visible=s.panel_visible,
+                )
             )
-            for s in list_bootstrap_skill_summaries()
-        ]
         repo = resolve_repo_root()
         conv_cache_abs = str(
             resolve_conversations_cache_abs(

@@ -76,5 +76,8 @@ class AppSettings:
     setting_entry_subdir: str = "setting_entry"
     #: per-skill deployment overrides（config/local.yaml → skills.overrides.<skill_id>）
     skill_overrides: dict[str, dict[str, Any]] = field(default_factory=dict)
+    #: per-skill 调优参数全局默认值（config/defaults.yaml → skills.config），
+    #  被 resolve_skill_config() 作为三层优先级的最底层
+    skill_config_defaults: dict[str, Any] = field(default_factory=dict)
     #: MCP stdio 技能列表（``config`` 中 ``skills.mcp_servers``）；见 ``重要子系统开发文档/MCP开发.md``
     mcp_servers: tuple[McpServerEntry, ...] = field(default_factory=tuple)

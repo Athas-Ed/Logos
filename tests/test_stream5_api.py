@@ -157,7 +157,7 @@ def test_api_v1_bootstrap_skills(tmp_path: Path) -> None:
     assert "lint_zh" in by_id
     assert by_id["lint_zh"]["paradigm"] == "dialogue"
     assert "chat_inspire" in by_id
-    assert by_id["chat_inspire"]["paradigm"] == "dialogue"
+    assert by_id["chat_inspire"]["paradigm"] == "react"
     assert "retrieve_qa" in by_id
     assert by_id["retrieve_qa"]["paradigm"] == "react"
     assert by_id["retrieve_qa"]["display_name"]
@@ -255,7 +255,7 @@ def test_api_v1_chat_paradigm_override_plan(tmp_path: Path) -> None:
 
 
 def test_api_v1_chat_chat_inspire_multi_turn_messages(tmp_path: Path) -> None:
-    """F5-07：chat_inspire dialogue 多轮 messages[] 可 SSE 完成。"""
+    """F5-07：chat_inspire react 多轮 messages[] 可 SSE 完成。"""
     app = create_app(_make_ports(tmp_path))
     messages = [
         {"role": "user", "content": "第一句"},
@@ -271,7 +271,6 @@ def test_api_v1_chat_chat_inspire_multi_turn_messages(tmp_path: Path) -> None:
         ) as stream:
             assert stream.status_code == 200
             raw = stream.read().decode("utf-8")
-    assert "event: reasoning_summary" not in raw
     assert "event: done" in raw
 
 
@@ -333,7 +332,7 @@ def test_registry_tool_names_subset_of_manifest_allowed_tools(tmp_path: Path) ->
 
 
 def test_api_v1_chat_sse_delta_and_done(tmp_path: Path) -> None:
-    """缺省 skill_id → chat_inspire（dialogue），无 ReAct reasoning 事件。"""
+    """缺省 skill_id → chat_inspire（react），有 ReAct reasoning 事件。"""
     app = create_app(_make_ports(tmp_path))
     with TestClient(app) as client:
         with client.stream(
@@ -344,7 +343,6 @@ def test_api_v1_chat_sse_delta_and_done(tmp_path: Path) -> None:
         ) as stream:
             assert stream.status_code == 200
             raw = stream.read().decode("utf-8")
-    assert "event: reasoning_summary" not in raw
     assert "event: delta" in raw
     assert "data:" in raw
     assert "event: done" in raw

@@ -46,6 +46,14 @@ developer:
 # MCP stdio 技能（高德、示例 echo 等）：见 docs/子系统文档/Skills与MCP扩展.md
 skills:
   mcp_servers: []
+  # 技能运行时调优参数的全局默认值
+  config:
+    # ReAct 步数上限（技能可通过 manifest config_requirements 或 local.yaml overrides 覆写）
+    max_steps: 16
+    # 连续问答历史保留完整轮数；null 表示不截断
+    history_clip_max_full_turns: null
+    # 连续追问模式；normal | continuous
+    qa_mode: normal
 
 ui:
   default_presentation: "work"

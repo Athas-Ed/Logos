@@ -12,8 +12,8 @@ def test_select_paradigm_lint_zh_dialogue() -> None:
     assert select_paradigm("lint_zh") == "dialogue"
 
 
-def test_select_paradigm_chat_inspire_dialogue() -> None:
-    assert select_paradigm("chat_inspire") == "dialogue"
+def test_select_paradigm_chat_inspire_react() -> None:
+    assert select_paradigm("chat_inspire") == "react"
 
 
 def test_select_paradigm_retrieve_qa_react() -> None:

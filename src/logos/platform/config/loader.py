@@ -230,6 +230,10 @@ def merged_dict_to_app_settings(data: Mapping[str, Any]) -> AppSettings:
         for k, v in overrides_raw.items():
             if isinstance(k, str) and isinstance(v, dict):
                 skill_overrides[k] = dict(v)
+    config_raw = skills.get("config") if isinstance(skills, Mapping) else {}
+    skill_config_defaults: dict[str, Any] = {}
+    if isinstance(config_raw, dict):
+        skill_config_defaults = {str(k): v for k, v in config_raw.items()}
     ui = data.get("ui") if isinstance(data.get("ui"), dict) else {}
     obs = data.get("obs") if isinstance(data.get("obs"), dict) else {}
     agent = data.get("agent") if isinstance(data.get("agent"), dict) else {}
@@ -296,6 +300,7 @@ def merged_dict_to_app_settings(data: Mapping[str, Any]) -> AppSettings:
             paths.get("sync_hsi_on_retrieve"), default=True
         ),
         skill_overrides=skill_overrides,
+        skill_config_defaults=skill_config_defaults,
         mcp_servers=mcp_servers,
     )
 
