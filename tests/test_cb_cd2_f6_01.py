@@ -11,7 +11,7 @@ from logos.agent.cb import (
     load_prompt_fragment,
 )
 from logos.agent.tool_registry import ToolRegistry
-from logos.platform.ii_layer.api_v1 import _operating_mode_suffix
+from logos.platform.ii_layer.api_chat import _operating_mode_suffix
 
 
 def test_react_base_loads_from_resource() -> None:
@@ -42,11 +42,13 @@ def test_react_system_changes_when_base_md_changes() -> None:
 
 def test_operating_mode_suffix_from_modes_md() -> None:
     author = load_operating_mode_suffix("author")
+    # screenwriter 参数现在也返回 author 内容
     screen = load_operating_mode_suffix("screenwriter")
     assert "作者" in author and "author" in author
-    assert "编剧" in screen and "screenwriter" in screen
+    assert "作者" in screen and "author" in screen
     assert author == _operating_mode_suffix("author")
     assert screen == _operating_mode_suffix("screenwriter")
+    assert screen == author
 
 
 def test_operating_mode_suffix_changes_when_md_changes() -> None:

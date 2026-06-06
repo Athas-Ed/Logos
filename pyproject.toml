@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "logos"
 version = "0.1.0"
-description = "Logos: dual-mode narrative agent for game writers (V0.1 scaffold)"
+description = "Logos: local narrative writing agent (V0.1)"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.11"
@@ -14,6 +14,7 @@ dependencies = [
     "httpx>=0.27",
     "jsonschema>=4.0",
     "mcp>=1.2.0",
+    "pycozo>=0.7.0",
 ]
 
 [project.optional-dependencies]

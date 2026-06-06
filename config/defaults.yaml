@@ -1,7 +1,5 @@
 # 可提交仓库的默认配置（勿写真实密钥）。本机覆盖请用 local.yaml。
 
-# operating_mode: author
-
 paths:
   workspace_root: "./workspace"
   # 开发用示例 KSFS（本机目录，.gitignore 不入库）
@@ -38,6 +36,12 @@ chroma:
   persist_directory: "./.index/.vector_index"
   # A5：chunk_id 与分块策略变更后使用新 collection，避免与 v0 单文件块混存
   collection: "ksfs_chunks_v1"
+
+# R1 稀疏全文索引（FTS5）配置
+retrieval:
+  sparse:
+    enabled: true
+    db_path: "./.index/.sparse_fts.sqlite"
 
 developer:
   show_dev_tools_ui: false

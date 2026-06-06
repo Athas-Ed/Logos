@@ -57,5 +57,8 @@ logs/**/*.log
 *.sqlite
 *.sqlite3
 
+# 检索基准历史
+.benchmark_history/
+
 # Windows 目录元数据
 desktop.ini

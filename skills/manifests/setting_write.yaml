@@ -7,13 +7,14 @@ ui_instructions: |
   草稿写入后可用「审核晋升」技能统一审查和晋升至 KSFS。
 persistence_tier: p1
 paradigm: react
-turn_policy: single
+turn_policy: multi
 allowed_tools:
   - retrieve
   - read_ksfs
   - list_ksfs
   - write_draft
   - list_drafts
+  - kg_query
 prompt_runtime_key: skills/setting_write
 input_schema:
   type: object

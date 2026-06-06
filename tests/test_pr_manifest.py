@@ -24,6 +24,10 @@ def test_select_paradigm_outline_plan() -> None:
     assert select_paradigm("outline_plan") == "plan"
 
 
+def test_select_paradigm_import_setting_pipeline() -> None:
+    assert select_paradigm("import_setting") == "pipeline"
+
+
 def test_select_paradigm_unknown_raises() -> None:
     with pytest.raises(SkillManifestNotFoundError):
         select_paradigm("no_such_skill_xyz")

@@ -1,6 +1,6 @@
 # Logos
 
-面向游戏叙事的本地写作 Agent 实验仓库（作家 / 编剧双模式、KSFS 知识库、Electron 桌面 + React GUI）。
+面向游戏叙事的本地写作 Agent 实验仓库（KSFS 知识库、Electron 桌面 + React GUI）。
 
 > **说明**：项目仍在积极开发，API 与目录可能变动，**暂不承诺**对外开箱即用。介绍性文档见 **[`docs/`](docs/README.md)**；作者自用草稿与排期在本机 **`original_docs/`**（不入库）。
 
@@ -14,6 +14,7 @@
 | `config/` | `defaults.yaml` + 本机 `local.yaml`（勿提交） |
 | `workspace/`、`resources/ksfs/`、`example_ksfs/` | 个人创作与示例（内容不入库，见 [docs/配置说明.md](docs/配置说明.md)） |
 | `docs/` | **对外介绍文档** |
+| `Dockerfile`、`docker-compose.yaml` | Docker 容器化部署（仅后端） |
 
 ## 文档入口
 
@@ -30,6 +31,7 @@
 | 会话 / Skill 界面 | [docs/子系统文档/任务与Skill界面.md](docs/子系统文档/任务与Skill界面.md) |
 | HTTP API | [docs/子系统文档/HTTP-API概览.md](docs/子系统文档/HTTP-API概览.md) |
 | 更多子系统 | [docs/子系统文档/README.md](docs/子系统文档/README.md) |
+| Docker 启动 | [docs/快速开始.md](docs/快速开始.md#也可用-docker-运行仅后端) |
 
 ## 本机运行（最短路径）
 
@@ -43,6 +45,8 @@ pytest -m "not slow"
 ```
 
 **日常开发（Windows）**：`scripts/start_logos.cmd` 或 `scripts/start_logos.ps1`。  
+
+**Docker（仅后端）**：`docker compose up -d`（[详见](docs/快速开始.md#也可用-docker-运行仅后端)）。  
 细节见 [docs/快速开始.md](docs/快速开始.md)。
 
 ## 配置与隐私

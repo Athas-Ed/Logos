@@ -12,6 +12,7 @@ ui_instructions: |
 persistence_tier: p1
 paradigm: react
 turn_policy: single
+custom_page: review
 allowed_tools:
   - list_drafts
   - read_draft

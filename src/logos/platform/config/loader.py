@@ -41,7 +41,6 @@ def apply_env_overrides(tree: dict[str, Any], environ: Mapping[str, str] | None 
     """将 ``LOGOS_*`` 环境变量写入嵌套配置 *tree*（原地修改）。
 
     命名规则：``LOGOS_<段>__<键>`` → ``tree[段小写][键小写]``，段之间用 ``__``。
-    单独一段 ``LOGOS_OPERATING_MODE`` 写入顶层 ``operating_mode``。
     空字符串的环境变量会被跳过。
     """
     env = environ if environ is not None else os.environ
