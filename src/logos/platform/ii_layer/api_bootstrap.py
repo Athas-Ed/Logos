@@ -37,6 +37,7 @@ class BootstrapSkillPayload(BaseModel):
     turn_policy: Literal["single", "multi"] = "single"
     qa_mode: Literal["normal", "continuous"] = "normal"
     panel_visible: bool = True
+    custom_page: str | None = None
 
 
 class BootstrapResponse(BaseModel):
@@ -91,6 +92,7 @@ def build_bootstrap_router() -> Any:
                     turn_policy=s.turn_policy,
                     qa_mode=cfg.get("qa_mode", "normal"),
                     panel_visible=s.panel_visible,
+                    custom_page=s.custom_page,
                 )
             )
         repo = resolve_repo_root()

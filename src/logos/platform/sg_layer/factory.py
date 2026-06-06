@@ -475,19 +475,19 @@ def build_v01_guarded_tool_registry(
 
         reg.register(
             "kg_query",
-            description="Query the knowledge graph (KG): return neighbors of an entity or shortest path between two entities. Data source: relations[] in KSFS front matter.",
+            description="查询知识图谱（KG）：返回实体的关联邻居，或两实体间最短路径。数据来源：KSFS front matter 中的 relations[]。",
             parameters={
                 "type": "object",
                 "properties": {
-                    "slug": {"type": "string", "description": "Entity slug (e.g. ye-hanyan)"},
+                    "slug": {"type": "string", "description": "实体 slug（如 罗德岛、悖论之地、极青）"},
                     "query_type": {
                         "type": "string", "enum": ["neighbors", "shortest_path"],
-                        "description": "neighbors=related entities; shortest_path=path to target",
+                        "description": "neighbors=关联实体；shortest_path=到目标的最短路径",
                         "default": "neighbors",
                     },
-                    "max_hops": {"type": "integer", "description": "Expansion hops (neighbors only, default 1)", "default": 1},
-                    "target_slug": {"type": "string", "description": "Target slug (shortest_path only)", "default": ""},
-                    "relation_type": {"type": "string", "description": "Optional filter (e.g. owns, member_of)", "default": ""},
+                    "max_hops": {"type": "integer", "description": "扩展跳数（仅 neighbors 模式，默认 1）", "default": 1},
+                    "target_slug": {"type": "string", "description": "目标实体 slug（仅 shortest_path 模式）", "default": ""},
+                    "relation_type": {"type": "string", "description": "可选关系类型过滤（如 opposes、located_in、created_by）", "default": ""},
                 },
                 "required": ["slug"],
             },

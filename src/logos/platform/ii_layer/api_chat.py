@@ -97,9 +97,11 @@ def _resolve_paradigm_override(
 
 
 def _operating_mode_suffix(mode: str) -> str:
+    """运行模式后缀：始终加载 author 模式。"""
     from logos.agent.cb import load_operating_mode_suffix
 
-    return load_operating_mode_suffix(mode)
+    _ = mode
+    return load_operating_mode_suffix("author")
 
 
 def _split_request_messages(

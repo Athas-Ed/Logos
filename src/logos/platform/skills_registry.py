@@ -64,6 +64,8 @@ class SkillManifest:
     panel_visible: bool = True
     #: 声明该技能需要的运行时配置键及其出厂默认值（被 resolve_skill_config 三层合并消费）
     config_requirements: dict[str, Any] = field(default_factory=dict)
+    #: 前端自定义独立页面路由（不走通用 TaskPage/ChatPage）
+    custom_page: str | None = None
 
 
 def manifests_dir() -> Path:
@@ -151,6 +153,12 @@ def _validate_manifest_dict(raw: dict[str, Any], *, source: str) -> SkillManifes
                 raise SkillManifestError(f"{source}: config_requirements keys must be strings")
     config_requirements = dict(config_requirements_raw) if config_requirements_raw else {}
 
+    custom_page_raw = raw.get("custom_page")
+    if custom_page_raw is not None:
+        if not isinstance(custom_page_raw, str) or not custom_page_raw.strip():
+            raise SkillManifestError(f"{source}: custom_page must be a non-empty string")
+    custom_page: str | None = custom_page_raw.strip() if custom_page_raw else None
+
     ui_instructions = raw.get("ui_instructions", "")
     if ui_instructions is None:
         ui_instructions = ""
@@ -190,6 +198,7 @@ def _validate_manifest_dict(raw: dict[str, Any], *, source: str) -> SkillManifes
         pipeline_profile=pipeline_profile,
         panel_visible=panel_visible,
         config_requirements=config_requirements,
+        custom_page=custom_page,
     )
 
 
@@ -230,6 +239,7 @@ class BootstrapSkillSummary:
     paradigm: Paradigm
     turn_policy: TurnPolicy
     panel_visible: bool = True
+    custom_page: str | None = None
 
 
 def list_bootstrap_skill_summaries() -> tuple[BootstrapSkillSummary, ...]:
@@ -247,6 +257,7 @@ def list_bootstrap_skill_summaries() -> tuple[BootstrapSkillSummary, ...]:
                 paradigm=manifest.paradigm,
                 turn_policy=manifest.turn_policy,
                 panel_visible=manifest.panel_visible,
+                custom_page=manifest.custom_page,
             )
         )
     return tuple(summaries)

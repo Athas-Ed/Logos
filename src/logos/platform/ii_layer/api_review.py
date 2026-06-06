@@ -13,7 +13,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from .api_v1 import _resolve_hsi_db, _resolve_ksfs_root, _resolve_workspace_root
+from .api_v1 import _resolve_hsi_db, _resolve_ksfs_root, _resolve_logs_root, _resolve_workspace_root
 from .deps import AppPortsDep, LLMDep
 
 _log = logging.getLogger("logos.api.review")
@@ -46,6 +46,7 @@ class DraftsReadResponse(BaseModel):
 
 class DraftsPromoteBody(BaseModel):
     paths: list[str]
+    scope: str = "setting_entry"
 
 
 class DraftsPromoteResponse(BaseModel):
@@ -57,6 +58,7 @@ class DraftsPromoteResponse(BaseModel):
 
 class DraftsDeleteBody(BaseModel):
     paths: list[str]
+    scope: str = "setting_entry"
 
 
 class DraftsDeleteResponse(BaseModel):
@@ -67,6 +69,7 @@ class DraftsDeleteResponse(BaseModel):
 class DraftsWriteBody(BaseModel):
     path: str
     content: str
+    scope: str = "setting_entry"
 
 
 class RewriteFileInput(BaseModel):
@@ -78,6 +81,7 @@ class RewriteRequestBody(BaseModel):
     files: list[RewriteFileInput]
     requirements: str = ""
     system_hint: str = "你是设定审核助手。注意保留 YAML front matter 与正文结构。"
+    scope: str = "setting_entry"
 
 
 class RewriteResponse(BaseModel):
@@ -115,6 +119,39 @@ def _build_rewrite_prompt(
     return prompt
 
 
+def _scope_drafts_root(ws_root: Path, settings: Any, scope: str) -> Path:
+    """Return the drafts root directory for a *scope* under ``pending_review/<scope>/``.
+
+    ``scope=""`` means the ``pending_review/`` root itself.
+    """
+    base = ws_root / settings.pending_review_subdir
+    return base if not scope else base / scope
+
+
+def _scope_rel_to_ws_path(ws_root: Path, settings: Any, scope: str, rel: str) -> Path:
+    """Convert a *scope*-relative path to a full workspace-relative :class:`Path`."""
+    return _scope_drafts_root(ws_root, settings, scope) / rel.replace("\\", "/").lstrip("/")
+
+
+def _now_iso() -> str:
+    from datetime import datetime, timezone
+
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _append_promotion_log(logs_root: Path, entry: dict[str, Any]) -> None:
+    """Append one JSON line to ``logs/promotion/promotions.jsonl``."""
+    import json
+
+    log_dir = logs_root / "promotion"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    path = log_dir / "promotions.jsonl"
+    line = json.dumps(entry, ensure_ascii=False)
+    with path.open("a", encoding="utf-8") as fh:
+        fh.write(line)
+        fh.write("\n")
+
+
 def build_review_router() -> Any:
     from fastapi import APIRouter
 
@@ -130,11 +167,8 @@ def build_review_router() -> Any:
 
         ws_root = _resolve_workspace_root(ports.settings)
         ksfs_root = _resolve_ksfs_root(ports.settings)
-        drafts_root = (
-            ws_root
-            / ports.settings.pending_review_subdir
-            / ports.settings.setting_entry_subdir
-        )
+        logs_root = _resolve_logs_root(ports.settings)
+        drafts_root = _scope_drafts_root(ws_root, ports.settings, "setting_entry")
         hsi_db = _resolve_hsi_db(ports.settings)
         port = FilesystemDraftPromotionPort(hsi_db=hsi_db)
         candidates = port.list_promotion_candidates(drafts_root, ksfs_root)
@@ -149,6 +183,23 @@ def build_review_router() -> Any:
                 notes="无匹配的可晋升草稿",
             )
         report = port.apply_promotion(drafts_root, ksfs_root, candidates)
+        for app in report.applied:
+            _append_promotion_log(logs_root, {
+                "ts": _now_iso(),
+                "op": "promote",
+                "src": app,
+                "dst": app,
+                "ok": True,
+            })
+        for sk in report.skipped:
+            _append_promotion_log(logs_root, {
+                "ts": _now_iso(),
+                "op": "promote",
+                "src": sk,
+                "dst": sk,
+                "ok": False,
+                "note": report.notes,
+            })
         return SettingEntryPromoteResponse(
             ok=report.ok,
             applied=list(report.applied),
@@ -159,22 +210,11 @@ def build_review_router() -> Any:
     @router.get("/drafts")
     def drafts_list_v1(
         ports: AppPortsDep,
-        dir: str = "",
+        scope: str = "setting_entry",
     ) -> DraftsListResponse:
-        """列出 pending_review 下某子目录的全部草稿文件。dir 空 = pending_review 根。"""
-        import os
-
+        """列出 pending_review 下某 scope 的全部草稿文件。scope 空 = pending_review 根。"""
         ws_root = _resolve_workspace_root(ports.settings)
-        pending_root = ws_root / ports.settings.pending_review_subdir
-        target = pending_root
-        raw_dir = (dir or "").strip().replace("\\", "/")
-        if raw_dir:
-            from logos.platform.sg_layer.path_sandbox import resolve_path_under_root
-
-            try:
-                target = resolve_path_under_root(pending_root, raw_dir)
-            except ValueError as exc:
-                return DraftsListResponse(files=[{"error": str(exc)}])
+        target = _scope_drafts_root(ws_root, ports.settings, scope)
 
         if not target.is_dir():
             return DraftsListResponse(files=[])
@@ -185,7 +225,7 @@ def build_review_router() -> Any:
                 continue
             if entry.is_file() and entry.suffix.lower() in (".md", ".markdown", ".txt", ".yaml", ".json"):
                 st = entry.stat()
-                rel = entry.resolve().relative_to(ws_root.resolve()).as_posix()
+                rel = entry.relative_to(target).as_posix()
                 files.append({
                     "name": entry.name,
                     "path": rel,
@@ -198,17 +238,12 @@ def build_review_router() -> Any:
     def drafts_read_v1(
         ports: AppPortsDep,
         path: str,
+        scope: str = "setting_entry",
     ) -> DraftsReadResponse:
-        """读取 pending_review 下某文件的正文。"""
+        """读取 pending_review 下某 scope 内文件的正文。path 相对 scope 根。"""
         ws_root = _resolve_workspace_root(ports.settings)
-        from logos.platform.sg_layer.path_sandbox import read_text_under_root
-
-        content = read_text_under_root(
-            ws_root,
-            path,
-            context_label="workspace",
-            denied_operation="drafts/read",
-        )
+        full = _scope_rel_to_ws_path(ws_root, ports.settings, scope, path)
+        content = full.read_text(encoding="utf-8")
         return DraftsReadResponse(path=path, content=content)
 
     @router.post("/drafts/promote")
@@ -216,21 +251,24 @@ def build_review_router() -> Any:
         body: DraftsPromoteBody,
         ports: AppPortsDep,
     ) -> DraftsPromoteResponse:
-        """将 pending_review 下的草稿晋升至 KSFS。成功后删除源文件。"""
+        """将 pending_review/<scope>/ 下的草稿晋升至 KSFS。成功后删除源文件。"""
         from logos.ports.draft_promotion import PromotionItem
         from logos.tools.draft_promotion_fs import FilesystemDraftPromotionPort
 
         ws_root = _resolve_workspace_root(ports.settings)
         ksfs_root = _resolve_ksfs_root(ports.settings)
+        logs_root = _resolve_logs_root(ports.settings)
+        drafts_root = _scope_drafts_root(ws_root, ports.settings, body.scope)
         hsi_db = _resolve_hsi_db(ports.settings)
         port = FilesystemDraftPromotionPort(hsi_db=hsi_db)
 
         applied: list[str] = []
         failed: list[str] = []
+        fail_reasons: list[str] = []
         for rel in body.paths:
-            src = (ws_root / rel).resolve()
+            src = (drafts_root / rel).resolve()
             try:
-                src.relative_to(ws_root)
+                src.relative_to(drafts_root)
             except ValueError:
                 failed.append(rel)
                 continue
@@ -245,20 +283,38 @@ def build_review_router() -> Any:
                     draft_mtime_ns=st.st_mtime_ns,
                 )
             ]
-            report = port.apply_promotion(ws_root, ksfs_root, candidates)
+            report = port.apply_promotion(drafts_root, ksfs_root, candidates)
             if report.ok:
                 applied.append(rel)
+                _append_promotion_log(logs_root, {
+                    "ts": _now_iso(),
+                    "op": "promote",
+                    "src": rel,
+                    "dst": rel,
+                    "ok": True,
+                })
                 try:
                     src.unlink()
                 except OSError:
                     pass
             else:
                 failed.append(rel)
+                fail_reasons.append(f"{rel}: {report.notes}")
+                _append_promotion_log(logs_root, {
+                    "ts": _now_iso(),
+                    "op": "promote",
+                    "src": rel,
+                    "dst": rel,
+                    "ok": False,
+                    "note": report.notes,
+                })
         notes = (
-            f"晋升 {len(applied)} 个，失败 {len(failed)} 个"
+            f"晋升 {len(applied)} 个，失败 {len(failed)} 个。"
             if failed
             else f"已晋升 {len(applied)} 个文件"
         )
+        if fail_reasons:
+            notes += "\n" + "\n".join(fail_reasons)
         return DraftsPromoteResponse(
             ok=len(failed) == 0,
             applied=applied,
@@ -271,13 +327,14 @@ def build_review_router() -> Any:
         body: DraftsDeleteBody,
         ports: AppPortsDep,
     ) -> DraftsDeleteResponse:
-        """删除 pending_review 下的草稿源文件（晋升成功后清理用）。"""
+        """删除 pending_review/<scope>/ 下的草稿源文件。path 相对 scope 根。"""
         ws_root = _resolve_workspace_root(ports.settings)
+        drafts_root = _scope_drafts_root(ws_root, ports.settings, body.scope)
         deleted: list[str] = []
         for rel in body.paths:
-            target = (ws_root / rel).resolve()
+            target = (drafts_root / rel).resolve()
             try:
-                target.relative_to(ws_root)
+                target.relative_to(drafts_root)
             except ValueError:
                 continue
             if target.is_file():
@@ -333,6 +390,8 @@ def build_review_router() -> Any:
         if not isinstance(results, list):
             results = []
 
+        ws_root = _resolve_workspace_root(ports.settings)
+        drafts_root = _scope_drafts_root(ws_root, ports.settings, body.scope)
         written: list[str] = []
         failed: list[str] = []
         for entry in results:
@@ -341,13 +400,9 @@ def build_review_router() -> Any:
             if not rpath:
                 continue
             try:
-                from logos.platform.sg_layer.path_sandbox import write_draft_under_workspace
-
-                write_draft_under_workspace(
-                    _resolve_workspace_root(ports.settings),
-                    rpath,
-                    rcontent,
-                )
+                target = (drafts_root / rpath).resolve()
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(rcontent, encoding="utf-8")
                 written.append(rpath)
             except Exception as exc:
                 _log.warning("drafts/rewrite 写入 %r 失败: %s", rpath, exc)
@@ -364,14 +419,12 @@ def build_review_router() -> Any:
         body: DraftsWriteBody,
         ports: AppPortsDep,
     ) -> dict[str, Any]:
-        """覆写 pending_review 下的草稿文件（LLM 打回重写后写入）。"""
-        from logos.platform.sg_layer.path_sandbox import write_draft_under_workspace
-
-        result = write_draft_under_workspace(
-            _resolve_workspace_root(ports.settings),
-            body.path,
-            body.content,
-        )
-        return {"ok": True, "path": body.path, "result": result}
+        """覆写 pending_review/<scope>/ 下的草稿文件。path 相对 scope 根。"""
+        ws_root = _resolve_workspace_root(ports.settings)
+        drafts_root = _scope_drafts_root(ws_root, ports.settings, body.scope)
+        target = (drafts_root / body.path).resolve()
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(body.content, encoding="utf-8")
+        return {"ok": True, "path": body.path, "result": "written"}
 
     return router

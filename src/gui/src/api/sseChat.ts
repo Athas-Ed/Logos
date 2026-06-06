@@ -1,7 +1,6 @@
 import type {
   ChatMessage,
   CitationItem,
-  OperatingMode,
   PresentationMode,
 } from "../types/chat";
 import { apiUrl } from "./apiBase";
@@ -144,7 +143,7 @@ function parseSseBlock(block: string): StreamChatEvent | null {
 
 export interface StreamChatOptions {
   messages: ChatMessage[];
-  operatingMode: OperatingMode;
+  operatingMode: string;
   /** 省略则服务端使用 ``ui.default_presentation`` */
   presentation?: PresentationMode;
   /** 产品 Skill（F5-02）；任务页必填 */

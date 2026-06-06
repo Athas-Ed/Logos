@@ -60,3 +60,112 @@ def create_app(
         app.mount("/", StaticFiles(directory=root, html=True), name="gui")
 
     return app
+
+
+def main() -> None:
+    """``python -m logos.platform.ii_layer.app`` 直接启动（供 Docker 入口使用）。"""
+    import os
+    import sys
+    from pathlib import Path
+
+    # 确保仓库根在 sys.path 上
+    _repo = Path(__file__).resolve().parents[3]
+    if str(_repo / "src") not in sys.path:
+        sys.path.insert(0, str(_repo / "src"))
+
+    os.chdir(_repo)
+    os.environ.setdefault("LOGOS_REPO_ROOT", str(_repo))
+
+    from logos.platform.config import load_app_settings
+    from logos.platform.ii_layer.container import AppPorts
+    from logos.platform.ii_layer.developer import DeveloperToggles
+    from logos.platform.obs import configure_logging
+    from logos.infrastructure.llm import build_chat_llm_from_settings
+    from logos.infrastructure.retrieval.fused import FusedRetrievalService
+    from logos.persistence import SqliteMetadataIndex
+    from logos.persistence.ksfs_filesystem import FilesystemKnowledgeSource
+    from logos.infrastructure.vector.chroma_store import ChromaSemanticStore
+    from logos.infrastructure.embeddings.bge_small_zh import BgeSmallZhEmbedder
+
+    settings = load_app_settings(config_dir=_repo / "config")
+    configure_logging(settings)
+
+    ksfs_root = Path(settings.ksfs_root).resolve()
+    hsi_db = Path(settings.hsi_sqlite_path).resolve()
+    index_root = Path(settings.index_root).resolve()
+    metadata = SqliteMetadataIndex(hsi_db)
+
+    # 尝试加载 Chroma + 嵌入（容器内可能无 GPU 加速，降级到桩也可运行）
+    try:
+        semantic_store = ChromaSemanticStore(
+            persist_directory=settings.chroma_persist_directory,
+            collection_name=settings.chroma_collection,
+        )
+    except Exception:  # noqa: BLE001
+        semantic_store = _StubSemanticStore()
+
+    try:
+        embedder = BgeSmallZhEmbedder(str(Path(settings.embedding_model_path)))
+    except Exception:  # noqa: BLE001
+        embedder = _StubEmbedder512()
+
+    from logos.persistence.chroma_bootstrap import default_svs_state_db_path
+    svs_state_db = default_svs_state_db_path(index_root)
+
+    retrieval = FusedRetrievalService(
+        metadata_index=metadata,
+        semantic_store=semantic_store,
+        embedder=embedder,
+        lazy_hsi_ksfs_root=ksfs_root,
+        lazy_hsi_db_path=hsi_db,
+        lazy_svs_state_db=svs_state_db if not isinstance(semantic_store, _StubSemanticStore) else None,
+        refresh_indexes_on_query=settings.sync_hsi_on_retrieve,
+    )
+    knowledge_source = FilesystemKnowledgeSource(ksfs_root)
+
+    llm = build_chat_llm_from_settings(settings) or _StubLLM()
+
+    ports = AppPorts(
+        settings=settings,
+        llm=llm,
+        retrieval=retrieval,
+        knowledge_source=knowledge_source,
+        metadata_index=metadata,
+        semantic_store=semantic_store,
+        text_embedder=embedder,
+        developer=DeveloperToggles(prompt_echo=settings.developer_prompt_echo),
+    )
+    app = create_app(ports)
+
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
+
+
+class _StubLLM:
+    """LLM 桩实现（无 API key 时使用）。"""
+    def complete(self, messages, *, json_mode: bool = False) -> str:
+        return "（Docker 桩后端）" + messages[-1].content
+
+    def stream_completion(self, messages, *, json_mode: bool = False):
+        text = self.complete(messages, json_mode=json_mode)
+        step = 12
+        for i in range(0, len(text), step):
+            yield text[i : i + step]
+
+
+class _StubSemanticStore:
+    def upsert_chunks(self, **kwargs) -> None:
+        return None
+    def delete_ids(self, ids: list[str]) -> None:
+        return None
+    def query(self, query_embedding: list[float], top_k: int):
+        return []
+
+
+class _StubEmbedder512:
+    def embed(self, texts: list[str]) -> list[list[float]]:
+        return [[0.0] * 512 for _ in texts]
+
+
+if __name__ == "__main__":
+    main()

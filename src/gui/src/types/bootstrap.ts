@@ -1,11 +1,6 @@
 import type { SkillCardMeta } from "../skills/catalog";
 
 
-
-import { FALLBACK_PANEL_SKILLS } from "../skills/catalog";
-
-
-
 /** 与 `GET /api/v1/bootstrap` 的 `ui` 段对齐（`config/ui.*`） */
 
 export type BootstrapUi = {
@@ -61,7 +56,7 @@ export type BootstrapSkill = {
   qa_mode?: SkillCardMeta["qa_mode"];
 
   panel_visible?: SkillCardMeta["panel_visible"];
-
+  custom_page?: string;
 };
 
 
@@ -196,37 +191,33 @@ export function panelSkillsFromBootstrap(
 
     const safe = item as BootstrapSkill;
 
-    const fallback = FALLBACK_PANEL_SKILLS.find((c) => c.skill_id === safe.skill_id);
-
-    const ui =
-
-      typeof safe.ui_instructions === "string" && safe.ui_instructions.trim()
-
-        ? safe.ui_instructions.trim()
-
-        : (fallback?.ui_instructions ?? "");
-
     out.push({
 
       skill_id: safe.skill_id,
 
       display_name: safe.display_name,
 
-      description: safe.description,
+      description: safe.description ?? "",
 
-      ui_instructions: ui,
+      ui_instructions:
+
+        typeof safe.ui_instructions === "string" && safe.ui_instructions.trim()
+
+          ? safe.ui_instructions.trim()
+
+          : "",
 
       persistence_tier: safe.persistence_tier,
 
       paradigm: safe.paradigm,
 
-      turn_policy: safe.turn_policy ?? fallback?.turn_policy ?? "single",
+      turn_policy: safe.turn_policy ?? "single",
 
-      qa_mode: safe.qa_mode ?? fallback?.qa_mode ?? "normal",
+      qa_mode: safe.qa_mode ?? "normal",
 
-      panel_visible: safe.panel_visible ?? fallback?.panel_visible ?? true,
+      panel_visible: safe.panel_visible ?? true,
 
-      customPage: fallback?.customPage,
+      customPage: (safe.custom_page || undefined) as SkillCardMeta["customPage"]
 
     });
 

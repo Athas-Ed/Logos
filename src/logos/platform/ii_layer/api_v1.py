@@ -84,6 +84,15 @@ def _resolve_hsi_db(settings: Any) -> Path:
     return p.resolve()
 
 
+def _resolve_logs_root(settings: Any) -> Path:
+    from logos.platform.mcp_stdio import resolve_repo_root
+
+    p = Path(settings.logs_root)
+    if not p.is_absolute():
+        p = resolve_repo_root() / p
+    return p.resolve()
+
+
 # ═══════════════════════════════════════════════════════════════════
 # Router 聚合
 # ═══════════════════════════════════════════════════════════════════
