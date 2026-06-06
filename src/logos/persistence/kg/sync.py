@@ -10,7 +10,7 @@ from typing import Any
 import yaml
 from pycozo import Client
 
-from . import open_db
+from . import normalize, open_db
 
 # 跳过各层 README.md（它们不是实体）
 _SKIP_PATTERNS = re.compile(r"(?:^|[/\\])README\.md$", re.IGNORECASE)
@@ -93,20 +93,41 @@ def sync_kg_from_ksfs(
             {"slug": slug, "title": title, "classification": classification}
         )
 
-        relations = fm.get("relations") or []
-        if relations:
+        relations = fm.get("relations")
+        # 兼容平铺格式：若 relations 为空字符串或 None，检查顶层 target_slug 字段
+        if isinstance(relations, list):
+            rel_list = relations
+        elif isinstance(relations, str) and relations.strip():
+            # YAML 列表可能被解析为字符串（极少见），尝试一次性构建
+            rel_list = []
+        else:
+            rel_list = None
+
+        if rel_list is not None:
+            # relations[] 列表格式
+            if rel_list:
+                files_with_rel += 1
+            for rel in rel_list:
+                if not isinstance(rel, dict):
+                    continue
+                target = rel.get("target") or rel.get("target_slug")
+                if not target:
+                    continue
+                all_relations.append(
+                    {
+                        "entity_slug": slug,
+                        "type": str(rel.get("type", "related_to")),
+                        "target_slug": str(target),
+                    }
+                )
+        elif fm.get("target_slug"):
+            # 平铺格式：顶层 target_slug / type / target_title / description
             files_with_rel += 1
-        for rel in relations:
-            if not isinstance(rel, dict):
-                continue
-            target = rel.get("target") or rel.get("target_slug")
-            if not target:
-                continue
             all_relations.append(
                 {
                     "entity_slug": slug,
-                    "type": str(rel.get("type", "related_to")),
-                    "target_slug": str(target),
+                    "type": str(fm.get("type", "related_to")),
+                    "target_slug": str(fm["target_slug"]),
                 }
             )
 
@@ -114,15 +135,15 @@ def sync_kg_from_ksfs(
     # entity 表：全量替换
     old_entity_slugs = set(
         row["slug"]
-        for row in db.run('?[slug] := *entity{slug}').to_dict("records")
+        for row in normalize(db.run('?[slug] := *entity{slug}'))
     )
     stale_entities = old_entity_slugs - current_slugs
     for stale_slug in stale_entities:
         # rm 需要所有列的值
-        old = db.run(
+        old = normalize(db.run(
             '?[title, classification] := *entity{slug: $slug, title, classification}',
             {"slug": stale_slug},
-        ).to_dict("records")
+        ))
         if old:
             db.rm("entity", {
                 "slug": stale_slug,
@@ -135,9 +156,9 @@ def sync_kg_from_ksfs(
 
     # relation 表：全量替换
     old_relation_keys: set[tuple[str, str, str]] = set()
-    for row in db.run(
+    for row in normalize(db.run(
         '?[entity_slug, type, target_slug] := *relation{entity_slug, type, target_slug}'
-    ).to_dict("records"):
+    )):
         old_relation_keys.add(
             (row["entity_slug"], row["type"], row["target_slug"])
         )

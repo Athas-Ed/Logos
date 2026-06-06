@@ -10,7 +10,7 @@ from typing import Any
 
 from pycozo import Client
 
-from . import open_db
+from . import normalize, open_db
 
 
 def neighbors(
@@ -43,15 +43,15 @@ def _neighbors_1hop(
 ) -> list[dict[str, Any]]:
     # 用 rtype 别名避免 type 保留字冲突
     if rel_type:
-        rows = db.run(
+        rows = normalize(db.run(
             '?[target_slug, rtype] := *relation{entity_slug: $slug, type: $type, target_slug}',
             {"slug": slug, "type": rel_type},
-        ).to_dict("records")
+        ))
     else:
-        rows = db.run(
+        rows = normalize(db.run(
             '?[target_slug, rtype] := *relation{entity_slug: $slug, type: rtype, target_slug}',
             {"slug": slug},
-        ).to_dict("records")
+        ))
 
     if not rows:
         return []
@@ -61,7 +61,7 @@ def _neighbors_1hop(
 
     # 获取实体信息
     for s in slugs:
-        ent = db.run('?[title, classification] := *entity{slug: $slug, title, classification}', {"slug": s}).to_dict("records")
+        ent = normalize(db.run('?[title, classification] := *entity{slug: $slug, title, classification}', {"slug": s}))
         if ent:
             result_map[s] = {
                 "slug": s,

@@ -24,9 +24,33 @@ def _default_db_path() -> Path:
     return Path(".index") / ".kg_cozo.db"
 
 
+def normalize(result: dict[str, Any]) -> list[dict[str, Any]]:
+    """将 pycozo 查询结果统一转为 ``list[dict]``。
+
+    兼容两种返回格式：
+      - 有 pandas：``DataFrame.to_dict("records")``
+      - 无 pandas：``{'headers': [...], 'rows': [...]}``
+    """
+    if isinstance(result, dict) and "headers" in result and "rows" in result:
+        headers = result["headers"]
+        return [dict(zip(headers, row)) for row in result["rows"]]
+    # 可能是 DataFrame 或已有 records 格式
+    if hasattr(result, "to_dict"):
+        return result.to_dict("records")  # type: ignore[union-attr]
+    if isinstance(result, list):
+        return result
+    return []
+
+
 def _create_tables(db: Client) -> None:
     """创建或确认 KG 三张表存在（幂等）。"""
-    existing = {r["name"] for r in db.relations().to_dict("records")}
+    rels = db.relations()
+    if isinstance(rels, dict):
+        # pycozo 无 pandas 时返回 dict {'headers': [...], 'rows': [...]}
+        existing = {row[0] for row in rels.get("rows", [])}
+    else:
+        # 有 pandas 时返回 DataFrame
+        existing = {r["name"] for r in rels.to_dict("records")}
     for name, cols in [
         ("entity", ["slug", "title", "classification"]),
         ("relation", ["entity_slug", "type", "target_slug"]),
