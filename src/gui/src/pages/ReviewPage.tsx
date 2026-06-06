@@ -23,7 +23,6 @@ export function ReviewPage() {
   const [searchParams] = useSearchParams();
   // scope 为空时默认扫 setting_entry 子目录（pending_review 根只有 README）
   const scope = searchParams.get("scope") ?? "setting_entry";
-  const scopeLabel = `pending_review/${scope}`;
 
   // ── 文件列表状态 ──
   const [fileList, setFileList] = useState<DraftFileEntry[]>([]);
@@ -68,12 +67,12 @@ export function ReviewPage() {
     setPreviewPath(path);
     setRightTab("preview");
     try {
-      const content = await fetchDraftRead(path);
+      const content = await fetchDraftRead(path, scope);
       setPreviewContent(content);
     } catch {
       setPreviewContent("（读取失败）");
     }
-  }, []);
+  }, [scope]);
 
   // ── 勾选切换 ──
   const toggleCheck = useCallback((path: string) => {
@@ -93,9 +92,10 @@ export function ReviewPage() {
     if (paths.length === 0) return;
     setStatusText(`晋升中 (${paths.length} 个文件)…`);
     try {
-      const result = await promoteDrafts(paths);
+      const result = await promoteDrafts(paths, scope);
       if (result.ok) {
         setStatusText(`✅ 已晋升 ${result.applied.length} 个文件`);
+        setErrorText("");
         // 从勾选移除已晋升的
         setCheckedPaths((prev) => {
           const next = new Set(prev);
@@ -108,13 +108,15 @@ export function ReviewPage() {
           setPreviewContent("");
         }
       } else {
-        setStatusText(`❌ 晋升完成，${result.failed.length} 个失败: ${result.notes}`);
+        setStatusText(`晋升 ${result.applied.length} 个，失败 ${result.failed.length} 个`);
+        // 用 errorBanner 展示具体失败原因，用户可见
+        setErrorText(result.notes || `晋升失败：${result.failed.join("、")}`);
       }
       void loadFiles(); // 刷新列表
     } catch {
       setStatusText("晋升请求异常");
     }
-  }, [canPromote, checkedPaths, rewritingPaths, previewPath, loadFiles]);
+  }, [canPromote, checkedPaths, rewritingPaths, previewPath, loadFiles, scope]);
 
   // ── 发送（附带文件清单上下文） ──
   const handleSend = useCallback(async () => {
@@ -184,7 +186,7 @@ export function ReviewPage() {
     // 读取每个文件的原文
     const fileContents: { path: string; content: string }[] = [];
     for (const p of paths) {
-      const content = await fetchDraftRead(p);
+      const content = await fetchDraftRead(p, scope);
       fileContents.push({ path: p, content });
     }
 
@@ -198,6 +200,8 @@ export function ReviewPage() {
     const result = await rewriteDrafts(
       fileContents,
       draft.trim(),
+      undefined,
+      scope,
     );
 
     // 解锁
@@ -211,13 +215,13 @@ export function ReviewPage() {
       setStatusText(`✅ 已重写 ${result.written.length} 个文件${result.failed.length > 0 ? `，${result.failed.length} 个失败` : ""}`);
       // 刷新预览
       if (previewPath) {
-        const content = await fetchDraftRead(previewPath);
+        const content = await fetchDraftRead(previewPath, scope);
         setPreviewContent(content);
       }
     } else {
       setStatusText(`❌ 重写失败：${result.failed.length} 个文件未能写入`);
     }
-  }, [canReject, checkedPaths, rewritingPaths, draft, previewPath]);
+  }, [canReject, checkedPaths, rewritingPaths, draft, previewPath, scope]);
 
   // ── 滚动到底部 ──
   useEffect(() => {
@@ -229,11 +233,24 @@ export function ReviewPage() {
     [checkedPaths, rewritingPaths],
   );
 
+  // ── 按目录分组 ──
+  type FileGroup = { dir: string; files: DraftFileEntry[] };
+  const groups = useMemo<FileGroup[]>(() => {
+    const map = new Map<string, DraftFileEntry[]>();
+    for (const f of fileList) {
+      const dir = f.path.includes("/") ? f.path.split("/")[0] : "其他";
+      if (!map.has(dir)) map.set(dir, []);
+      map.get(dir)!.push(f);
+    }
+    return [...map.entries()]
+      .map(([dir, files]) => ({ dir, files }))
+      .sort((a, b) => a.dir.localeCompare(b.dir));
+  }, [fileList]);
+
   return (
     <div className={styles.page} data-testid="review-page">
       <header className={styles.header}>
         <h1 className={styles.title}>审核晋升</h1>
-        <span className={styles.scopeHint}>{scopeLabel}</span>
         <button
           type="button"
           className={styles.refreshBtn}
@@ -249,32 +266,39 @@ export function ReviewPage() {
           {fileList.length === 0 ? (
             <p className={styles.muted}>暂无文件</p>
           ) : (
-            fileList.map((f) => {
-              const locked = rewritingPaths.has(f.path);
-              return (
-                <div
-                  key={f.path}
-                  className={`${styles.fileItem} ${previewPath === f.path ? styles.fileItemActive : ""} ${locked ? styles.fileLocked : ""}`}
-                  onClick={() => void handlePreview(f.path)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") void handlePreview(f.path);
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    className={styles.fileCheckbox}
-                    checked={checkedPaths.has(f.path)}
-                    disabled={locked}
-                    onChange={() => toggleCheck(f.path)}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                  <span className={styles.fileName}>{f.name}</span>
-                  {locked ? <span className={styles.lockBadge}>✎</span> : null}
+            groups.map((g) => (
+              <div key={g.dir} className={styles.fileGroup}>
+                <div className={styles.groupHeader}>
+                  📁 {g.dir} ({g.files.length})
                 </div>
-              );
-            })
+                {g.files.map((f) => {
+                  const locked = rewritingPaths.has(f.path);
+                  return (
+                    <div
+                      key={f.path}
+                      className={`${styles.fileItem} ${previewPath === f.path ? styles.fileItemActive : ""} ${locked ? styles.fileLocked : ""}`}
+                      onClick={() => void handlePreview(f.path)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") void handlePreview(f.path);
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        className={styles.fileCheckbox}
+                        checked={checkedPaths.has(f.path)}
+                        disabled={locked}
+                        onChange={() => toggleCheck(f.path)}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <span className={styles.fileName}>{f.name}</span>
+                      {locked ? <span className={styles.lockBadge}>✎</span> : null}
+                    </div>
+                  );
+                })}
+              </div>
+            ))
           )}
         </aside>
 

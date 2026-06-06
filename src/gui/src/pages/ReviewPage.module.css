@@ -27,15 +27,6 @@
   font-weight: 650;
 }
 
-.scopeHint {
-  font-size: 0.78rem;
-  color: var(--muted);
-  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
-  padding: 0.2rem 0.5rem;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-}
-
 .body {
   flex: 1;
   display: flex;
@@ -80,6 +71,21 @@
   font-size: 0.82rem;
   border: 1px solid transparent;
   user-select: none;
+}
+
+.fileGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.groupHeader {
+  font-size: 0.78rem;
+  font-weight: 650;
+  color: var(--muted);
+  padding: 0.35rem 0.4rem 0.15rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+  margin-top: 0.2rem;
 }
 
 .fileItem:hover {
@@ -133,26 +139,54 @@
 
 .rightTabs {
   display: flex;
+  gap: 0.25rem;
+  padding: 0.5rem 0.75rem 0;
   border-bottom: 1px solid var(--border);
-  font-size: 0.8rem;
+  background: color-mix(in srgb, var(--surface) 95%, var(--bg));
 }
 
 .rightTab {
-  padding: 0.35rem 0.75rem;
+  position: relative;
+  padding: 0.45rem 0.9rem 0.5rem;
   cursor: pointer;
-  border-bottom: 2px solid transparent;
-  user-select: none;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  background: transparent;
   color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 500;
+  user-select: none;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease,
+    border-color 0.15s ease;
+  margin-bottom: -1px;
 }
 
 .rightTab:hover {
   color: var(--text);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 25%, var(--border));
 }
 
 .rightTabActive {
   color: var(--text);
-  border-bottom-color: var(--accent);
   font-weight: 600;
+  background: var(--bg);
+  border-color: var(--border);
+  z-index: 1;
+}
+
+.rightTabActive::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0.5rem;
+  right: 0.5rem;
+  height: 2px;
+  border-radius: 1px 1px 0 0;
+  background: var(--accent);
 }
 
 .previewArea {
@@ -334,6 +368,7 @@
   border: 1px solid color-mix(in srgb, var(--err) 55%, var(--border));
   background: color-mix(in srgb, var(--err) 10%, var(--surface));
   font-size: 0.82rem;
+  white-space: pre-wrap;
 }
 
 .refreshBtn {

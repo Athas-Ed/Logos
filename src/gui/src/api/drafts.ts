@@ -9,17 +9,16 @@ export type DraftFileEntry = {
   mtime_ns: number;
 };
 
-export async function fetchDraftsList(dir = ""): Promise<DraftFileEntry[]> {
-  const params = new URLSearchParams();
-  if (dir) params.set("dir", dir);
+export async function fetchDraftsList(scope = "setting_entry"): Promise<DraftFileEntry[]> {
+  const params = new URLSearchParams({ scope });
   const res = await fetch(`${API_BASE}/drafts?${params}`);
   if (!res.ok) return [];
   const data = await res.json();
   return data.files ?? [];
 }
 
-export async function fetchDraftRead(path: string): Promise<string> {
-  const params = new URLSearchParams({ path });
+export async function fetchDraftRead(path: string, scope = "setting_entry"): Promise<string> {
+  const params = new URLSearchParams({ path, scope });
   const res = await fetch(`${API_BASE}/drafts/read?${params}`);
   if (!res.ok) return "";
   const data = await res.json();
@@ -33,20 +32,20 @@ export type PromoteResult = {
   notes: string;
 };
 
-export async function promoteDrafts(paths: string[]): Promise<PromoteResult> {
+export async function promoteDrafts(paths: string[], scope = "setting_entry"): Promise<PromoteResult> {
   const res = await fetch(`${API_BASE}/drafts/promote`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ paths }),
+    body: JSON.stringify({ paths, scope }),
   });
   return res.ok ? res.json() : { ok: false, applied: [], failed: paths, notes: "晋升请求失败" };
 }
 
-export async function deleteDrafts(paths: string[]): Promise<boolean> {
+export async function deleteDrafts(paths: string[], scope = "setting_entry"): Promise<boolean> {
   const res = await fetch(`${API_BASE}/drafts/delete`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ paths }),
+    body: JSON.stringify({ paths, scope }),
   });
   if (!res.ok) return false;
   const data = await res.json();
@@ -59,11 +58,11 @@ export type WriteResult = {
   result: string;
 };
 
-export async function writeDraft(path: string, content: string): Promise<WriteResult> {
+export async function writeDraft(path: string, content: string, scope = "setting_entry"): Promise<WriteResult> {
   const res = await fetch(`${API_BASE}/drafts/write`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ path, content }),
+    body: JSON.stringify({ path, content, scope }),
   });
   return res.ok ? res.json() : { ok: false, path, result: "写入失败" };
 }
@@ -83,6 +82,7 @@ export async function rewriteDrafts(
   files: RewriteFileInput[],
   requirements: string,
   systemHint?: string,
+  scope = "setting_entry",
 ): Promise<RewriteResult> {
   const res = await fetch(`${API_BASE}/drafts/rewrite`, {
     method: "POST",
@@ -91,6 +91,7 @@ export async function rewriteDrafts(
       files,
       requirements,
       system_hint: systemHint ?? "你是设定审核助手。注意保留 YAML front matter 与正文结构。",
+      scope,
     }),
   });
   if (!res.ok) {
