@@ -157,6 +157,7 @@ class OpenAICompatibleChatClient:
             "model": self._model,
             "messages": [{"role": m.role, "content": m.content} for m in messages],
             "stream": True,
+            "frequency_penalty": 0.5,
         }
         if json_mode:
             payload["response_format"] = {"type": "json_object"}
@@ -234,6 +235,7 @@ class OpenAICompatibleChatClient:
         payload: dict[str, Any] = {
             "model": self._model,
             "messages": [{"role": m.role, "content": m.content} for m in messages],
+            "frequency_penalty": 0.5,
         }
         if json_mode:
             payload["response_format"] = {"type": "json_object"}

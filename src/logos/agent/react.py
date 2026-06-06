@@ -124,6 +124,7 @@ def iter_react_loop(
     history: list[ChatMessage] | None = None,
     stream_assistant: bool = True,
     prompt_echo: bool = False,
+    skill_id: str | None = None,
 ) -> Iterator[ReActStreamReasoning | ReActStreamToolTrace | ReActStreamDone]:
     """与 :func:`run_react_loop` 相同语义；若 *stream_assistant* 则每轮助手输出以流式片段产出。"""
     messages = cb.seed_messages_with_history(
@@ -131,6 +132,7 @@ def iter_react_loop(
         history or [],
         user_text,
         extra_system=extra_system,
+        skill_id=skill_id,
     )
     if prompt_echo:
         echo_text = format_messages_for_prompt_echo(messages)
@@ -251,6 +253,7 @@ def run_react_loop(
     json_mode: bool = True,
     history: list[ChatMessage] | None = None,
     prompt_echo: bool = False,
+    skill_id: str | None = None,
 ) -> ReActResult:
     """Thought → (optional) tool → observation, until final_answer or cap（非流式）。"""
     final: ReActResult | None = None
@@ -264,6 +267,7 @@ def run_react_loop(
         history=history,
         stream_assistant=False,
         prompt_echo=prompt_echo,
+        skill_id=skill_id,
     ):
         if isinstance(item, ReActStreamDone):
             final = item.result

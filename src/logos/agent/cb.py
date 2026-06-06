@@ -137,7 +137,7 @@ def compose_prompt(
         if registry is None:
             msg = "compose_prompt(react) requires registry"
             raise ValueError(msg)
-        system = build_react_system_message(registry)
+        system = build_react_system_message(registry, skill_id=skill_id)
         if extra_system:
             system = system + "\n\n" + extra_system.strip()
         return system
@@ -171,21 +171,40 @@ def seed_dialogue_messages(
 
 
 def load_operating_mode_suffix(mode: str) -> str:
-    """运行模式后缀：``resources/prompts/modes/{author|screenwriter}.md``。"""
-    m = (mode or "author").strip().lower()
-    rel = "modes/screenwriter.md" if m == "screenwriter" else "modes/author.md"
-    return load_prompt_fragment(rel)
+    """运行模式后缀：始终加载 author 模式。"""
+    _ = mode  # 保留参数兼容；始终返回 author
+    return load_prompt_fragment("modes/author.md")
 
 
-def build_react_system_message(registry: ToolRegistry) -> str:
+def build_react_system_message(
+    registry: ToolRegistry,
+    skill_id: str | None = None,
+) -> str:
     tools = registry.tools_prompt_section()
     template = load_prompt_fragment("paradigms/react/base.md")
     if not template:
         msg = "missing resources/prompts/paradigms/react/base.md"
         raise FileNotFoundError(msg)
+
+    # 注入技能专属提示词（如 skills/retrieve_qa.md）
+    skill_prompt = ""
+    if skill_id:
+        from logos.platform.skills_registry import get_skill_manifest
+        try:
+            manifest = get_skill_manifest(skill_id)
+            skill_prompt = load_prompt_fragment(f"{manifest.prompt_runtime_key}.md")
+        except (KeyError, FileNotFoundError):
+            pass
+
     if "{{TOOLS_JSON}}" in template:
-        return template.replace("{{TOOLS_JSON}}", tools)
-    return template + "\n工具目录（JSON 数组）：\n" + tools
+        system = template.replace("{{TOOLS_JSON}}", tools)
+    else:
+        system = template + "\n工具目录（JSON 数组）：\n" + tools
+
+    if skill_prompt:
+        system = system + "\n\n" + skill_prompt
+
+    return system
 
 
 def seed_messages(
@@ -193,6 +212,7 @@ def seed_messages(
     user_text: str,
     *,
     extra_system: str | None = None,
+    skill_id: str | None = None,
 ) -> list[ChatMessage]:
     """Initial messages for a ReAct session."""
     return seed_messages_with_history(
@@ -200,6 +220,7 @@ def seed_messages(
         [],
         user_text,
         extra_system=extra_system,
+        skill_id=skill_id,
     )
 
 
@@ -209,9 +230,10 @@ def seed_messages_with_history(
     user_text: str,
     *,
     extra_system: str | None = None,
+    skill_id: str | None = None,
 ) -> list[ChatMessage]:
     """system + 历史 user/assistant 轮次 + 当前 user（*history* 不含 system）。"""
-    system = build_react_system_message(registry)
+    system = build_react_system_message(registry, skill_id=skill_id)
     if extra_system:
         system = system + "\n\n" + extra_system.strip()
     out: list[ChatMessage] = [ChatMessage(role="system", content=system)]

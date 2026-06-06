@@ -89,6 +89,7 @@ class AgentShell:
             json_mode=json_mode,
             history=history,
             prompt_echo=self.prompt_echo,
+            skill_id=skill_id,
         )
 
     def iter_run_react_task(
@@ -100,6 +101,7 @@ class AgentShell:
         json_mode: bool = True,
         history: list[ChatMessage] | None = None,
         stream_assistant: bool = True,
+        skill_id: str | None = None,
     ) -> Iterator[
         react.ReActStreamReasoning | react.ReActStreamToolTrace | react.ReActStreamDone
     ]:
@@ -113,6 +115,7 @@ class AgentShell:
             history=history,
             stream_assistant=stream_assistant,
             prompt_echo=self.prompt_echo,
+            skill_id=skill_id,
         )
 
     def iter_paradigm_task(
@@ -192,6 +195,7 @@ class AgentShell:
                 json_mode=True,
                 history=history,
                 stream_assistant=stream_assistant,
+                skill_id=skill_id,
             )
             return
         msg = f"unsupported paradigm: {paradigm!r}"
