@@ -1,9 +1,8 @@
 import type { ConversationState } from "../conversation/storeTypes";
-import { getSkillCard } from "./catalog";
 import { getSkillMeta } from "./registry";
 /** 单任务向导（input → running → done），非多轮 Chat */
 export function skillUsesTaskWizard(skillId: string): boolean {
-  const card = getSkillMeta(skillId) ?? getSkillCard(skillId);
+  const card = getSkillMeta(skillId);
   if (!card) {
     return true;
   }
@@ -35,7 +34,6 @@ export function isInspireChatState(
   if (!state.skillId) {
     return false;
   }
-  const card = getSkillCard(state.skillId);
+  const card = getSkillMeta(state.skillId);
   return card?.turn_policy === "multi";
 }
-

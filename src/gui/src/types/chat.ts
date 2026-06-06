@@ -19,10 +19,5 @@ export interface CitationItem {
   score: number;
 }
 
-/** SPEC-V0.1：author | screenwriter；与请求体 operating_mode 对齐 */
-export type OperatingMode = "author" | "screenwriter";
-
-export const OPERATING_MODES: readonly OperatingMode[] = [
-  "author",
-  "screenwriter",
-] as const;
+/** 运行模式（当前仅 author）；与请求体 operating_mode 对齐 */
+export const OPERATING_MODE = "author" as const;

@@ -1,7 +1,45 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, beforeEach } from "vitest";
+import { hydrateSkillRegistry } from "./registry";
 import { conversationNavPath, isInspireChatState, skillUsesTaskWizard } from "./routing";
 
+/* 注册表初始为空，需先填充测试数据 */
+function seedRegistry() {
+  hydrateSkillRegistry([
+    {
+      skill_id: "lint_zh",
+      display_name: "中文语病检查",
+      description: "",
+      ui_instructions: "",
+      paradigm: "dialogue",
+      persistence_tier: "p2",
+      turn_policy: "single",
+    },
+    {
+      skill_id: "outline_plan",
+      display_name: "大纲规划",
+      description: "",
+      ui_instructions: "",
+      paradigm: "plan",
+      persistence_tier: "p1",
+      turn_policy: "single",
+    },
+    {
+      skill_id: "chat_inspire",
+      display_name: "创作启发对话",
+      description: "",
+      ui_instructions: "",
+      paradigm: "dialogue",
+      persistence_tier: "p2",
+      turn_policy: "multi",
+    },
+  ]);
+}
+
 describe("skill routing", () => {
+  beforeEach(() => {
+    seedRegistry();
+  });
+
   it("lint_zh 走任务向导", () => {
     expect(skillUsesTaskWizard("lint_zh")).toBe(true);
     const path = conversationNavPath({
@@ -23,4 +61,3 @@ describe("skill routing", () => {
     expect(isInspireChatState(state)).toBe(true);
   });
 });
-

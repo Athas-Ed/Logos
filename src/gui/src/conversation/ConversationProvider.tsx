@@ -18,7 +18,6 @@ import {
   panelSkillsFromBootstrap,
   resolveBootstrapUi,
 } from "../types/bootstrap";
-import { FALLBACK_PANEL_SKILLS } from "../skills/catalog";
 import { getSkillMeta, hydrateSkillRegistry } from "../skills/registry";
 import { conversationNavPath } from "../skills/routing";
 import {
@@ -138,13 +137,10 @@ function applyStreamEventToMessages(
     return copy;
   }
   if (ev.kind === "reasoning_summary") {
-    acc.reasoningText = ev.text;
     copy[last] = { ...copy[last], reasoning: acc.reasoningText };
   } else if (ev.kind === "reasoning_full") {
-    acc.reasoningText += ev.text;
     copy[last] = { ...copy[last], reasoning: acc.reasoningText };
   } else if (ev.kind === "delta") {
-    acc.assistantText += ev.text;
     copy[last] = {
       ...copy[last],
       content: acc.assistantText,
@@ -466,6 +462,16 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
               ev.kind === "reasoning_summary" ||
               ev.kind === "reasoning_full"
             ) {
+              // ⚠️ acc 的更新必须在 patchConversation 之外完成，
+              // 因为 React Strict Mode 会双重调用 state updater，
+              // 若将 += 放入其中会导致文本被追加两次（字词重复 bug）。
+              if (ev.kind === "delta") {
+                acc.assistantText += ev.text;
+              } else if (ev.kind === "reasoning_summary") {
+                acc.reasoningText = ev.text;
+              } else if (ev.kind === "reasoning_full") {
+                acc.reasoningText += ev.text;
+              }
               patchConversation(conversationId, (s) => {
                 const messages = applyStreamEventToMessages(
                   s.messages,
@@ -824,6 +830,23 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
       const onArchivedRoute = isConversationRoute(path, conversationId);
 
       const isReview = stateRaw.pageType === "review";
+
+      // 在状态更新前确定导航目标，避免在 setState 回调内调用 navigate（防止竞态）
+      let navigateTo: string | null = null;
+      if (onArchivedRoute) {
+        const remainingTabs = openTabIdsRef.current.filter(
+          (x) => x !== conversationId,
+        );
+        if (remainingTabs.length === 0) {
+          navigateTo = "/";
+        } else {
+          const nextState = byIdRef.current[remainingTabs[0]];
+          navigateTo = nextState
+            ? conversationNavPath(nextState)
+            : `/chat/${remainingTabs[0]}`;
+        }
+      }
+
       void (async () => {
         if (!isReview && isConversationIpcAvailable()) {
           await writeConversationIpc(conversationId, record);
@@ -833,19 +856,6 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
         setOpenTabIds((prev) => {
           const next = prev.filter((x) => x !== conversationId);
           openTabIdsRef.current = next;
-          if (onArchivedRoute) {
-            if (next.length === 0) {
-              navigate("/", { replace: true });
-            } else {
-              const nextState = byIdRef.current[next[0]];
-              navigate(
-                nextState
-                  ? conversationNavPath(nextState)
-                  : `/chat/${next[0]}`,
-                { replace: true },
-              );
-            }
-          }
           return next;
         });
 
@@ -861,6 +871,10 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
         });
         notifyConversation(conversationId);
         closingTabsRef.current.delete(conversationId);
+
+        if (navigateTo) {
+          navigate(navigateTo, { replace: true });
+        }
       })();
     },
     [navigate, stopStream, syncQueueMeta],
@@ -1111,9 +1125,7 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
     void (async () => {
       const b = await fetchBootstrap();
       const fromApi = panelSkillsFromBootstrap(b?.skills);
-      hydrateSkillRegistry(
-        fromApi.length > 0 ? fromApi : [...FALLBACK_PANEL_SKILLS],
-      );
+      hydrateSkillRegistry(fromApi);
       const ui = resolveBootstrapUi(b?.ui);
       setSseMaxNum(ui.SSE_maxNum);
       sseMaxNumRef.current = ui.SSE_maxNum;

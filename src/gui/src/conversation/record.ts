@@ -1,7 +1,6 @@
 import type {
   ChatMessage,
   CitationItem,
-  OperatingMode,
   PresentationMode,
 } from "../types/chat";
 import type { TaskPhase } from "./storeTypes";
@@ -51,7 +50,7 @@ export function buildConversationRecord(args: {
   citationTurns: CitationItem[][];
   toolTraceTurns: string[][];
   reactStepLimitTurns?: { hit: boolean }[];
-  operatingMode: OperatingMode;
+  operatingMode: string;
   presentation: PresentationMode;
   status?: ConversationStatus;
   title?: string;
@@ -181,8 +180,8 @@ function parseCoreFieldsV3(
     tool_trace_turns = legacy.length > 0 ? [legacy] : [];
   }
   const op = raw.operating_mode;
-  const operating_mode: OperatingMode =
-    op === "screenwriter" ? "screenwriter" : "author";
+  const operating_mode: string =
+    typeof op === "string" && op.trim() ? op.trim() : "author";
   const pres = raw.presentation;
   const presentation: PresentationMode =
     pres === "developer" ? "developer" : "work";

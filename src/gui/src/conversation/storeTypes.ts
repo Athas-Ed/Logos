@@ -1,7 +1,6 @@
 import type {
   ChatMessage,
   CitationItem,
-  OperatingMode,
   PresentationMode,
 } from "../types/chat";
 import type { SkillCardMeta } from "../skills/catalog";
@@ -52,7 +51,7 @@ export type ConversationState = {
   /** 晋升 KSFS 结果摘要（Task 页展示） */
   promoteMessage: string | null;
   promoteBusy: boolean;
-  operatingMode: OperatingMode;
+  operatingMode: string;
   presentation: PresentationMode;
   streaming: boolean;
   /** 页面类型：review = 审核晋升独立页面，缺省则走 chat/task 路由 */

@@ -1,5 +1,5 @@
 import type { ChatMessage, CitationItem } from "../types/chat";
-import { readStoredOperatingMode, readStoredPresentation } from "../preferences/chatPrefs";
+import { readStoredPresentation } from "../preferences/chatPrefs";
 import type { ReactStepLimitTurnMeta } from "./reactStepLimit";
 import { inferReactStepLimitTurns } from "./reactStepLimit";
 import type { ConversationRecord } from "./types";
@@ -53,7 +53,7 @@ export function createEmptyConversationState(
     pipelineWrittenPaths: [],
     promoteMessage: null,
     promoteBusy: false,
-    operatingMode: readStoredOperatingMode() ?? "author",
+    operatingMode: "author",
     presentation: readStoredPresentation() ?? "work",
     streaming: false,
     queued: false,

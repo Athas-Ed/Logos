@@ -1,4 +1,5 @@
-/** bootstrap 不可用时的面板与页面回退元数据（须与 manifest 的 ui_instructions 保持同步）。 */
+/** Manifest YAML 是技能元数据的唯一数据源。bootstrap API 将其送达前端。
+ *  离线回退只保留最低标识（skill_id + display_name），无行为字段可漂移。 */
 
 export type TurnPolicy = "single" | "multi";
 
@@ -20,99 +21,6 @@ export type SkillCardMeta = {
   customPage?: "review";
 };
 
-const LINT_UI = `粘贴或输入一段中文正文；助手将指出语病与表达问题（单轮，无工具调用）。
-示例：他跑的很快，我们要加快进度。`;
-
-const RETRIEVE_UI = `用自然语言提问；助手会先检索 KSFS，再按需 read_ksfs 读原文，最后作答。
-执行阶段可在页面查看 ReAct 工具轨迹与检索引用。
-**追问**：同一主题继续问 → 点「追问」。**换题**：不同主题 → 点「换题（新会话）」；不会自动归档当前标签，误点可切回原标签。
-顶栏关闭标签 = 归档。示例：有罪者的大道怎么去藏骨堂？需要哪些步骤？`;
-
-const INSPIRE_UI = `多轮创作启发对话：在下方输入创作相关问题，按 Enter 发送。
-切换顶栏标签不会中断后台 SSE；超额请求将排队。`;
-
-const SETTING_WRITE_UI = `ReAct 设定撰写工具链：助手自动调 retrieve → read_ksfs → 设定写入等工具。
-执行阶段可查看 ReAct 轨迹。适用于基于 KSFS 知识的设定补充与撰写。`;
-
-const OUTLINE_PLAN_UI = `Plan 范式大纲规划：助手先规划步骤骨架，再按步执行。
-适用于需要结构化输出的大纲/规划类任务。`;
-
-const IMPORT_UI_LAB = `Pipeline 导入设定流水线：助手自动执行多步 pipeline（序列化 → 校验 → 写入草稿）。
-完成后结果展示在右侧阶段进度中。`;
-
-const DRAFT_REVIEW_UI_LAB = `审核晋升（dialogue 路线）：列出 pending_review 下草稿文件，助手辅助审阅。
-注意：产品模式走独立 ReviewPage 面板，试验台走通用对话页供核查 Prompt。`;
-
-/** 范式试验台可选 Skill（含 react 样例） */
-export const LAB_SKILL_CARDS: readonly SkillCardMeta[] = [
-  {
-    skill_id: "lint_zh",
-    display_name: "中文语病检查",
-    description: "dialogue · 语病检查 Prompt",
-    ui_instructions: LINT_UI,
-    paradigm: "dialogue",
-    persistence_tier: "p2",
-    turn_policy: "single",
-  },
-  {
-    skill_id: "chat_inspire",
-    display_name: "创作启发对话",
-    description: "dialogue · 多轮启发 Prompt",
-    ui_instructions: INSPIRE_UI,
-    paradigm: "dialogue",
-    persistence_tier: "p2",
-    turn_policy: "multi",
-  },
-  {
-    skill_id: "retrieve_qa",
-    display_name: "检索问答",
-    description: "react · retrieve + read_ksfs + ReAct",
-    ui_instructions: RETRIEVE_UI,
-    paradigm: "react",
-    persistence_tier: "p2",
-    turn_policy: "single",
-  },
-  {
-    skill_id: "setting_write",
-    display_name: "设定撰写",
-    description: "react · 基于 KSFS 知识的设定撰写",
-    ui_instructions: SETTING_WRITE_UI,
-    paradigm: "react",
-    persistence_tier: "p1",
-    turn_policy: "single",
-  },
-  {
-    skill_id: "outline_plan",
-    display_name: "大纲规划",
-    description: "plan · 分步规划 + 执行",
-    ui_instructions: OUTLINE_PLAN_UI,
-    paradigm: "plan",
-    persistence_tier: "p1",
-    turn_policy: "single",
-  },
-  {
-    skill_id: "import_setting",
-    display_name: "导入设定（pipeline）",
-    description: "pipeline · 导入 + 校验 + 写入草稿",
-    ui_instructions: IMPORT_UI_LAB,
-    paradigm: "pipeline",
-    persistence_tier: "p0",
-    turn_policy: "single",
-  },
-  {
-    skill_id: "draft_review",
-    display_name: "审核晋升",
-    description: "dialogue · 草稿审阅 Prompt 核查",
-    ui_instructions: DRAFT_REVIEW_UI_LAB,
-    paradigm: "dialogue",
-    persistence_tier: "p1",
-    turn_policy: "single",
-  },
-] as const;
-
-const IMPORT_UI = `将 Word 等来源的设定正文粘贴到下方；流水线会产出 JSON、校验并写入 workspace/setting_entry/ 草稿。
-完成后请查看结果摘要与右侧阶段进度；确认无误后点击「晋升至 KSFS」。`;
-
 export const PARADIGM_LABELS: Record<SkillCardMeta["paradigm"], string> = {
   dialogue: "dialogue（自然语言 SSE）",
   react: "react（ReAct + 工具轨迹）",
@@ -120,70 +28,24 @@ export const PARADIGM_LABELS: Record<SkillCardMeta["paradigm"], string> = {
   pipeline: "HITL Plan-and-Execute（设定导入流水线）",
 };
 
-/** bootstrap 请求失败时的面板 Skill 回退列表（只含核心技能；新增技能只需写 manifest YAML）。 */
-export const FALLBACK_PANEL_SKILLS: readonly SkillCardMeta[] = [
-  {
-    skill_id: "lint_zh",
-    display_name: "中文语病检查",
-    description: "对输入段落做语病与表达问题提示（单轮对话，无工具）。",
-    ui_instructions: LINT_UI,
-    paradigm: "dialogue",
-    persistence_tier: "p2",
-    turn_policy: "single",
-    qa_mode: "normal",
-    panel_visible: true,
-  },
-  {
-    skill_id: "chat_inspire",
-    display_name: "创作启发对话",
-    description: "多轮启发式创作对话；非默认万能 Chat 入口。",
-    ui_instructions: INSPIRE_UI,
-    paradigm: "dialogue",
-    persistence_tier: "p2",
-    turn_policy: "multi",
-    qa_mode: "normal",
-    panel_visible: true,
-  },
-  {
-    skill_id: "retrieve_qa",
-    display_name: "检索问答",
-    description: "react · retrieve + read_ksfs + ReAct",
-    ui_instructions: RETRIEVE_UI,
-    paradigm: "react",
-    persistence_tier: "p2",
-    turn_policy: "single",
-    qa_mode: "continuous",
-    panel_visible: true,
-  },
-  {
-    skill_id: "import_setting",
-    display_name: "导入设定",
-    description: "粘贴设定 → 结构化 JSON → setting_entry 草稿（pipeline）。",
-    ui_instructions: IMPORT_UI,
-    paradigm: "pipeline",
-    persistence_tier: "p0",
-    turn_policy: "single",
-    qa_mode: "normal",
-    panel_visible: true,
-  },
-  {
-    skill_id: "draft_review",
-    display_name: "审核晋升",
-    description: "审阅 pending_review 下草稿，晋升至 KSFS 或打回 LLM 重写。",
-    ui_instructions: "审阅 pending_review 目录下的草稿文件。勾选文件后可以晋升至 KSFS 或打回要求 LLM 重写。",
-    paradigm: "dialogue",
-    persistence_tier: "p1",
-    turn_policy: "single",
-    qa_mode: "normal",
-    panel_visible: true,
-    customPage: "review",
-  },
-] as const;
+/* ==============================
+ *  离线回退：bootstrap 不可用时最低标识
+ *  ==============================
+ *  仅含 skill_id + display_name，无行为字段。
+ *  新增技能只需写 manifest YAML，bootstrap 在线时自动送达。
+ *  如需在离线时可见，在此追加 `{ skill_id, display_name }`。
+ */
+export const OFFLINE_SKILL_NAMES: readonly Pick<SkillCardMeta, "skill_id" | "display_name">[] = [
+  { skill_id: "lint_zh", display_name: "中文语病检查" },
+  { skill_id: "chat_inspire", display_name: "创作启发对话" },
+  { skill_id: "retrieve_qa", display_name: "检索问答" },
+  { skill_id: "setting_write", display_name: "设定撰写" },
+  { skill_id: "outline_plan", display_name: "大纲规划" },
+  { skill_id: "import_setting", display_name: "导入设定" },
+  { skill_id: "draft_review", display_name: "审核晋升" },
+];
 
-/** @deprecated 使用 {@link getSkillMeta}（registry） */
-export function getSkillCard(skillId: string): SkillCardMeta | undefined {
-  return (
-    FALLBACK_PANEL_SKILLS.find((c) => c.skill_id === skillId) ??
-    LAB_SKILL_CARDS.find((c) => c.skill_id === skillId)
-  );
+/** 离线回退：根据 skill_id 找 display_name */
+export function getOfflineSkillName(skillId: string): string | undefined {
+  return OFFLINE_SKILL_NAMES.find((c) => c.skill_id === skillId)?.display_name;
 }

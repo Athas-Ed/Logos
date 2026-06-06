@@ -11,17 +11,16 @@ import {
 } from "../conversation/ConversationProvider";
 import type { ParadigmOverride } from "../conversation/storeTypes";
 import {
-  MODE_LABELS,
   PRESENTATION_LABELS,
-  persistOperatingMode,
   persistPresentation,
 } from "../preferences/chatPrefs";
 import {
-  LAB_SKILL_CARDS,
+  OFFLINE_SKILL_NAMES,
   PARADIGM_LABELS,
-  getSkillCard,
+  getOfflineSkillName,
 } from "../skills/catalog";
-import type { OperatingMode, PresentationMode } from "../types/chat";
+import { getSkillMeta } from "../skills/registry";
+import type { PresentationMode } from "../types/chat";
 import styles from "./LabChatControls.module.css";
 
 const PARADIGMS = Object.keys(PARADIGM_LABELS) as ParadigmOverride[];
@@ -30,7 +29,6 @@ type Props = {
   conversationId: string;
   skillId: string;
   paradigmOverride?: ParadigmOverride;
-  operatingMode: OperatingMode;
   presentation: PresentationMode;
 };
 
@@ -38,7 +36,6 @@ export function LabChatControls({
   conversationId,
   skillId,
   paradigmOverride,
-  operatingMode,
   presentation,
 }: Props) {
   const baseId = useId();
@@ -50,7 +47,7 @@ export function LabChatControls({
   } | null>(null);
   const [devBusy, setDevBusy] = useState(false);
 
-  const manifestParadigm = getSkillCard(skillId)?.paradigm ?? "dialogue";
+  const manifestParadigm = getSkillMeta(skillId)?.paradigm ?? "dialogue";
   const effectiveParadigm = paradigmOverride ?? manifestParadigm;
   const canOverrideParadigm = llmMode === "stub" || Boolean(devUi?.show);
 
@@ -82,11 +79,11 @@ export function LabChatControls({
 
   const onSkillChange = useCallback(
     (nextSkill: string) => {
-      const card = getSkillCard(nextSkill);
+      const name = getSkillMeta(nextSkill)?.display_name ?? getOfflineSkillName(nextSkill) ?? nextSkill;
       patch({
         skillId: nextSkill,
         paradigmOverride: undefined,
-        title: card ? `试验 · ${card.display_name}` : `试验 · ${nextSkill}`,
+        title: `试验 · ${name}`,
       });
     },
     [patch],
@@ -143,9 +140,9 @@ export function LabChatControls({
             value={skillId}
             onChange={(e) => onSkillChange(e.target.value)}
           >
-            {LAB_SKILL_CARDS.map((c) => (
+            {[...OFFLINE_SKILL_NAMES].sort((a, b) => a.skill_id.localeCompare(b.skill_id)).map((c) => (
               <option key={c.skill_id} value={c.skill_id}>
-                {c.display_name} · {c.paradigm}
+                {c.display_name} · {getSkillMeta(c.skill_id)?.paradigm ?? "dialogue"}
               </option>
             ))}
           </select>
@@ -178,26 +175,8 @@ export function LabChatControls({
           </select>
         </div>
         <div className={styles.field}>
-          <label className={styles.label} htmlFor={`${baseId}-op`}>
-            运行模式
-          </label>
-          <select
-            id={`${baseId}-op`}
-            className={styles.select}
-            data-testid="lab-operating-mode"
-            value={operatingMode}
-            onChange={(e) => {
-              const mode = e.target.value as OperatingMode;
-              persistOperatingMode(mode);
-              patch({ operatingMode: mode });
-            }}
-          >
-            {(Object.keys(MODE_LABELS) as OperatingMode[]).map((m) => (
-              <option key={m} value={m}>
-                {MODE_LABELS[m]}
-              </option>
-            ))}
-          </select>
+          <span className={styles.label}>运行模式</span>
+          <span className={styles.label}>作者模式</span>
         </div>
         <div className={styles.field}>
           <label className={styles.label} htmlFor={`${baseId}-pres`}>

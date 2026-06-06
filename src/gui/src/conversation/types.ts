@@ -1,7 +1,6 @@
 import type {
   ChatMessage,
   CitationItem,
-  OperatingMode,
   PresentationMode,
 } from "../types/chat";
 import type { TaskPhase } from "./storeTypes";
@@ -33,7 +32,7 @@ export type ConversationRecord = {
   tool_trace_turns: string[][];
   /** ReAct 范式：按轮步数触顶（可选；schema v3+） */
   react_step_limit_turns?: { hit: boolean }[];
-  operating_mode: OperatingMode;
+  operating_mode: string;
   presentation: PresentationMode;
   skill_id: string;
   task_phase?: TaskPhase;

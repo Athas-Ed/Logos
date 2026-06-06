@@ -18,18 +18,12 @@ import {
   resolveEffectiveCacheWarnUi,
 } from "../preferences/cacheWarnPrefs";
 import {
-  MODE_LABELS,
   PRESENTATION_LABELS,
-  normalizeOperatingFromServer,
-  persistOperatingMode,
   persistPresentation,
-  readStoredOperatingMode,
   readStoredPresentation,
 } from "../preferences/chatPrefs";
 import {
-  OPERATING_MODES,
   type LogProfile,
-  type OperatingMode,
   type PresentationMode,
 } from "../types/chat";
 import {
@@ -106,9 +100,6 @@ export function SettingsPage() {
   const [dryErr, setDryErr] = useState<string | null>(null);
   const [copyHint, setCopyHint] = useState<string | null>(null);
   const [uiLimits, setUiLimits] = useState<BootstrapUi>(BOOTSTRAP_UI_DEFAULTS);
-  const [operatingMode, setOperatingMode] = useState<OperatingMode>(
-    () => readStoredOperatingMode() ?? "author",
-  );
   const [presentation, setPresentation] = useState<PresentationMode>(
     () => readStoredPresentation() ?? "work",
   );
@@ -140,13 +131,9 @@ export function SettingsPage() {
             : null,
         );
         setUiLimits(resolveEffectiveCacheWarnUi(resolveBootstrapUi(b.ui)));
-        const storedOp = readStoredOperatingMode();
         const storedPres = readStoredPresentation();
-        const op = storedOp ?? normalizeOperatingFromServer(b.operating_mode);
         const pres = storedPres ?? b.default_presentation;
-        setOperatingMode(op);
         setPresentation(pres);
-        if (!storedOp) persistOperatingMode(op);
         if (!storedPres) persistPresentation(pres);
       }
     })();
@@ -272,20 +259,6 @@ export function SettingsPage() {
     }
   }, []);
 
-  const applyOperatingMode = useCallback(
-    (mode: OperatingMode) => {
-      setOperatingMode(mode);
-      persistOperatingMode(mode);
-      if (!convMeta.ready) {
-        return;
-      }
-      for (const id of convMeta.openTabIds) {
-        convActions.patchConversation(id, { operatingMode: mode });
-      }
-    },
-    [convActions, convMeta.openTabIds, convMeta.ready],
-  );
-
   const applyPresentation = useCallback(
     (mode: PresentationMode) => {
       setPresentation(mode);
@@ -335,24 +308,8 @@ export function SettingsPage() {
             SSE 中 LLM 推理过程为摘要或全文（见 SPEC-DISPLAY-AND-LOGGING）。
           </p>
           <div className={styles.field}>
-            <label className={styles.fieldLabel} htmlFor={`${titleId}-op-mode`}>
-              运行模式
-            </label>
-            <select
-              id={`${titleId}-op-mode`}
-              className={styles.select}
-              data-testid="settings-operating-mode"
-              value={operatingMode}
-              onChange={(e) =>
-                applyOperatingMode(e.target.value as OperatingMode)
-              }
-            >
-              {OPERATING_MODES.map((m) => (
-                <option key={m} value={m}>
-                  {MODE_LABELS[m]}
-                </option>
-              ))}
-            </select>
+            <span className={styles.fieldLabel}>运行模式</span>
+            <span className={styles.fieldLabel}>作者模式</span>
           </div>
           <div className={styles.field}>
             <label className={styles.fieldLabel} htmlFor={`${titleId}-pres`}>

@@ -1,12 +1,8 @@
-import { FALLBACK_PANEL_SKILLS, type SkillCardMeta } from "./catalog";
+import type { SkillCardMeta } from "./catalog";
 
 const byId = new Map<string, SkillCardMeta>();
 
-/** 启动时用回退列表填充，避免 bootstrap 到达前 getSkillMeta 为空。 */
-export function initSkillRegistryFallback(): void {
-  hydrateSkillRegistry([...FALLBACK_PANEL_SKILLS]);
-}
-
+/** 用 bootstrap 数据填充注册表（完全替换）。 */
 export function hydrateSkillRegistry(cards: readonly SkillCardMeta[]): void {
   byId.clear();
   for (const c of cards) {
@@ -14,9 +10,7 @@ export function hydrateSkillRegistry(cards: readonly SkillCardMeta[]): void {
   }
 }
 
-/** 当前 Skill 元数据（bootstrap 优先，否则 catalog 回退）。 */
+/** 当前 Skill 元数据（bootstrap 优先，无回退避免数据漂移）。 */
 export function getSkillMeta(skillId: string): SkillCardMeta | undefined {
-  return byId.get(skillId) ?? FALLBACK_PANEL_SKILLS.find((c) => c.skill_id === skillId);
+  return byId.get(skillId);
 }
-
-initSkillRegistryFallback();
