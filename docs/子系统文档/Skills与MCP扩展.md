@@ -6,24 +6,25 @@
 
 - 展示名称、说明、UI 指引
 - 允许的**进程内工具**与 **MCP 工具** 子集
-- `paradigm`（对话 / ReAct / Plan / HITL Plan-and-Execute，代码值 `pipeline`）
+- `paradigm`（对话 / ReAct / Plan / Pipeline，代码值 `pipeline`）
 - 持久化档位 `persistence_tier`（p0 / p1 / p2）
 - 可选 `input_schema` 约束任务输入
 
 manifest 位于 `skills/manifests/<skill_id>.yaml`，与 `skills/<name>/` 下的设计说明、MCP 入口脚本并列。
 
-## 内置 Skill 示例（随仓库演进）
+## 内置 Skill 一览
 
-| skill_id | 用途（概要） |
-|----------|----------------|
-| `chat_inspire` | 长对话启发 |
-| `lint_zh` | 中文语病检查 |
-| `import_setting` | 结构化设定导入 |
-| `retrieve_qa` | 检索问答（同会话连续多轮；步数见 `agent.react.max_QA_steps`） |
-| `outline_plan` | 大纲规划 |
-| `import_setting` | 导入设定（HITL Plan-and-Execute） |
+`skills/manifests/` 下当前包含以下 7 个产品 Skill（以实际文件为准）：
 
-以 `skills/manifests/` 实际文件为准。
+| skill_id | 范式 | 用途（概要） |
+|----------|------|----------------|
+| `chat_inspire` | react | 长对话启发 |
+| `draft_review` | react | 审核晋升：列出待审草稿，预览后晋升至 KSFS |
+| `import_setting` | pipeline | 结构化设定导入（确定性阶段表） |
+| `lint_zh` | dialogue | 中文语病检查（纯对话，无工具） |
+| `outline_plan` | plan | 大纲规划（Phase A 预览，面板默认隐藏） |
+| `retrieve_qa` | react | 检索问答（三路融合检索 + read_ksfs 原文核实） |
+| `setting_write` | react | 设定撰写：基于 KSFS 上下文起草新条目 |
 
 ## MCP 集成
 

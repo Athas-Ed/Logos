@@ -1,0 +1,67 @@
+# =============================================================================
+# Logos 后端 + GUI — Docker Compose 编排
+# =============================================================================
+# 用法:
+#   docker compose up -d                    # 启动后端 + 前端 (http://localhost:3000)
+#   docker compose logs -f                  # 跟踪日志
+#   docker compose down                     # 停止并清理
+#
+# 配置文件: 复制 config/local.example.yaml → config/local.yaml 并填写 API key
+# =============================================================================
+
+services:
+  logos-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: logos-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      # 配置（只读）
+      - ./config:/app/config:ro
+      # 索引持久化（HSI / Chroma / Sparse FTS）
+      - ./.index:/app/.index
+      # 工作区（草稿、导入等）
+      - ./workspace:/app/workspace
+      # Docker 版使用西游记示例知识库；本地开发仍使用 resources/ksfs
+      - ./example_ksfs:/app/resources/ksfs
+      # 日志
+      - ./logs:/app/logs
+      # MCP 技能脚本
+      - ./skills:/app/skills:ro
+      # Prompt 模板、Pipeline 配置、实体模板（只读）
+      - ./resources/prompts:/app/resources/prompts:ro
+      - ./resources/pipelines:/app/resources/pipelines:ro
+      - ./resources/entity_template:/app/resources/entity_template:ro
+      # 嵌入模型（可选，可挂载预下载的模型权重）
+      - ./models:/app/models:ro
+    environment:
+      # 日志等级
+      - LOGOS_LOGGING__LEVEL=INFO
+      # LLM 配置通过 .env 文件或环境变量注入
+      # - LOGOS_LLM__API_KEY=sk-...    # 通过 .env 或 shell export 设置
+      # - LOGOS_LLM__BASE_URL=https://api.deepseek.com/v1
+      # - LOGOS_LLM__MODEL=deepseek-chat
+    env_file:
+      - path: .env
+        required: false
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+  logos-gui:
+    build:
+      context: ./src/gui
+      dockerfile: Dockerfile
+    container_name: logos-gui
+    ports:
+      - "3000:3000"
+    depends_on:
+      logos-backend:
+        condition: service_healthy
+    restart: unless-stopped

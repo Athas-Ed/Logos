@@ -19,7 +19,7 @@
 | 对话 | `dialogue` | 自由文本多轮，非 ReAct JSON | 聊天启发 |
 | ReAct | `react` | 每轮结构化 JSON + 工具 | 语病检查、检索问答 |
 | Plan | `plan` | 先计划再分步（演进中） | 大纲类 |
-| **HITL Plan-and-Execute** | `pipeline` | 人在回路的计划—执行流水线；**非** CI Pipeline | 设定导入 |
+| **Pipeline** | `pipeline` | 确定性阶段表；**非** ReAct 循环，也**非** CI Pipeline | 设定导入 |
 
 PR **不**默认在运行时「智能猜范式」；Skill 作者在 manifest 中定好边界。开发者可在开启调试工具时用 `paradigm_override` 试验（见 API 文档）。
 
@@ -39,7 +39,7 @@ skill_id → 读取 manifest → PR 选定执行范式 → Agent 调度器调用
          → CB 组装 messages → S&G 裁剪工具白名单 → LLM / 工具循环 / Pipeline 步骤
 ```
 
-`pipeline`（HITL Plan-and-Execute）会发出步骤级 SSE 事件（如 `pipeline_step`），GUI 可展示轨迹。
+`pipeline` 会发出步骤级 SSE 事件（如 `pipeline_step`），GUI 可展示轨迹。
 
 ## 与基础设施的边界
 

@@ -29,6 +29,7 @@ type Props = {
   conversationId: string;
   skillId: string;
   paradigmOverride?: ParadigmOverride;
+  operatingMode: string;
   presentation: PresentationMode;
 };
 
@@ -36,6 +37,7 @@ export function LabChatControls({
   conversationId,
   skillId,
   paradigmOverride,
+  operatingMode,
   presentation,
 }: Props) {
   const baseId = useId();
@@ -176,7 +178,7 @@ export function LabChatControls({
         </div>
         <div className={styles.field}>
           <span className={styles.label}>运行模式</span>
-          <span className={styles.label}>作者模式</span>
+          <span className={styles.label}>{operatingMode}</span>
         </div>
         <div className={styles.field}>
           <label className={styles.label} htmlFor={`${baseId}-pres`}>

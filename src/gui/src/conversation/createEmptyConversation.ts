@@ -19,7 +19,7 @@ export function currentTurnToolTrace(state: {
   return turns.length > 0 ? turns[turns.length - 1]! : [];
 }
 
-export function createEmptyReviewState(id: string, scope?: string): ConversationState {
+export function createEmptyReviewState(id: string, _scope?: string): ConversationState {
   return {
     ...createEmptyConversationState(id, "审核晋升", "draft_review"),
     pageType: "review" as const,

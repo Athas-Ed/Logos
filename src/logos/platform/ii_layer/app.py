@@ -68,8 +68,8 @@ def main() -> None:
     import sys
     from pathlib import Path
 
-    # 确保仓库根在 sys.path 上
-    _repo = Path(__file__).resolve().parents[3]
+    # 在 Docker 中由 ENV LOGOS_REPO_ROOT=/app 提供；开发模式下由 scripts/run_dev_backend.py 设置
+    _repo = Path(os.environ.get("LOGOS_REPO_ROOT", Path(__file__).resolve().parents[4]))
     if str(_repo / "src") not in sys.path:
         sys.path.insert(0, str(_repo / "src"))
 
@@ -106,6 +106,8 @@ def main() -> None:
 
     try:
         embedder = BgeSmallZhEmbedder(str(Path(settings.embedding_model_path)))
+        # 主动触发懒加载，路径不存在时尽早降级
+        embedder.embed([""])
     except Exception:  # noqa: BLE001
         embedder = _StubEmbedder512()
 
@@ -142,9 +144,25 @@ def main() -> None:
 
 
 class _StubLLM:
-    """LLM 桩实现（无 API key 时使用）。"""
+    """LLM 桩实现（无 API key 时使用）。
+    
+    返回完整拼装的 messages 文本，方便检视 CB 到底组了什么给 LLM。
+    """
+
+    def _format_messages(self, messages) -> str:
+        lines: list[str] = []
+        for i, m in enumerate(messages):
+            lines.append(f"--- [{i}] role={m.role} ---")
+            lines.append(m.content)
+            lines.append("")
+        return "\n".join(lines).rstrip()
+
     def complete(self, messages, *, json_mode: bool = False) -> str:
-        return "（Docker 桩后端）" + messages[-1].content
+        import json as _json
+        text = self._format_messages(messages)
+        if json_mode:
+            return _json.dumps({"final_answer": text}, ensure_ascii=False)
+        return text
 
     def stream_completion(self, messages, *, json_mode: bool = False):
         text = self.complete(messages, json_mode=json_mode)

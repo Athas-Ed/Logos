@@ -1,0 +1,42 @@
+# Python
+.venv/
+.venv_test/
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+*.egg
+.pytest_cache/
+
+# Node / GUI / Electron (后端镜像不需要)
+node_modules/
+src/gui/
+src/electron/
+src/gui/dist/
+src/electron/dist/
+src/electron/release/
+
+# Data / index (bind-mount via docker-compose)
+.index/
+workspace/
+logs/
+resources/ksfs/
+example_ksfs/
+
+# Git
+.git/
+.gitattributes
+.githooks/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+config/local.yaml

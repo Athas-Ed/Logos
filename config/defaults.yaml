@@ -62,7 +62,7 @@ skills:
 ui:
   default_presentation: "work"
   # 后台 SSE 并发上限（超额排队）；见 DECISIONS.md §13、GUI开发文档.md §12.4
-  SSE_maxNum: 1
+  SSE_maxNum: 3
   # 会话缓存占用告警阈值（字节）；默认 500 MiB
   cache_warn_bytes: 524288000
   # 连续问答：CB 保留最近几轮 user/assistant 全文

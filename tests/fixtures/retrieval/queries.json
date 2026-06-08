@@ -1,0 +1,247 @@
+[
+  {
+    "id": "Q001",
+    "text": "琥珀钟楼",
+    "expected_paths": ["lore/amber_clock.md"],
+    "type": "exact_title",
+    "tags": ["hsi", "smoke"]
+  },
+  {
+    "id": "Q002",
+    "text": "钟楼在午夜校准齿轮",
+    "expected_paths": ["lore/amber_clock.md"],
+    "type": "body_paraphrase",
+    "tags": ["svs", "semantic"]
+  },
+  {
+    "id": "Q003",
+    "text": "午夜校准",
+    "expected_paths": ["lore/amber_clock.md"],
+    "type": "body_exact_phrase",
+    "tags": ["sparse", "fts"]
+  },
+  {
+    "id": "Q004",
+    "text": "九号符文",
+    "expected_paths": ["lore/rune_nine.md"],
+    "type": "body_noun",
+    "tags": ["sparse", "fts"]
+  },
+  {
+    "id": "Q005",
+    "text": "隐藏在青城峰的门派",
+    "expected_paths": ["locations/qingcheng_peak.md"],
+    "type": "relation_paraphrase",
+    "tags": ["kg", "future"]
+  },
+  {
+    "id": "Q006",
+    "text": "碎星剑",
+    "expected_paths": ["lore/starfall_sword.md"],
+    "type": "exact_title",
+    "tags": ["hsi", "smoke"]
+  },
+  {
+    "id": "Q007",
+    "text": "林夜的长弓是谁打造的",
+    "expected_paths": ["characters/lin_ye.md", "items/zhui_feng_bow.md", "characters/tie_gu.md"],
+    "type": "body_hybrid",
+    "tags": ["hsi", "svs", "sparse"]
+  },
+  {
+    "id": "Q008",
+    "text": "符文学院教授",
+    "expected_paths": ["characters/su_qingxue.md", "organizations/rune_academy.md"],
+    "type": "title_extra",
+    "tags": ["hsi"]
+  },
+  {
+    "id": "Q009",
+    "text": "苏晴雪",
+    "expected_paths": ["characters/su_qingxue.md"],
+    "type": "exact_title",
+    "tags": ["hsi", "smoke"]
+  },
+  {
+    "id": "Q010",
+    "text": "铁骨锻造",
+    "expected_paths": ["characters/tie_gu.md", "items/zhui_feng_bow.md"],
+    "type": "body_hybrid",
+    "tags": ["hsi", "svs", "sparse"]
+  },
+  {
+    "id": "Q011",
+    "text": "姜元启",
+    "expected_paths": ["characters/jiang_yuanqi.md"],
+    "type": "exact_title",
+    "tags": ["hsi", "smoke"]
+  },
+  {
+    "id": "Q012",
+    "text": "青城峰",
+    "expected_paths": ["locations/qingcheng_peak.md"],
+    "type": "exact_title",
+    "tags": ["hsi", "smoke"]
+  },
+  {
+    "id": "Q013",
+    "text": "旧城区中央广场",
+    "expected_paths": ["locations/old_city.md"],
+    "type": "body_exact_phrase",
+    "tags": ["sparse", "fts"]
+  },
+  {
+    "id": "Q014",
+    "text": "黑石关",
+    "expected_paths": ["locations/blackstone_pass.md"],
+    "type": "exact_title",
+    "tags": ["hsi", "smoke"]
+  },
+  {
+    "id": "Q015",
+    "text": "逐风",
+    "expected_paths": ["items/zhui_feng_bow.md"],
+    "type": "exact_title",
+    "tags": ["hsi", "smoke"]
+  },
+  {
+    "id": "Q016",
+    "text": "符文动态共振模型",
+    "expected_paths": ["items/resonance_model.md"],
+    "type": "exact_title",
+    "tags": ["hsi", "smoke"]
+  },
+  {
+    "id": "Q017",
+    "text": "符文学院历任院长",
+    "expected_paths": ["organizations/rune_academy.md"],
+    "type": "body_hybrid",
+    "tags": ["hsi", "svs", "sparse"]
+  },
+  {
+    "id": "Q018",
+    "text": "青岚宗",
+    "expected_paths": ["organizations/qinglan_sect.md"],
+    "type": "exact_title",
+    "tags": ["hsi", "smoke"]
+  },
+  {
+    "id": "Q019",
+    "text": "熔火城矮人锻造",
+    "expected_paths": ["locations/melting_city.md", "characters/tie_gu.md"],
+    "type": "body_hybrid",
+    "tags": ["hsi", "svs", "sparse"]
+  },
+  {
+    "id": "Q020",
+    "text": "冰蚕丝产自哪里",
+    "expected_paths": ["items/ice_silk.md"],
+    "type": "body_exact_phrase",
+    "tags": ["sparse", "fts"]
+  },
+  {
+    "id": "Q021",
+    "text": "霜牙火喙短刃",
+    "expected_paths": ["items/frost_fang_fire_beak.md"],
+    "type": "body_exact_phrase",
+    "tags": ["sparse", "fts"]
+  },
+  {
+    "id": "Q022",
+    "text": "林夜以一己之力击退追兵",
+    "expected_paths": ["characters/lin_ye.md", "locations/blackstone_pass.md"],
+    "type": "body_paraphrase",
+    "tags": ["svs", "semantic"]
+  },
+  {
+    "id": "Q023",
+    "text": "静止之雷",
+    "expected_paths": ["lore/rune_nine.md"],
+    "type": "body_exact_phrase",
+    "tags": ["sparse", "fts"]
+  },
+  {
+    "id": "Q024",
+    "text": "长久不愈的寒冰之伤",
+    "expected_paths": [],
+    "type": "body_paraphrase",
+    "tags": ["svs", "negative"]
+  },
+  {
+    "id": "Q025",
+    "text": "守钟人校准",
+    "expected_paths": ["lore/amber_clock.md"],
+    "type": "body_exact_phrase",
+    "tags": ["sparse", "fts"]
+  },
+  {
+    "id": "Q026",
+    "text": "叹息之地荒原",
+    "expected_paths": ["locations/blackstone_pass.md"],
+    "type": "body_exact_phrase",
+    "tags": ["sparse", "fts"]
+  },
+  {
+    "id": "Q027",
+    "text": "护山大阵九曲迷踪阵",
+    "expected_paths": ["locations/qingcheng_peak.md"],
+    "type": "body_exact_phrase",
+    "tags": ["sparse", "fts"]
+  },
+  {
+    "id": "Q028",
+    "text": "铁骨评价林夜配得上好弓",
+    "expected_paths": ["characters/tie_gu.md"],
+    "type": "body_paraphrase",
+    "tags": ["svs", "semantic"]
+  },
+  {
+    "id": "Q029",
+    "text": "青岚宗青城峰隐世",
+    "expected_paths": ["locations/qingcheng_peak.md", "organizations/qinglan_sect.md"],
+    "type": "title_extra",
+    "tags": ["hsi"]
+  },
+  {
+    "id": "Q030",
+    "text": "苏晴雪的导师",
+    "expected_paths": ["characters/su_qingxue.md", "characters/jiang_yuanqi.md"],
+    "type": "body_exact_phrase",
+    "tags": ["sparse", "fts"]
+  },
+  {
+    "id": "Q031",
+    "text": "碎星剑由谁打造",
+    "expected_paths": ["lore/starfall_sword.md"],
+    "type": "body_exact_phrase",
+    "tags": ["sparse", "fts"]
+  },
+  {
+    "id": "Q032",
+    "text": "旧城区东市药材符文材料",
+    "expected_paths": ["locations/old_city.md"],
+    "type": "body_exact_phrase",
+    "tags": ["sparse", "fts"]
+  },
+  {
+    "id": "Q033",
+    "text": "火喙内含火符文",
+    "expected_paths": ["items/frost_fang_fire_beak.md"],
+    "type": "body_exact_phrase",
+    "tags": ["sparse", "fts"]
+  },
+  {
+    "id": "Q034",
+    "text": "弱水三千",
+    "expected_paths": [],
+    "type": "body_paraphrase",
+    "tags": ["svs", "negative"]
+  },
+  {
+    "id": "Q035",
+    "text": "符文引擎效率提升百分比",
+    "expected_paths": ["items/resonance_model.md", "characters/su_qingxue.md"],
+    "type": "body_exact_phrase",
+    "tags": ["sparse", "fts"]
+  }
+]

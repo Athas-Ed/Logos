@@ -11,8 +11,8 @@ config/secrets.yaml
 .env
 .env.local
 
-# 开发用 KSFS 示例树（本机保留；不入库）
-/example_ksfs/**
+# 开发用 KSFS 示例树（西游记示例，已入库见 example_ksfs/）
+# /example_ksfs/**
 
 # KSFS 事实源：个人创作内容不入库，仅保留说明
 /resources/ksfs/**
@@ -45,6 +45,7 @@ src/gui/test-results/
 __pycache__/
 *.py[cod]
 .venv/
+.venv_test/
 venv/
 *.egg-info/
 
@@ -52,6 +53,20 @@ venv/
 .index/
 # logs：提交 README 与 daily/maint 占位；忽略所有 .log 落盘文件（见 logs/README.md）
 logs/**/*.log
+# 晋升操作记录含用户叙事文件路径
+logs/promotion/
+
+# 技术展示文档（面试官用，本地保管）
+docs/technical-showcase/
+
+# IDE 配置与 AI 规则（本地不提交）
+.cursor/
+
+# Git 挂钩（本地副本）
+.githooks/
+
+# Skill 设计笔记 L1 Blueprint（内部开发用，不入库）
+skills/**/DESIGN.md
 
 # 常见本地数据（路径可按实现调整）
 *.sqlite
