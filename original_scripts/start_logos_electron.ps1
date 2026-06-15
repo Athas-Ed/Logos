@@ -77,7 +77,7 @@ if (-not $npmCmd) {
   exit 1
 }
 
-$BackendScript = Join-Path $RepoRoot "scripts\run_dev_backend.py"
+$BackendScript = Join-Path $RepoRoot "original_scripts\run_dev_backend.py"
 $GuiDir = Join-Path $RepoRoot "src\gui"
 $ElectronDir = Join-Path $RepoRoot "src\electron"
 

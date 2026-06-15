@@ -63,6 +63,7 @@ docs/technical-showcase/
 .cursor/
 .codegraph/
 .reasonix/
+reasonix.toml
 
 # Git 挂钩（本地副本）
 .githooks/
