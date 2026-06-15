@@ -1,0 +1,31 @@
+skill_id: RQA
+display_name: RQA
+description: 先 retrieve 定位文档，再用 read_ksfs 读取 KSFS 原文后作答（ReAct）。
+ui_instructions: |
+  用自然语言提问；助手会先检索 KSFS，再按需 read_ksfs 读原文，最后作答。
+  执行阶段可在页面查看 ReAct 工具轨迹与检索引用。
+  **追问**：接着同一主题继续问（代词、细节、同一设定条目）→ 点「追问」。
+  **换题**：不同主题请点「换题（新会话）」；不会自动归档当前标签，误点可切回原标签继续追问。
+  顶栏关闭标签 = 归档会话。
+  示例：查一下灭国的设定 / 审判日组织的成员有哪些 / 夏洛特的爱人是谁
+persistence_tier: p2
+paradigm: react
+turn_policy: single
+allowed_tools:
+  - retrieve
+  - read_ksfs
+  - kg_query
+  - query_weather
+prompt_runtime_key: skills/RQA
+config_requirements:
+  max_steps: 20
+  history_clip_max_full_turns: 5
+  qa_mode: continuous
+input_schema:
+  type: object
+  properties:
+    text:
+      type: string
+      title: 问题
+  required:
+    - text
