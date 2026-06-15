@@ -40,7 +40,6 @@ export const OFFLINE_SKILL_NAMES: readonly Pick<SkillCardMeta, "skill_id" | "dis
   { skill_id: "chat_inspire", display_name: "创作启发对话" },
   { skill_id: "retrieve_qa", display_name: "检索问答" },
   { skill_id: "setting_write", display_name: "设定撰写" },
-  { skill_id: "outline_plan", display_name: "大纲规划" },
   { skill_id: "import_setting", display_name: "导入设定" },
   { skill_id: "draft_review", display_name: "审核晋升" },
 ];

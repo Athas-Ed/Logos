@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import json
+import math
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -22,13 +23,16 @@ from logos.infrastructure.retrieval.fused import FusedRetrievalService
 from logos.persistence import (
     SqliteMetadataIndex,
     SqliteSparseIndex,
+    default_svs_state_db_path,
     sync_ksfs_hsi,
     sync_ksfs_sparse_incremental,
+    sync_ksfs_svs_incremental,
 )
 from logos.ports.metadata import MetadataRecord
 from logos.ports.retrieval import Citation
 from logos.ports.sparse import SparseQueryHit
 from logos.ports.vector import VectorQueryHit
+from logos.ports.embedding import TextEmbedder
 
 
 # ── stubs ───────────────────────────────────────────────────────────────
@@ -51,6 +55,79 @@ class _NoopSemanticStore:
 
     def query(self, query_embedding: list[float], top_k: int) -> list[VectorQueryHit]:
         return []
+
+
+class _CharFreqEmbedder:
+    """字符频率嵌入器：将文本映射为 512 维归一化向量。
+
+    每个字符通过哈希映射到 0-511 中的一个桶，桶内计数累加后 L2 归一化。
+    相似文本（共享较多字符）会得到相似的向量——在基准中提供有意义的 SVS 相似度。
+    """
+
+    def embed(self, texts: list[str]) -> list[list[float]]:
+        out: list[list[float]] = []
+        for text in texts:
+            vec = [0.0] * 512
+            for ch in text.lower():
+                bucket = (ord(ch) * 31 + 7) % 512
+                vec[bucket] += 1.0
+            norm = math.sqrt(sum(v * v for v in vec))
+            if norm > 1e-9:
+                vec = [v / norm for v in vec]
+            out.append(vec)
+        return out
+
+
+class _InMemVectorStore:
+    """内存向量库：存储 chunk，cosine similarity 检索。"""
+
+    def __init__(self) -> None:
+        self._chunks: dict[str, dict[str, Any]] = {}
+
+    def upsert_chunks(
+        self,
+        *,
+        ids: list[str],
+        texts: list[str],
+        embeddings: list[list[float]],
+        metadatas: list[dict[str, str]] | None = None,
+    ) -> None:
+        for i, cid in enumerate(ids):
+            md = metadatas[i] if metadatas else {}
+            self._chunks[cid] = {
+                "text": texts[i],
+                "embedding": embeddings[i],
+                "source_path": md.get("source_path", ""),
+            }
+
+    def delete_ids(self, ids: list[str]) -> None:
+        for cid in ids:
+            self._chunks.pop(cid, None)
+
+    def query(self, query_embedding: list[float], top_k: int) -> list[VectorQueryHit]:
+        scored: list[tuple[float, str, dict[str, Any]]] = []
+        for cid, data in self._chunks.items():
+            sim = _cosine_sim(query_embedding, data["embedding"])
+            scored.append((sim, cid, data))
+        scored.sort(key=lambda x: x[0], reverse=True)
+        return [
+            VectorQueryHit(
+                chunk_id=cid,
+                text=data["text"],
+                score=sim,
+                source_path=data["source_path"],
+            )
+            for sim, cid, data in scored[:top_k]
+        ]
+
+
+def _cosine_sim(a: list[float], b: list[float]) -> float:
+    dot = sum(x * y for x, y in zip(a, b, strict=True))
+    na = math.sqrt(sum(x * x for x in a))
+    nb = math.sqrt(sum(y * y for y in b))
+    if na < 1e-9 or nb < 1e-9:
+        return 0.0
+    return dot / (na * nb)
 
 
 class _EmptyMetadata:
@@ -176,7 +253,6 @@ def make_retrieval_service(
     sparse_db = index_root / ".sparse_fts.sqlite"
 
     meta = SqliteMetadataIndex(hsi_db)
-    embedder = _Fixed512Embedder()
 
     parts = components.split("+")
     use_hsi = "hsi" in parts
@@ -185,10 +261,11 @@ def make_retrieval_service(
 
     # semantic store
     if use_svs:
-        # 用内存的 _NoopSemanticStore 避免 chroma 依赖；若要真实 Chroma 则在测例中改建
-        store = _NoopSemanticStore()
+        store = _InMemVectorStore()
+        svs_embedder: TextEmbedder = _CharFreqEmbedder()
     else:
         store = _NoopSemanticStore()
+        svs_embedder = _Fixed512Embedder()
 
     # metadata index
     if not use_hsi:
@@ -204,7 +281,7 @@ def make_retrieval_service(
     svc = FusedRetrievalService(
         metadata_index=meta,
         semantic_store=store,
-        embedder=embedder,
+        embedder=svs_embedder,
         sparse_index=sparse_index,
         lazy_hsi_ksfs_root=ksfs_root,
         lazy_hsi_db_path=hsi_db,
@@ -362,6 +439,57 @@ def test_benchmark_filter_by_tag(tmp_path: Path, queries: list[Query]) -> None:
     result = run_benchmark(svc, filtered, label="Sparse-tag-filtered")
     report = format_report(result)
     print(report)
+
+
+def test_benchmark_svs_only(tmp_path: Path, queries: list[Query]) -> None:
+    """仅 SVS（字符频率嵌入）组件的基准——验证 SVS 路已真实参与。"""
+    ksfs = build_ksfs_fixture(tmp_path)
+    index_root = tmp_path / ".index"
+
+    svc = make_retrieval_service(
+        ksfs_root=ksfs,
+        index_root=index_root,
+        components="svs",
+    )
+    result = run_benchmark(svc, queries, label="SVS-only (char-freq)")
+    report = format_report(result)
+    print(report)
+
+    # SVS-only 应当在 paraphrase 类 query 上有一定命中
+    para_queries = [q for q in queries if q.type == "body_paraphrase"]
+    para_hits = 0
+    for qr in result.queries:
+        q = _query_map.get(qr.query_id)
+        if q is None or q.type != "body_paraphrase" or not q.expected_paths:
+            continue
+        if any(ep in {c.path for c in qr.citations[:5]} for ep in q.expected_paths):
+            para_hits += 1
+    print(f"  → body_paraphrase 类型命中 {para_hits}/{len(para_queries)} 条")
+
+
+def test_benchmark_svs_vs_nosvs(tmp_path: Path, queries: list[Query]) -> None:
+    """对比：有/无 SVS 的 Recall 差异——验证 SVS 是否真正改善了融合质量。"""
+    ksfs = build_ksfs_fixture(tmp_path)
+    index_root = tmp_path / ".index"
+
+    nosvs = run_benchmark(
+        make_retrieval_service(ksfs, index_root, "hsi+sparse"),
+        queries,
+        label="HSI+Sparse (no SVS)",
+    )
+    withsvs = run_benchmark(
+        make_retrieval_service(ksfs, index_root, "hsi+svs+sparse"),
+        queries,
+        label="HSI+SVS+Sparse",
+    )
+
+    diff = analyze(nosvs, withsvs)
+    print(diff)
+
+    # 有 SVS 时 Recall@1 不应低于无 SVS 时（SVS 增加信息，不应减分）
+    assert withsvs.recall_at(1) >= nosvs.recall_at(1) - 0.05, (
+        f"SVS 导致 Recall@1 下降过多: {nosvs.recall_at(1):.3f} → {withsvs.recall_at(1):.3f}"
+    )
 
 
 @pytest.mark.slow

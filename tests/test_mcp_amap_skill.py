@@ -99,11 +99,16 @@ def test_registry_without_amap_has_no_query_weather(tmp_path: Path) -> None:
 
 
 def test_registry_with_amap_registers_query_weather(tmp_path: Path) -> None:
-    s = _minimal_settings(tmp_path, mcp=(_amap_entry(enabled=True, key=""),))
-    reg = build_v01_guarded_tool_registry(s)
-    assert "query_weather" in reg.names()
-    obs = reg.execute("query_weather", {"city": "上海"})
-    assert "error:" in obs
+    from logos.platform.sg_layer.factory import close_all_mcp_sessions
+
+    try:
+        s = _minimal_settings(tmp_path, mcp=(_amap_entry(enabled=True, key=""),))
+        reg = build_v01_guarded_tool_registry(s)
+        assert "query_weather" in reg.names()
+        obs = reg.execute("query_weather", {"city": "上海"})
+        assert "error:" in obs
+    finally:
+        close_all_mcp_sessions()
 
 
 @pytest.mark.skipif(
@@ -111,9 +116,14 @@ def test_registry_with_amap_registers_query_weather(tmp_path: Path) -> None:
     reason="需要环境变量 LOGOS_AMAP_E2E_KEY 才跑真实高德请求",
 )
 def test_registry_query_weather_live(tmp_path: Path) -> None:
+    from logos.platform.sg_layer.factory import close_all_mcp_sessions
+
     key = os.environ["LOGOS_AMAP_E2E_KEY"].strip()
-    s = _minimal_settings(tmp_path, mcp=(_amap_entry(enabled=True, key=key),))
-    reg = build_v01_guarded_tool_registry(s)
-    obs = reg.execute("query_weather", {"city": "110101"})
-    assert "error:" not in obs
-    assert "气温" in obs or "天气" in obs
+    try:
+        s = _minimal_settings(tmp_path, mcp=(_amap_entry(enabled=True, key=key),))
+        reg = build_v01_guarded_tool_registry(s)
+        obs = reg.execute("query_weather", {"city": "110101"})
+        assert "error:" not in obs
+        assert "气温" in obs or "天气" in obs
+    finally:
+        close_all_mcp_sessions()

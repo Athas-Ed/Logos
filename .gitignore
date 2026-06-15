@@ -61,6 +61,8 @@ docs/technical-showcase/
 
 # IDE 配置与 AI 规则（本地不提交）
 .cursor/
+.codegraph/
+.reasonix/
 
 # Git 挂钩（本地副本）
 .githooks/

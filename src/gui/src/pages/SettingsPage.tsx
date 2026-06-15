@@ -32,6 +32,12 @@ import {
   type BootstrapUi,
 } from "../types/bootstrap";
 import { applyGuiTheme, readThemeChoice, type GuiThemeChoice } from "../theme";
+import {
+  type LlmProvider,
+  PROVIDER_TEMPLATES,
+  detectProvider,
+  putLlmApiKey,
+} from "../api/config";
 import styles from "./SettingsPage.module.css";
 
 export type LogosDebugInfo = {
@@ -109,6 +115,17 @@ export function SettingsPage() {
   } | null>(null);
   const [devToggleBusy, setDevToggleBusy] = useState(false);
 
+  // ── LLM 服务配置 ────────────────────────────────────────────────
+  const [llmMode, setLlmMode] = useState<string>("");
+  const [llmError, setLlmError] = useState<string>("");
+  const [llmProvider, setLlmProvider] = useState<LlmProvider>("deepseek");
+  const [llmApiKey, setLlmApiKey] = useState("");
+  const [llmBaseUrl, setLlmBaseUrl] = useState(PROVIDER_TEMPLATES["deepseek"].base_url);
+  const [llmModel, setLlmModel] = useState(PROVIDER_TEMPLATES["deepseek"].model);
+  const [llmBusy, setLlmBusy] = useState(false);
+  const [llmResult, setLlmResult] = useState<string | null>(null);
+  const [llmResultOk, setLlmResultOk] = useState(false);
+
   const refreshHealth = useCallback(async () => {
     setHealthOk(await fetchHealth());
   }, []);
@@ -120,6 +137,8 @@ export function SettingsPage() {
     void (async () => {
       const b = await fetchBootstrap();
       if (b) {
+        setLlmMode(b.llm_mode ?? "");
+        setLlmError(b.llm_error ?? "");
         const lp = normalizeLogProfile(b.log_profile);
         if (lp) setLogProfile(lp);
         setObsShowLogRootInGui(Boolean(b.obs_show_log_root_in_gui));
@@ -287,6 +306,47 @@ export function SettingsPage() {
     }
   }, []);
 
+  /* ── LLM 服务：测试并保存 API Key ──────────────────────────── */
+  const handleLlmTest = useCallback(async () => {
+    const key = llmApiKey.trim();
+    if (!key) {
+      setLlmResult("请输入 API Key");
+      setLlmResultOk(false);
+      return;
+    }
+    setLlmBusy(true);
+    setLlmResult(null);
+    try {
+      const resp = await putLlmApiKey(
+        {
+          provider: llmProvider,
+          api_key: key,
+          base_url: llmBaseUrl.trim() || PROVIDER_TEMPLATES[llmProvider].base_url,
+          model: llmModel.trim() || PROVIDER_TEMPLATES[llmProvider].model,
+        },
+      );
+      if (!resp) {
+        setLlmResult("网络错误，无法连接到后端");
+        setLlmResultOk(false);
+        return;
+      }
+      if (resp.success) {
+        setLlmMode("remote");
+        setLlmError("");
+        setLlmResult(resp.detail || "LLM 配置已更新");
+        setLlmResultOk(true);
+      } else {
+        setLlmResult(resp.detail || "验证失败");
+        setLlmResultOk(false);
+      }
+    } catch {
+      setLlmResult("提交时发生异常");
+      setLlmResultOk(false);
+    } finally {
+      setLlmBusy(false);
+    }
+  }, [llmApiKey, llmBaseUrl, llmModel, llmProvider]);
+
   return (
     <div className={styles.page}>
       <header className={styles.header}>
@@ -359,6 +419,105 @@ export function SettingsPage() {
               />
               <span className={styles.fieldLabel}>Prompt 回显（开发者）</span>
             </label>
+          ) : null}
+        </section>
+
+        <section className={styles.section} aria-labelledby={`${titleId}-llm`}>
+          <h2 id={`${titleId}-llm`} className={styles.sectionTitle}>
+            LLM 服务
+          </h2>
+          <p className={styles.muted}>
+            当前模式：<strong>{llmMode === "remote" ? "远程" : "桩后端"}</strong>
+            {llmError ? (
+              <span style={{ color: "var(--err)" }}> · ⚠️ {llmError}</span>
+            ) : null}
+          </p>
+          <label className={styles.field}>
+            <span className={styles.fieldLabel}>LLM 提供商</span>
+            <select
+              className={styles.select}
+              value={llmProvider}
+              onChange={(e) => {
+                const p = e.target.value as LlmProvider;
+                setLlmProvider(p);
+                setLlmResult(null);
+              }}
+              disabled={llmBusy}
+            >
+              {(Object.keys(PROVIDER_TEMPLATES) as LlmProvider[]).map(
+                (p) => (
+                  <option key={p} value={p}>
+                    {PROVIDER_TEMPLATES[p].label}
+                  </option>
+                ),
+              )}
+            </select>
+          </label>
+          <label className={styles.field}>
+            <span className={styles.fieldLabel}>API Key</span>
+            <input
+              className={styles.input}
+              type="password"
+              autoComplete="off"
+              placeholder={llmProvider === "anthropic" ? "sk-ant-..." : "sk-..."}
+              value={llmApiKey}
+              onChange={(e) => {
+                const val = e.target.value;
+                setLlmApiKey(val);
+                setLlmResult(null);
+                const detected = detectProvider(val);
+                if (detected && detected !== llmProvider) {
+                  setLlmProvider(detected);
+                }
+              }}
+              disabled={llmBusy}
+            />
+          </label>
+          <label className={styles.field}>
+            <span className={styles.fieldLabel}>Base URL</span>
+            <input
+              className={styles.input}
+              type="url"
+              autoComplete="off"
+              value={llmBaseUrl}
+              onChange={(e) => {
+                setLlmBaseUrl(e.target.value);
+                setLlmResult(null);
+              }}
+              disabled={llmBusy}
+            />
+          </label>
+          <label className={styles.field}>
+            <span className={styles.fieldLabel}>模型</span>
+            <input
+              className={styles.input}
+              type="text"
+              autoComplete="off"
+              value={llmModel}
+              onChange={(e) => {
+                setLlmModel(e.target.value);
+                setLlmResult(null);
+              }}
+              disabled={llmBusy}
+            />
+          </label>
+          <div className={styles.row}>
+            <button
+              type="button"
+              className={styles.primaryBtn}
+              disabled={llmBusy || !llmApiKey.trim()}
+              onClick={() => void handleLlmTest()}
+            >
+              {llmBusy ? "验证中…" : "检查并启用"}
+            </button>
+          </div>
+          {llmResult ? (
+            <p
+              className={styles.muted}
+              style={{ color: llmResultOk ? "var(--ok)" : "var(--err)" }}
+            >
+              {llmResult}
+            </p>
           ) : null}
         </section>
 

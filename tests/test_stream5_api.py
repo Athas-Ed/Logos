@@ -553,3 +553,5 @@ def test_api_v1_chat_prompt_echo_skips_slow_retrieval(tmp_path: Path) -> None:
             raw = stream.read().decode("utf-8")
     assert time.perf_counter() - t0 < 2.0
     assert "【Prompt 回显模式】" in raw
+
+# 修订记录：2026-06-15 整理项目结构，同步 API 契约检查

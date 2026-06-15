@@ -8,6 +8,7 @@ import json
 import logging
 import os
 import sys
+import threading
 from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any
@@ -226,4 +227,142 @@ def make_stdio_mcp_tool_handler(
             _log.exception("MCP tools/call 失败 tool=%s", tool_name)
             return f"error: MCP 调用失败 — {type(exc).__name__}: {exc}"
 
+    return _handler
+
+
+class McpStdioSession:
+    """长连接 MCP stdio 会话（背景线程 + 独立事件循环 + 官方 SDK）。
+
+    在后台线程中持有一个 ``ClientSession``，线程安全地通过 ``asyncio.run_coroutine_threadsafe``
+    派发 ``list_tools`` / ``call_tool``。子进程随上下文退出自动回收。
+    """
+
+    def __init__(
+        self,
+        command: list[str],
+        env: Mapping[str, str] | None = None,
+        *,
+        cwd: str | Path | None = None,
+        init_timeout: float = 30.0,
+    ) -> None:
+        require_mcp_sdk_installed()
+        if not command:
+            msg = "MCP stdio command 为空"
+            raise ValueError(msg)
+        self._command = command
+        self._env = dict(env) if env is not None else None
+        self._cwd = str(cwd) if cwd else None
+        self._loop: asyncio.AbstractEventLoop | None = None
+        self._thread: threading.Thread | None = None
+        self._session: ClientSession | Any = None  # type: ignore[valid-type]
+        self._ready = threading.Event()
+        self._stop = threading.Event()
+        self._start(init_timeout)
+
+    # ----------------------------------------------------------------
+    # lifecycle
+    # ----------------------------------------------------------------
+
+    def _start(self, timeout: float) -> None:
+        self._ready.clear()
+        self._stop.clear()
+        self._thread = threading.Thread(
+            target=self._run,
+            name="mcp-stdio-session",
+            daemon=True,
+        )
+        self._thread.start()
+        if not self._ready.wait(timeout=timeout):
+            self.close()
+            msg = f"MCP 会话初始化超时（{timeout}s）: {' '.join(self._command)}"
+            raise TimeoutError(msg)
+
+    def _run(self) -> None:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        self._loop = loop
+        try:
+            loop.run_until_complete(self._session_lifetime())
+        except Exception:  # noqa: BLE001
+            _log.exception("MCP 会话生命周期异常退出")
+        finally:
+            self._loop = None
+            loop.close()
+
+    async def _session_lifetime(self) -> None:
+        assert ClientSession is not None
+        assert StdioServerParameters is not None
+        assert stdio_client is not None
+        params = StdioServerParameters(
+            command=self._command[0],
+            args=self._command[1:],
+            env=self._env,
+            cwd=self._cwd,
+        )
+        async with stdio_client(params) as (read, write):
+            async with ClientSession(read, write) as session:
+                await session.initialize()
+                self._session = session
+                self._ready.set()
+                while not self._stop.is_set():
+                    await asyncio.sleep(0.5)
+
+    def close(self) -> None:
+        """优雅关闭：通知背景线程退出并等待 SDK 回收子进程。"""
+        self._stop.set()
+        if self._thread is not None and self._thread.is_alive():
+            self._thread.join(timeout=8)
+        self._session = None
+
+    # ----------------------------------------------------------------
+    # public API
+    # ----------------------------------------------------------------
+
+    def _run_async(self, coro_factory: Callable[[], Any], *, timeout: float = 120.0) -> Any:
+        loop = self._loop
+        if loop is None or loop.is_closed():
+            msg = "MCP 会话已关闭"
+            raise RuntimeError(msg)
+        future = asyncio.run_coroutine_threadsafe(coro_factory(), loop)
+        return future.result(timeout=timeout)
+
+    def list_tools(self) -> list[Any]:
+        """``tools/list``，返回工具描述对象列表。"""
+
+        async def _list() -> list[Any]:
+            result = await self._session.list_tools()
+            return list(result.tools)
+
+        return self._run_async(_list)
+
+    def call_tool(self, tool_name: str, arguments: Mapping[str, Any] | None) -> str:
+        """``tools/call``，返回文本结果。"""
+
+        async def _call() -> str:
+            result = await self._session.call_tool(
+                tool_name,
+                arguments=dict(arguments or {}),
+            )
+            return _call_tool_result_to_text(result)
+
+        return self._run_async(_call)
+
+    def __enter__(self) -> McpStdioSession:
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        self.close()
+
+
+def make_long_lived_mcp_handler(
+    session: McpStdioSession,
+    tool_name: str,
+) -> Callable[..., str]:
+    """返回闭包，通过长连接 *session* 调用指定工具。"""
+    def _handler(**kwargs: Any) -> str:
+        try:
+            return session.call_tool(tool_name, kwargs)
+        except Exception as exc:  # noqa: BLE001
+            _log.exception("MCP tools/call 失败 tool=%s", tool_name)
+            return f"error: MCP 调用失败 — {type(exc).__name__}: {exc}"
     return _handler

@@ -1,4 +1,4 @@
-"""MCP stdio 示例 Skill 与 GuardedToolRegistry / 沙箱策略的集成测试。"""
+"""MCP stdio 长连接会话与 GuardedToolRegistry / 沙箱策略的集成测试。"""
 
 from __future__ import annotations
 
@@ -11,15 +11,21 @@ import pytest
 pytest.importorskip("mcp")
 
 from logos.agent.react import ReActStreamDone, iter_react_loop
+from logos.platform.mcp_stdio import (
+    McpStdioSession,
+    make_long_lived_mcp_handler,
+    mcp_server_argv,
+    resolve_repo_root,
+)
 from logos.platform.sg_layer import (
     GuardedToolRegistry,
     V01_EXAMPLE_MCP_TOOL_NAMES,
     build_v01_guarded_tool_registry,
+    close_all_mcp_sessions,
+    mcp_tool_summaries,
 )
 from logos.platform.sg_layer.builtin_tool_schemas import WRITE_DRAFT_PARAMETERS
-from logos.platform.sg_layer.guarded_registry import V01_SG_TOOL_WHITELIST as _V01_CORE
-from logos.platform.sg_layer.mcp_bridge import mcp_tool_summaries, register_mcp_tool_proxies
-from logos.platform.sg_layer.mcp_stdio_sync import McpStdioJsonRpcSession, stdio_params_for_example_skill
+from logos.platform.sg_layer.guarded_registry import V01_SG_TOOL_WHITELIST
 from logos.ports import AppSettings
 from logos.ports.llm import ChatMessage, LLMClient
 
@@ -76,28 +82,29 @@ def _settings(tmp_path: Path) -> AppSettings:
     )
 
 
+def _stdio_cmd() -> list[str]:
+    repo = resolve_repo_root()
+    return mcp_server_argv(repo, "skills/example-stdio-mcp/server.py")
+
+
 def test_mcp_stdio_session_list_and_call_tool() -> None:
-    params = stdio_params_for_example_skill(repo_root=_repo_root(), python_exe=sys.executable)
-    with McpStdioJsonRpcSession(params) as client:
-        lr = client.list_tools()
-        names = {t["name"] for t in lr.get("tools", []) if isinstance(t, dict)}
+    cmd = _stdio_cmd()
+    with McpStdioSession(cmd) as client:
+        tools = client.list_tools()
+        names = {t.name for t in tools}
         assert "echo_write_draft" in names
-        text = client.call_tool_text("echo_write_draft", {"path": "a.md", "content": "xy"})
+        text = client.call_tool("echo_write_draft", {"path": "a.md", "content": "xy"})
         data = json.loads(text)
         assert data.get("ok") is True
         assert data.get("content_bytes") == 2
 
 
 def test_mcp_tool_schema_aligns_with_builtin_write_draft() -> None:
-    params = stdio_params_for_example_skill(repo_root=_repo_root(), python_exe=sys.executable)
-    with McpStdioJsonRpcSession(params) as client:
-        lr = client.list_tools()
-        echo = next(
-            t
-            for t in lr.get("tools", [])
-            if isinstance(t, dict) and t.get("name") == "echo_write_draft"
-        )
-        schema = echo.get("inputSchema")
+    cmd = _stdio_cmd()
+    with McpStdioSession(cmd) as client:
+        tools = client.list_tools()
+        echo = next(t for t in tools if t.name == "echo_write_draft")
+        schema = echo.inputSchema
         assert isinstance(schema, dict)
         assert set(schema.get("required", [])) == set(WRITE_DRAFT_PARAMETERS["required"])
         mcp_props = set((schema.get("properties") or {}).keys())
@@ -105,11 +112,15 @@ def test_mcp_tool_schema_aligns_with_builtin_write_draft() -> None:
 
 
 def test_mcp_progressive_summaries_strip_schema() -> None:
-    params = stdio_params_for_example_skill(repo_root=_repo_root(), python_exe=sys.executable)
-    with McpStdioJsonRpcSession(params) as client:
-        sums = mcp_tool_summaries(client.list_tools())
-        assert sums and all("inputSchema" not in s for s in sums)
-        assert any(s["name"] == "echo_write_draft" for s in sums)
+    payload = {
+        "tools": [
+            {"name": "echo_write_draft", "description": "回显草稿工具"},
+            {"name": "echo", "description": "回显文本"},
+        ]
+    }
+    sums = mcp_tool_summaries(payload)
+    assert sums and all("inputSchema" not in s for s in sums)
+    assert any(s["name"] == "echo_write_draft" for s in sums)
 
 
 def test_guarded_registry_blocks_echo_without_whitelist_extension() -> None:
@@ -123,42 +134,47 @@ def test_guarded_registry_blocks_echo_without_whitelist_extension() -> None:
         )
 
 
-def test_registry_proxies_mcp_tool_and_process_exits(tmp_path: Path) -> None:
-    params = stdio_params_for_example_skill(repo_root=_repo_root(), python_exe=sys.executable)
-    proc_holder: dict[str, int | None] = {"pid": None}
-    with McpStdioJsonRpcSession(params) as client:
-        assert client._proc is not None
-        proc_holder["pid"] = client._proc.pid
+def test_registry_proxies_mcp_tool_through_session(tmp_path: Path) -> None:
+    cmd = _stdio_cmd()
+    session = McpStdioSession(cmd)
+    try:
         reg = build_v01_guarded_tool_registry(
             _settings(tmp_path),
             extra_allowed_tools=V01_EXAMPLE_MCP_TOOL_NAMES,
         )
-        register_mcp_tool_proxies(
-            reg,
-            client,
-            mcp_tool_names=V01_EXAMPLE_MCP_TOOL_NAMES,
-        )
-        out = reg.execute(
-            "echo_write_draft",
-            {"path": "rel.md", "content": "body"},
-        )
+        for t in session.list_tools():
+            if t.name not in V01_EXAMPLE_MCP_TOOL_NAMES:
+                continue
+            reg.register(
+                t.name,
+                description=t.description or "",
+                parameters=t.inputSchema if isinstance(t.inputSchema, dict) else {"type": "object", "properties": {}},
+                handler=make_long_lived_mcp_handler(session, t.name),
+            )
+        out = reg.execute("echo_write_draft", {"path": "rel.md", "content": "body"})
         parsed = json.loads(out)
         assert parsed.get("ok") is True
-    assert proc_holder["pid"] is not None
+    finally:
+        session.close()
 
 
 def test_react_uses_mcp_proxied_tool(tmp_path: Path) -> None:
-    params = stdio_params_for_example_skill(repo_root=_repo_root(), python_exe=sys.executable)
-    with McpStdioJsonRpcSession(params) as client:
+    cmd = _stdio_cmd()
+    session = McpStdioSession(cmd)
+    try:
         reg = build_v01_guarded_tool_registry(
             _settings(tmp_path),
             extra_allowed_tools=V01_EXAMPLE_MCP_TOOL_NAMES,
         )
-        register_mcp_tool_proxies(
-            reg,
-            client,
-            mcp_tool_names=V01_EXAMPLE_MCP_TOOL_NAMES,
-        )
+        for t in session.list_tools():
+            if t.name not in V01_EXAMPLE_MCP_TOOL_NAMES:
+                continue
+            reg.register(
+                t.name,
+                description=t.description or "",
+                parameters=t.inputSchema if isinstance(t.inputSchema, dict) else {"type": "object", "properties": {}},
+                handler=make_long_lived_mcp_handler(session, t.name),
+            )
         llm = _ToolThenAnswerLLM()
         done = None
         for item in iter_react_loop(
@@ -176,10 +192,12 @@ def test_react_uses_mcp_proxied_tool(tmp_path: Path) -> None:
             m.role == "user" and "content_bytes" in (m.content or "")
             for m in done.messages
         )
+    finally:
+        session.close()
 
 
 def test_v01_whitelist_constant_unchanged_for_builtin_only() -> None:
-    assert _V01_CORE == frozenset(
-        {"retrieve", "read_ksfs", "list_ksfs", "write_draft"},
+    assert V01_SG_TOOL_WHITELIST == frozenset(
+        {"retrieve", "read_ksfs", "list_ksfs", "write_draft", "list_drafts", "read_draft", "promote_draft", "kg_query"},
     )
     assert V01_EXAMPLE_MCP_TOOL_NAMES == frozenset({"echo_write_draft"})

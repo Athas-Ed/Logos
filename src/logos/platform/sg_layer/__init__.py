@@ -3,6 +3,8 @@
 from logos.platform.sg_layer.factory import (
     build_v01_guarded_tool_registry,
     clear_mcp_discovery_cache,
+    close_all_mcp_sessions,
+    mcp_tool_summaries,
 )
 from logos.platform.sg_layer.guarded_registry import (
     GuardedToolRegistry,
@@ -23,6 +25,8 @@ __all__ = [
     "V01_SG_TOOL_WHITELIST",
     "build_v01_guarded_tool_registry",
     "clear_mcp_discovery_cache",
+    "close_all_mcp_sessions",
+    "mcp_tool_summaries",
     "read_text_under_root",
     "resolve_path_under_root",
     "write_draft_under_workspace",

@@ -21,6 +21,9 @@ async def _app_lifespan(app) -> AsyncIterator[None]:  # noqa: ANN001
             hsi_db=Path(ports.settings.hsi_sqlite_path).resolve(),
         )
     yield
+    # 关闭所有 MCP 长连接（后台线程 + 子进程）
+    from logos.platform.sg_layer.factory import close_all_mcp_sessions
+    close_all_mcp_sessions()
 
 
 def create_app(
@@ -82,10 +85,11 @@ def main() -> None:
     from logos.platform.obs import configure_logging
     from logos.infrastructure.llm import build_chat_llm_from_settings
     from logos.infrastructure.retrieval.fused import FusedRetrievalService
-    from logos.persistence import SqliteMetadataIndex
-    from logos.persistence.ksfs_filesystem import FilesystemKnowledgeSource
     from logos.infrastructure.vector.chroma_store import ChromaSemanticStore
     from logos.infrastructure.embeddings.bge_small_zh import BgeSmallZhEmbedder
+    from logos.persistence import SqliteMetadataIndex
+    from logos.persistence.ksfs_filesystem import FilesystemKnowledgeSource
+    from .llm_ref import LLMRef
 
     settings = load_app_settings(config_dir=_repo / "config")
     configure_logging(settings)
@@ -125,7 +129,8 @@ def main() -> None:
     )
     knowledge_source = FilesystemKnowledgeSource(ksfs_root)
 
-    llm = build_chat_llm_from_settings(settings) or _StubLLM()
+    llm_raw = build_chat_llm_from_settings(settings) or _StubLLM()
+    llm = LLMRef(llm_raw)
 
     ports = AppPorts(
         settings=settings,
@@ -145,9 +150,11 @@ def main() -> None:
 
 class _StubLLM:
     """LLM 桩实现（无 API key 时使用）。
-    
+
     返回完整拼装的 messages 文本，方便检视 CB 到底组了什么给 LLM。
     """
+
+    _IS_STUB = True
 
     def _format_messages(self, messages) -> str:
         lines: list[str] = []

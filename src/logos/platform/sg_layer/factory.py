@@ -10,8 +10,8 @@ from pathlib import Path
 from typing import Any
 
 from logos.platform.mcp_stdio import (
-    discover_mcp_tools_sync,
-    make_stdio_mcp_tool_handler,
+    McpStdioSession,
+    make_long_lived_mcp_handler,
     mcp_server_argv,
     resolve_repo_root,
 )
@@ -34,9 +34,13 @@ _log = logging.getLogger(__name__)
 
 _mcp_discovery_cache: dict[
     tuple[Any, ...],
-    tuple[tuple[Any, ...], tuple[tuple[Any, list[str], dict[str, str]], ...]],
+    tuple[Any, ...],
 ] = {}
 _mcp_discovery_lock = threading.Lock()
+
+# 长连接 MCP 会话池（按 entry.id 索引，进程级生命周期）
+_mcp_sessions: dict[str, McpStdioSession] = {}
+_mcp_sessions_lock = threading.Lock()
 
 _STRIP_HTTP_PROXY_KEYS: frozenset[str] = frozenset(
     {
@@ -110,6 +114,69 @@ def _tool_in_skill_scope(name: str, scoped: frozenset[str] | None) -> bool:
     return scoped is None or name in scoped
 
 
+def _get_or_create_mcp_session(
+    entry_id: str,
+    command: list[str],
+    child_env: dict[str, str],
+    repo: Path,
+) -> McpStdioSession | None:
+    """返回 entry_id 对应的长连接会话（缓存命中或新建）。"""
+    with _mcp_sessions_lock:
+        existing = _mcp_sessions.get(entry_id)
+        if existing is not None:
+            return existing
+    try:
+        session = McpStdioSession(command, child_env, cwd=repo)
+    except ImportError:
+        _log.error("MCP 技能 %s 未挂载（缺少 Python 包 mcp 等）", entry_id)
+        return None
+    except (SystemExit, KeyboardInterrupt):
+        raise
+    except Exception:  # noqa: BLE001
+        _log.exception("MCP 会话 %s 启动失败", entry_id)
+        return None
+    with _mcp_sessions_lock:
+        # double-check 防止竞态
+        if entry_id in _mcp_sessions:
+            session.close()
+            return _mcp_sessions[entry_id]
+        _mcp_sessions[entry_id] = session
+    return session
+
+
+def close_all_mcp_sessions() -> None:
+    """关闭所有长连接 MCP 会话（进程退出前调用）。"""
+    with _mcp_sessions_lock:
+        for sid, session in list(_mcp_sessions.items()):
+            try:
+                session.close()
+            except Exception:  # noqa: BLE001
+                _log.exception("关闭 MCP 会话 %s 时出错", sid)
+        _mcp_sessions.clear()
+
+
+def mcp_tool_summaries(tools_payload: dict[str, Any]) -> list[dict[str, str]]:
+    """渐进式披露：仅名称与说明（不含 inputSchema），便于拼装提示词或 UI。"""
+    tools = tools_payload.get("tools", [])
+    if not isinstance(tools, list):
+        return []
+    out: list[dict[str, str]] = []
+    for spec in tools:
+        if not isinstance(spec, dict):
+            continue
+        n = spec.get("name")
+        if not isinstance(n, str):
+            continue
+        d = spec.get("description")
+        out.append(
+            {
+                "name": n,
+                "description": d if isinstance(d, str) else "",
+            }
+        )
+    return out
+
+
 def build_v01_guarded_tool_registry(
     settings: AppSettings,
     *,
@@ -128,18 +195,18 @@ def build_v01_guarded_tool_registry(
     repo = resolve_repo_root()
 
     if scoped is not None and len(scoped) == 0:
-        mcp_tool_specs = []
-        mcp_handlers = []
+        mcp_tool_specs: list[Any] = []
+        session_registrations: list[tuple[Any, McpStdioSession]] = []
     else:
         cache_key = _mcp_discovery_cache_key(settings)
         with _mcp_discovery_lock:
             cached = _mcp_discovery_cache.get(cache_key)
         if cached is not None:
-            mcp_tool_specs = list(cached[0])
-            mcp_handlers = list(cached[1])
+            mcp_tool_specs = list(cached)
+            session_registrations = []
         else:
             mcp_tool_specs = []
-            mcp_handlers = []
+            session_registrations = []
             for entry in settings.mcp_servers:
                 if not entry.enabled:
                     continue
@@ -153,16 +220,23 @@ def build_v01_guarded_tool_registry(
                     continue
                 cmd = mcp_server_argv(repo, entry.entrypoint)
                 child_env = _mcp_child_env(entry)
+                session = _get_or_create_mcp_session(entry.id, cmd, child_env, repo)
+                if session is None:
+                    continue
                 try:
-                    discovered = discover_mcp_tools_sync(cmd, child_env, cwd=repo)
+                    discovered = session.list_tools()
                 except ImportError as exc:
                     _log.error(
                         "MCP 技能 %s 未挂载（缺少 Python 包 mcp 等）：%s",
                         entry.id,
                         exc,
                     )
+                    continue
+                except (SystemExit, KeyboardInterrupt):
+                    raise
                 except Exception:  # noqa: BLE001
                     _log.exception("MCP tools/list 失败（技能 id=%s）", entry.id)
+                    continue
                 else:
                     for t in discovered:
                         if t.name in V01_SG_TOOL_WHITELIST:
@@ -181,7 +255,7 @@ def build_v01_guarded_tool_registry(
                             continue
                         seen_mcp_tool_names.add(t.name)
                         mcp_tool_specs.append(t)
-                        mcp_handlers.append((t, cmd, child_env))
+                        session_registrations.append((t, session))
                     if not discovered:
                         _log.warning(
                             "MCP 技能 %s 已启用但 tools/list 为空",
@@ -189,10 +263,7 @@ def build_v01_guarded_tool_registry(
                         )
 
             with _mcp_discovery_lock:
-                _mcp_discovery_cache[cache_key] = (
-                    tuple(mcp_tool_specs),
-                    tuple(tuple(h) for h in mcp_handlers),
-                )
+                _mcp_discovery_cache[cache_key] = tuple(mcp_tool_specs)
 
     extra_names = frozenset(t.name for t in mcp_tool_specs)
     extras = extra_allowed_tools or frozenset()
@@ -493,7 +564,7 @@ def build_v01_guarded_tool_registry(
             },
             handler=_kg_query,
         )
-    for t, cmd, child_env in mcp_handlers:
+    for t, session in session_registrations:
         if not _tool_in_skill_scope(t.name, scoped):
             continue
         params: dict[str, Any]
@@ -505,6 +576,6 @@ def build_v01_guarded_tool_registry(
             t.name,
             description=t.description or f"MCP 工具 {t.name}",
             parameters=params,
-            handler=make_stdio_mcp_tool_handler(cmd, child_env, t.name, cwd=repo),
+            handler=make_long_lived_mcp_handler(session, t.name),
         )
     return reg

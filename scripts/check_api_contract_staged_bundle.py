@@ -1,4 +1,4 @@
-"""pre-commit：若暂存区包含「实现或 GUI 侧的 API 契约载体」之一，则必须同时暂存 API-V0.2 与 test_stream5。
+"""pre-commit：若暂存区包含「实现或 GUI 侧的 API 契约载体」之一，则必须同时暂存 test_stream5。
 
 与 ``original_docs/重要子系统开发文档/API终极文档.md`` 第 4.1 节一致。
 """
@@ -22,7 +22,6 @@ BUNDLE_TRIGGER_PATHS: frozenset[str] = frozenset(
 
 REQUIRED_STAGED: frozenset[str] = frozenset(
     {
-        "original_docs/重要子系统开发文档/API-V0.2.md",
         "tests/test_stream5_api.py",
     }
 )

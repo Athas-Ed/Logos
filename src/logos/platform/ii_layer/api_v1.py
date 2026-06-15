@@ -49,10 +49,20 @@ def _effective_presentation(raw: str | None, default: str) -> Literal["work", "d
     return "work"
 
 
-def _resolve_llm_mode(settings: Any) -> Literal["stub", "remote"]:
+def _resolve_llm_mode(settings: Any, llm: Any) -> Literal["stub", "remote"]:
+    """若强制桩模式、未配置 API Key 或 LLM 为桩实现则返回 ``"stub"``。
+
+    *llm* 为可选的 :class:`~logos.platform.ii_layer.llm_ref.LLMRef`
+    实例，提供运行时 LLM 状态（热更新 API Key 后实时反映）。
+    """
     if os.environ.get("LOGOS_FORCE_STUB_LLM", "").strip() == "1":
         return "stub"
     if not (settings.llm_api_key or "").strip():
+        return "stub"
+    # 即使 settings 中有 key，如果运行时 LLM 仍是桩（刚恢复配置后未热更新），也报 stub
+    from .llm_ref import LLMRef as _LLMRef
+
+    if isinstance(llm, _LLMRef) and llm.is_stub:
         return "stub"
     return "remote"
 
@@ -104,12 +114,14 @@ def build_v1_router() -> Any:
     # 延迟导入避免循环依赖（子模块 import .api_v1 时本模块已完全加载）
     from .api_bootstrap import build_bootstrap_router
     from .api_chat import build_chat_router
+    from .api_config import build_config_router
     from .api_developer import build_developer_router
     from .api_review import build_review_router
 
     router = APIRouter(prefix="/api/v1", tags=["api-v1"])
     router.include_router(build_bootstrap_router())
     router.include_router(build_chat_router())
+    router.include_router(build_config_router())
     router.include_router(build_developer_router())
     router.include_router(build_review_router())
     return router

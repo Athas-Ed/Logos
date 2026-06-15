@@ -53,9 +53,14 @@ def test_registry_mounts_echo(tmp_path: Path) -> None:
         embedding_model_path="models/x",
         mcp_servers=(entry,),
     )
-    reg = build_v01_guarded_tool_registry(s)
-    assert "echo" in reg.names()
-    assert reg.execute("echo", {"text": "x"}) == "x"
+    from logos.platform.sg_layer.factory import close_all_mcp_sessions
+
+    try:
+        reg = build_v01_guarded_tool_registry(s)
+        assert "echo" in reg.names()
+        assert reg.execute("echo", {"text": "x"}) == "x"
+    finally:
+        close_all_mcp_sessions()
 
 
 def test_build_registry_reuses_mcp_discovery_cache(
@@ -65,13 +70,16 @@ def test_build_registry_reuses_mcp_discovery_cache(
 
     sg_factory.clear_mcp_discovery_cache()
     calls = {"n": 0}
-    real_discover = sg_factory.discover_mcp_tools_sync
 
-    def _counting_discover(*a: object, **k: object) -> object:
+    real_get_or_create = sg_factory._get_or_create_mcp_session  # noqa: SLF001
+
+    def _counting_get_or_create(*a: object, **k: object) -> object:
         calls["n"] += 1
-        return real_discover(*a, **k)
+        return real_get_or_create(*a, **k)
 
-    monkeypatch.setattr(sg_factory, "discover_mcp_tools_sync", _counting_discover)
+    monkeypatch.setattr(
+        sg_factory, "_get_or_create_mcp_session", _counting_get_or_create
+    )
     entry = McpServerEntry(
         id="example_echo",
         enabled=True,
@@ -93,7 +101,13 @@ def test_build_registry_reuses_mcp_discovery_cache(
         embedding_model_path="models/x",
         mcp_servers=(entry,),
     )
-    sg_factory.build_v01_guarded_tool_registry(s)
-    sg_factory.build_v01_guarded_tool_registry(s)
-    assert calls["n"] == 1
-    sg_factory.clear_mcp_discovery_cache()
+    from logos.platform.sg_layer.factory import close_all_mcp_sessions
+
+    try:
+        sg_factory.build_v01_guarded_tool_registry(s)
+        sg_factory.build_v01_guarded_tool_registry(s)
+        # 第二次调用应命中缓存，不创建新会话
+        assert calls["n"] == 1
+        sg_factory.clear_mcp_discovery_cache()
+    finally:
+        close_all_mcp_sessions()

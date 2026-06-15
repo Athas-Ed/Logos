@@ -271,6 +271,8 @@ def merged_dict_to_app_settings(data: Mapping[str, Any]) -> AppSettings:
         llm_api_key=str(llm.get("api_key", "") or ""),
         llm_base_url=str(llm.get("base_url", "https://api.deepseek.com/v1")),
         llm_model=str(llm.get("model", "deepseek-chat")),
+        llm_provider=str(llm.get("provider", "") or ""),
+        llm_max_tokens=max(1, _coerce_non_negative_int(llm.get("max_tokens"), default=4096)),
         llm_verify_ssl=_coerce_truthy(llm.get("verify_ssl"), default=True),
         llm_ca_bundle=_str_opt(llm.get("ca_bundle")),
         llm_http_proxy=_str_opt(llm.get("http_proxy")),

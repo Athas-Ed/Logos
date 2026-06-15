@@ -36,10 +36,14 @@ class AppSettings:
     #: ``paths.pending_review_subdir``：审核晋升草稿子目录（相对 workspace_root）
     pending_review_subdir: str = "pending_review"
     operating_mode: str = "author"
+    # LLM 提供商标识：openai / deepseek / anthropic / custom
+    llm_provider: str = ""
     # OpenAI 兼容对话 API（DeepSeek、OpenAI 等）；api_key 为空则走桩实现
     llm_api_key: str = ""
     llm_base_url: str = "https://api.deepseek.com/v1"
     llm_model: str = "deepseek-chat"
+    # Anthropic 必填字段（对其他提供商无影响）
+    llm_max_tokens: int = 4096
     # LLM HTTPS：校验与代理（由 config 合并 + LOGOS_LLM__* 覆盖）
     llm_verify_ssl: bool = True
     llm_ca_bundle: str = ""
