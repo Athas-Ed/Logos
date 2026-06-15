@@ -22,7 +22,7 @@ echo [1/3] Starting backend...
 start "Logos Backend" "%PY%" "%BACKEND%"
 
 echo [2/3] Starting Vite dev server...
-start "Logos Vite" cmd /c "cd /d "%GUI_DIR%" && if not exist node_modules npm install && npm run dev"
+start "Logos Vite" /D "%GUI_DIR%" cmd /c "if not exist node_modules npm install & npm run dev"
 
 echo Waiting for Vite (port 5173)...
 set WAIT_COUNT=0
@@ -32,12 +32,12 @@ powershell -NoProfile -Command "& {param($p=5173) try{$c=New-Object Net.Sockets.
 if errorlevel 1 (
     set /a WAIT_COUNT+=1
     if !WAIT_COUNT! lss 15 goto wait_vite
-    echo [WARN] Vite not ready after ~30s, starting Electron anyway...
+    echo [WARN] Vite not ready after ~30s, check the Vite window for errors.
 )
 
 echo [3/3] Starting Electron...
 set LOGOS_ELECTRON_SKIP_BACKEND=1
-start "Logos Electron" cmd /c "cd /d "%ELECTRON_DIR%" && npm run electron:dev:fast"
+start "Logos Electron" /D "%ELECTRON_DIR%" cmd /c "npm run electron:dev:fast"
 
 endlocal
 echo.
