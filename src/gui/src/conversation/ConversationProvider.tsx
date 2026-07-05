@@ -91,7 +91,7 @@ export type ConversationActions = {
   ) => void;
   sendMessage: (id: string, text: string) => void;
   /** 任务向导：提交第二步输入并启动 SSE（须已绑定 skillId） */
-  submitTaskRun: (id: string, text: string) => void;
+  submitTaskRun: (id: string, text: string, taskInputFields?: Record<string, unknown>) => void;
   /** 任务页统一发送：连续问答同会话追加；触顶后自动新开 tab 并作为首问 */
   submitTaskSend: (id: string, text: string) => void;
   /** 检索问答：新开 tab（不归档当前会话） */
@@ -364,9 +364,9 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
       try {
         const st = byIdRef.current[conversationId]!;
         const taskInput =
-          st.taskInputText?.trim() ?
+          st.taskInputFields ?? (st.taskInputText?.trim() ?
             { text: st.taskInputText.trim() }
-          : undefined;
+          : undefined);
         const skillForApi =
           st.skillId ?? (st.labMode ? "lint_zh" : undefined);
         await streamChat({
@@ -576,6 +576,7 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
       conversationId: string,
       text: string,
       mode: "first" | "follow-up",
+      taskInputFields?: Record<string, unknown>,
     ) => {
       const trimmed = text.trim();
       if (!trimmed) {
@@ -609,6 +610,7 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
           ...turnReset,
           taskPhase: "running",
           taskInputText: trimmed,
+          taskInputFields: taskInputFields ?? undefined,
           streamError: null,
           streaming: false,
           queued: false,
@@ -630,8 +632,8 @@ export function ConversationProvider({ children }: { children: ReactNode }) {
   );
 
   const submitTaskRun = useCallback(
-    (conversationId: string, text: string) => {
-      startTaskRun(conversationId, text, "first");
+    (conversationId: string, text: string, taskInputFields?: Record<string, unknown>) => {
+      startTaskRun(conversationId, text, "first", taskInputFields);
     },
     [startTaskRun],
   );

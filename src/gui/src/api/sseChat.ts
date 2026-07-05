@@ -149,7 +149,7 @@ export interface StreamChatOptions {
   /** 产品 Skill（F5-02）；任务页必填 */
   skillId?: string;
   /** 任务向导第二步输入（F5-02） */
-  taskInput?: { text: string };
+  taskInput?: Record<string, unknown>;
   /** 开发者试验台：强制 PR 范式 */
   paradigmOverride?: string;
   signal?: AbortSignal;

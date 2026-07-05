@@ -1,22 +1,42 @@
 skill_id: outline_plan
 display_name: 大纲规划
-description: 【暂停】产品设计讨论中；试验台可用。见 重要子系统开发文档/大纲规划skill.md
+description: 输入创作主题与角色信息，生成结构化分步大纲。生成过程中自动检索已有设定，确保大纲与设定一致。
 ui_instructions: |
-  【开发暂停】产品大纲规划 Skill 正在重新设计，详见子系统文档「大纲规划skill.md」。
-  技能面板默认不展示；范式试验台仍可选用本 Skill 做 Plan Phase A 技术验证。
-  恢复后：输入主题 → 可审阅分步大纲（JSON 或 Markdown），不自动执行、不调用工具。
+  输入创作主题、事件梗概与相关角色，生成可审阅的分步创作大纲。
+  大纲生成过程中会自动检索你的已有设定（世界观、角色等），确保规划内容与设定不冲突。
+  生成完毕后可切换 JSON / Markdown 视图、复制步骤卡片，并保存到 workspace。
 persistence_tier: p1
-paradigm: plan
+paradigm: react
 turn_policy: single
-panel_visible: false
-allowed_tools: []
+panel_visible: true
+allowed_tools:
+  - retrieve
+  - read_ksfs
+  - list_ksfs
 prompt_runtime_key: skills/outline_plan
 blueprint_path: skills/outline_plan/DESIGN.md
+config_requirements:
+  max_steps: 24
 input_schema:
   type: object
   properties:
-    text:
+    topic:
       type: string
-      title: 主题或目标
+      title: 主题关键词
+      description: 用一个词概括创作主题（如"赛博朋克爱情"）
+    synopsis:
+      type: string
+      title: 主要事件梗概
+      description: 简述核心事件走向与关键情节
+    characters:
+      type: string
+      title: 主要相关角色
+      description: 列出关键角色，至少一个，用逗号分隔（如"张三，李四"）
+    locate:
+      type: string
+      title: 事件地点
+      description: 主要事件发生的地点或场景
   required:
-    - text
+    - synopsis
+    - characters
+  additionalProperties: true

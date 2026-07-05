@@ -57,6 +57,7 @@ export type BootstrapSkill = {
 
   panel_visible?: SkillCardMeta["panel_visible"];
   custom_page?: string;
+  input_schema?: SkillCardMeta["input_schema"];
 };
 
 
@@ -217,7 +218,8 @@ export function panelSkillsFromBootstrap(
 
       panel_visible: safe.panel_visible ?? true,
 
-      customPage: (safe.custom_page || undefined) as SkillCardMeta["customPage"]
+      customPage: (safe.custom_page || undefined) as SkillCardMeta["customPage"],
+      input_schema: safe.input_schema ?? undefined,
 
     });
 

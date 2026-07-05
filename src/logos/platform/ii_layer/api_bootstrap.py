@@ -39,6 +39,7 @@ class BootstrapSkillPayload(BaseModel):
     qa_mode: Literal["normal", "continuous"] = "normal"
     panel_visible: bool = True
     custom_page: str | None = None
+    input_schema: dict[str, Any] | None = None
 
 
 class BootstrapResponse(BaseModel):
@@ -183,6 +184,7 @@ def build_bootstrap_router() -> Any:
         for s in list_bootstrap_skill_summaries():
             manifest = get_skill_manifest(s.skill_id)
             cfg = resolve_skill_config(s.skill_id, manifest, ports.settings)
+            input_schema = manifest.input_schema if manifest.input_schema else None
             skill_payloads.append(
                 BootstrapSkillPayload(
                     skill_id=s.skill_id,
@@ -195,6 +197,7 @@ def build_bootstrap_router() -> Any:
                     qa_mode=cfg.get("qa_mode", "normal"),
                     panel_visible=s.panel_visible,
                     custom_page=s.custom_page,
+                    input_schema=input_schema,
                 )
             )
         repo = resolve_repo_root()

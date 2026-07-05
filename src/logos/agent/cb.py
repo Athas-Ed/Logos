@@ -39,17 +39,31 @@ def _merge_task_input_into_user(user_text: str, task_input: dict[str, Any] | Non
     if not task_input:
         return base
     lines = [base] if base else []
+
     text = task_input.get("text")
     if isinstance(text, str) and text.strip():
         if not base or text.strip() != base:
             lines.append(f"【任务输入】\n{text.strip()}")
-    else:
+        return "\n\n".join(lines).strip() or base
+
+    remaining = {k: v for k, v in task_input.items() if k != "text"}
+    if remaining:
+        field_lines = []
+        for key, value in remaining.items():
+            if isinstance(value, str) and value.strip():
+                title = key
+                field_lines.append(f"{title}：{value.strip()}")
+            elif not isinstance(value, str):
+                field_lines.append(f"{key}：{value!s}")
+        if field_lines:
+            lines.append("【任务输入】\n" + "\n".join(field_lines))
+    elif not base:
         try:
             import json
-
             lines.append("【任务输入】\n" + json.dumps(task_input, ensure_ascii=False))
         except (TypeError, ValueError):
             lines.append(f"【任务输入】\n{task_input!s}")
+
     return "\n\n".join(lines).strip() or base
 
 

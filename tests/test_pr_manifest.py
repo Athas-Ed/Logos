@@ -21,7 +21,7 @@ def test_select_paradigm_retrieve_qa_react() -> None:
 
 
 def test_select_paradigm_outline_plan() -> None:
-    assert select_paradigm("outline_plan") == "plan"
+    assert select_paradigm("outline_plan") == "react"
 
 
 def test_select_paradigm_import_setting_pipeline() -> None:

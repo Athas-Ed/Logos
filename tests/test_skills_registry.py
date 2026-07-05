@@ -50,7 +50,7 @@ def test_list_bootstrap_skill_summaries() -> None:
     assert rq.paradigm == "react"
     assert rq.display_name
     op = next(s for s in summaries if s.skill_id == "outline_plan")
-    assert op.paradigm == "plan"
+    assert op.paradigm == "react"
 
 
 def test_unknown_skill_id_raises() -> None:

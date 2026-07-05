@@ -19,6 +19,8 @@ export type SkillCardMeta = {
   panel_visible?: boolean;
   /** 自定义独立页面路由（不走通用 TaskPage/ChatPage） */
   customPage?: "review";
+  /** manifest input_schema（动态表单元数据） */
+  input_schema?: Record<string, unknown>;
 };
 
 export const PARADIGM_LABELS: Record<SkillCardMeta["paradigm"], string> = {

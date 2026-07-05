@@ -1,0 +1,20 @@
+skill_id: weather
+display_name: 天气查询
+description: 查询天气信息（纯对话，无工具）。
+ui_instructions: |
+  输入一个地点，助手将提供该地点的天气信息（单轮，无工具调用）。
+  示例：北京的天气怎么样？
+persistence_tier: p2
+paradigm: dialogue
+turn_policy: single
+allowed_tools:
+  - query_weather
+prompt_runtime_key: skills/weather
+input_schema:
+  type: object
+  properties:
+    location:
+      type: string
+      title: 地点
+  required:
+    - location

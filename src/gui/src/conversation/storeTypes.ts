@@ -31,6 +31,8 @@ export type ConversationState = {
   taskPhase?: TaskPhase;
   /** 第二步结构化输入（当前为纯文本） */
   taskInputText?: string;
+  /** 多字段结构化输入（来自动态表单，优先级高于 taskInputText） */
+  taskInputFields?: Record<string, unknown>;
   title: string;
   status: ConversationStatus;
   messages: ChatMessage[];

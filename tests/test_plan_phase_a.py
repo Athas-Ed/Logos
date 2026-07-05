@@ -43,16 +43,25 @@ class _PlanStubLLM:
 
 def test_outline_plan_manifest() -> None:
     m = get_skill_manifest("outline_plan")
-    assert m.paradigm == "plan"
+    assert m.paradigm == "react"
     assert m.turn_policy == "single"
-    assert select_paradigm("outline_plan") == "plan"
+    assert select_paradigm("outline_plan") == "react"
 
 
 def test_build_plan_system_message_no_react_mandate() -> None:
-    system = cb.build_plan_system_message("outline_plan")
+    from logos.agent.cb import build_react_system_message
+    from logos.agent.tool_registry import ToolRegistry
+    from logos.platform.skills_registry import get_skill_manifest
+
+    manifest = get_skill_manifest("outline_plan")
+    reg = ToolRegistry()
+    for name in manifest.allowed_tools:
+        reg.register(name, description=name, parameters={}, handler=lambda **kw: "stub")
+
+    system = build_react_system_message(reg, skill_id="outline_plan")
     assert "steps" in system.lower() or "步骤" in system
     for marker in REACT_JSON_MANDATE_MARKERS:
-        assert marker not in system
+        assert marker in system, f"ReAct system message must contain: {marker}"
 
 
 def test_run_plan_phase_a_returns_steps_json() -> None:

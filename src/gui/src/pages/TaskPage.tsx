@@ -22,6 +22,10 @@ import { getSkillMeta } from "../skills/registry";
 
 import { skillSupportsContinuousQa } from "../skills/continuousQa";
 
+import { OutlineForm } from "../components/outline/OutlineForm";
+import { OutlineResult } from "../components/outline/OutlineResult";
+import { useOutlineLookup } from "../components/outline/useOutlineLookup";
+
 import styles from "./TaskPage.module.css";
 
 
@@ -45,6 +49,9 @@ export function TaskPage() {
   const [draft, setDraft] = useState("");
 
   const listEndRef = useRef<HTMLDivElement | null>(null);
+
+  const [originalUserText, setOriginalUserText] = useState("");
+  const [originalTaskFields, setOriginalTaskFields] = useState<Record<string, unknown>>({});
 
 
 
@@ -118,7 +125,15 @@ export function TaskPage() {
 
   const resultText = lastAssistant?.content?.trim() ?? "";
 
-  const showInputPanel = phase === "input" || (continuousQa && !streaming);
+  const isOutlinePlan = conv?.skillId === "outline_plan";
+  const showInputPanel = isOutlinePlan
+    ? (phase === "input" && !streaming && !resultText)
+    : (phase === "input" || (continuousQa && !streaming));
+
+  const inputSchema = (skill?.input_schema ?? {}) as Record<string, unknown>;
+  const inputProperties = (inputSchema.properties ?? {}) as Record<string, { title?: string; description?: string; type?: string }>;
+  const inputRequired = (inputSchema.required ?? []) as string[];
+  const { roles, locations } = useOutlineLookup(conv?.skillId);
 
 
 
@@ -184,6 +199,54 @@ export function TaskPage() {
 
     }
 
+  }, [resultText]);
+
+
+
+  const handleOutlineSubmit = useCallback((userText: string, taskFields: Record<string, unknown>) => {
+    setOriginalUserText(userText);
+    setOriginalTaskFields(taskFields);
+    actions.submitTaskRun(conversationId, userText, taskFields);
+  }, [actions, conversationId]);
+
+  const handleOutlineRewrite = useCallback((userText: string, taskFields: Record<string, unknown>) => {
+    actions.submitTaskRun(conversationId, userText, taskFields);
+  }, [actions, conversationId]);
+
+  const handleOutlineNew = useCallback(() => {
+    actions.createTask("outline_plan");
+  }, [actions]);
+
+  const handleSaveOutline = useCallback(async () => {
+    if (!resultText) return;
+    let content = resultText;
+    let filename: string | undefined;
+    try {
+      const parsed = JSON.parse(resultText.trim());
+      let title = "";
+      if (parsed?.title && typeof parsed.title === "string") {
+        title = parsed.title;
+      }
+      if (parsed?.title && Array.isArray(parsed.steps)) {
+        content = `# ${parsed.title}\n\n${parsed.steps.map((s: unknown, i: number) => `${i + 1}. ${String(s)}`).join("\n")}\n`;
+      }
+      if (title) filename = title.replace(/[\\/:*?"<>|]/g, "_") + ".md";
+    } catch {/* noop */}
+    try {
+      const resp = await fetch("/api/v1/outlines/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content, filename }),
+      });
+      if (resp.ok) {
+        const data = (await resp.json()) as { path: string };
+        alert(`大纲已保存到 workspace/${data.path}`);
+      } else {
+        alert("保存失败");
+      }
+    } catch {
+      alert("保存失败：无法连接到后端");
+    }
   }, [resultText]);
 
 
@@ -370,15 +433,29 @@ export function TaskPage() {
 
             <p className={styles.muted} role="status">
 
-              已加入发送队列…
+               已加入发送队列…
 
             </p>
 
           : null}
 
+          {isOutlinePlan && resultText ?
+            <OutlineResult
+              resultText={resultText}
+              streaming={streaming}
+              queued={queued}
+              onCopy={copyResult}
+              onSave={handleSaveOutline}
+              onRewrite={handleOutlineRewrite}
+              onNew={handleOutlineNew}
+              originalUserText={originalUserText}
+              originalTaskFields={originalTaskFields}
+            />
+          : null}
 
 
-          {messages.length > 0 ?
+
+          {messages.length > 0 && !(isOutlinePlan && resultText) ?
 
             <div className={styles.messageList} data-testid="task-messages">
 
@@ -498,99 +575,111 @@ export function TaskPage() {
 
               {conv.skillId ? <SkillInstructions skillId={conv.skillId} /> : null}
 
-              <label className={styles.label} htmlFor="task-input-text">
+              {isOutlinePlan && phase === "input" ?
+                <OutlineForm
+                  inputProperties={inputProperties}
+                  inputRequired={inputRequired}
+                  ksfsRoles={roles}
+                  ksfsLocations={locations}
+                  streaming={streaming}
+                  queued={queued}
+                  onSubmit={handleOutlineSubmit}
+                />
+              :
+                <>
+                  <label className={styles.label} htmlFor="task-input-text">
 
-                {continuousQa && hasCompletedTurn ? "输入" : "输入"}
+                    {continuousQa && hasCompletedTurn ? "输入" : "输入"}
 
-              </label>
+                  </label>
 
-              <textarea
+                  <textarea
 
-                id="task-input-text"
+                    id="task-input-text"
 
-                className={styles.textarea}
+                    className={styles.textarea}
 
-                data-testid="task-input-textarea"
+                    data-testid="task-input-textarea"
 
-                rows={3}
+                    rows={3}
 
-                placeholder={
+                    placeholder={
 
-                  lastTurnHitLimit && continuousQa
+                      lastTurnHitLimit && continuousQa
 
-                    ? "发送新问题将自动开启新会话…（Enter 发送，Shift+Enter 换行）"
+                        ? "发送新问题将自动开启新会话…（Enter 发送，Shift+Enter 换行）"
 
-                  : isPipeline
+                      : isPipeline
 
-                    ? "粘贴设定正文（角色、地点、世界观片段等）…（Enter 发送，Shift+Enter 换行）"
+                        ? "粘贴设定正文（角色、地点、世界观片段等）…（Enter 发送，Shift+Enter 换行）"
 
-                    : continuousQa && hasCompletedTurn
+                        : continuousQa && hasCompletedTurn
 
-                      ? "输入内容…（Enter 发送，Shift+Enter 换行）"
+                          ? "输入内容…（Enter 发送，Shift+Enter 换行）"
 
-                      : "输入内容…（Enter 发送，Shift+Enter 换行）"
+                          : "输入内容…（Enter 发送，Shift+Enter 换行）"
 
-                }
+                    }
 
-                value={draft}
+                    value={draft}
 
-                disabled={streaming || queued}
+                    disabled={streaming || queued}
 
-                onChange={(e) => setDraft(e.target.value)}
+                    onChange={(e) => setDraft(e.target.value)}
 
-                onKeyDown={(e) => {
+                    onKeyDown={(e) => {
 
-                  if (e.key === "Enter" && !e.shiftKey) {
+                      if (e.key === "Enter" && !e.shiftKey) {
 
-                    e.preventDefault();
+                        e.preventDefault();
 
-                    submitSend();
+                        submitSend();
 
-                  }
+                      }
 
-                }}
+                    }}
 
-              />
+                  />
 
-              <div className={styles.actions}>
+                  <div className={styles.actions}>
 
-                <button
+                    <button
 
-                  type="button"
+                      type="button"
 
-                  className={styles.primaryBtn}
+                      className={styles.primaryBtn}
 
-                  data-testid="task-submit"
+                      data-testid="task-submit"
 
-                  disabled={!draft.trim() || streaming || queued}
+                      disabled={!draft.trim() || streaming || queued}
 
-                  onClick={() => submitSend()}
+                      onClick={() => submitSend()}
 
-                >
+                    >
 
-                  发送
+                      发送
 
-                </button>
+                    </button>
 
-                {resultText && !continuousQa ?
+                    {resultText && !continuousQa ?
 
-                  <button
+                      <button
 
-                    type="button"
+                        type="button"
 
-                    className={styles.secondaryBtn}
+                        className={styles.secondaryBtn}
 
-                    data-testid="task-copy-result"
+                        data-testid="task-copy-result"
 
-                    onClick={() => void copyResult()}
+                        onClick={() => void copyResult()}
 
-                  >
+                      >
 
-                    复制结果
+                        复制结果
 
-                  </button>
+                      </button>
 
-                : null}
+                    : null}
 
                 {isPipeline && pipelineWrittenPaths.length > 0 && !streaming ?
 
@@ -680,6 +769,9 @@ export function TaskPage() {
 
               </div>
 
+                </>
+              }
+
               {promoteMessage ?
 
                 <p
@@ -747,4 +839,3 @@ export function TaskPage() {
   );
 
 }
-

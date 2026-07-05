@@ -1,0 +1,231 @@
+.result {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.25rem 0;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 650;
+  word-break: break-word;
+}
+
+.toolbarActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.activeBtn {
+  border-color: var(--accent) !important;
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+}
+
+.secondaryBtn {
+  padding: 0.45rem 0.9rem;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+}
+
+.secondaryBtn:hover {
+  border-color: var(--accent);
+}
+
+.primaryBtn {
+  padding: 0.45rem 0.9rem;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  cursor: pointer;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.primaryBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.textarea {
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.rewritePanel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.65rem 0.8rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+}
+
+.rewritePanel .textarea {
+  font-size: 0.88rem;
+  padding: 0.5rem 0.6rem;
+}
+
+.rewriteActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.stepCards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.stepCard {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.stepCardExpanded {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+}
+
+.stepCardHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.88rem;
+  cursor: pointer;
+  text-align: left;
+}
+
+.stepCardHeader:hover {
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+
+.stepIndex {
+  flex-shrink: 0;
+  font-weight: 650;
+  color: var(--accent);
+  font-size: 0.82rem;
+  min-width: 3.2rem;
+}
+
+.stepPreview {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+}
+
+.stepCardExpanded .stepPreview {
+  display: none;
+}
+
+.stepToggle {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.stepCardBody {
+  padding: 0.5rem 0.75rem 0.75rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.stepCardBody :global(p) {
+  margin: 0 0 0.5rem;
+}
+
+.stepCardBody :global(p:last-child) {
+  margin-bottom: 0;
+}
+
+.stepCardBody :global(strong) {
+  font-weight: 650;
+}
+
+.mdPreview {
+  padding: 0.65rem 0.8rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.mdPreview :global(h1) {
+  margin: 0 0 0.65rem;
+  font-size: 1.1rem;
+  font-weight: 650;
+}
+
+.mdPreview :global(ol) {
+  padding-left: 1.25rem;
+  margin: 0;
+}
+
+.mdPreview :global(li) {
+  margin-bottom: 0.35rem;
+}
+
+.mdPreview :global(p) {
+  margin: 0 0 0.5rem;
+}
+
+.mdPreview :global(p:last-child) {
+  margin-bottom: 0;
+}
+
+@media (max-width: 768px) {
+  .stepCards {
+    gap: 0.35rem;
+  }
+
+  .stepCardHeader {
+    padding: 0.45rem 0.6rem;
+    font-size: 0.84rem;
+  }
+
+  .stepIndex {
+    min-width: 2.8rem;
+    font-size: 0.78rem;
+  }
+
+  .toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

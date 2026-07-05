@@ -188,8 +188,10 @@ class AgentShell:
             )
             return
         if paradigm == "react":
+            from . import cb
+            merged_user = cb._merge_task_input_into_user(user_text, task_input)
             yield from self.iter_run_react_task(
-                user_text,
+                merged_user,
                 max_steps=max_steps,
                 extra_system=extra_system,
                 json_mode=True,
