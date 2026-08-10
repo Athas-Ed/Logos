@@ -24,8 +24,8 @@ services:
       - ./.index:/app/.index
       # 工作区（草稿、导入等）
       - ./workspace:/app/workspace
-      # Docker 版使用西游记示例知识库；本地开发仍使用 resources/ksfs
-      - ./example_ksfs:/app/resources/ksfs
+      # 西游记示例知识库（默认 ksfs_root 即指向此）；本地开发直接使用 example_ksfs/
+      - ./example_ksfs:/app/example_ksfs
       # 日志
       - ./logs:/app/logs
       # MCP 技能脚本

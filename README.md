@@ -1,7 +1,8 @@
 # Logos — 叙事写作智能助手
 
 > **面向游戏叙事创作者的本地智能写作 Agent** | Python + React + Electron  
-> 技能驱动（Skill-driven）· 多范式 Agent · 融合检索 · MCP 可扩展
+> 技能驱动（Skill-driven）· 多范式 Agent · 融合检索 · Skill 治理  
+> 内置《西游记》示例知识库，克隆即用
 
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python)](https://www.python.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-React-3178C6?logo=typescript)](https://www.typescriptlang.org/)
@@ -36,9 +37,9 @@ Logos 是一款面向**游戏叙事创作者**（文案、叙事策划）的本�
 ┌──────────────────────────▼──────────────────────────────┐
 │                Agent Layer (决策层)                      │
 │       Shell 调度器 · CB 上下文构建 · PR 范式路由            │
-│      ┌────────┐ ┌───────┐ ┌────────┐ ┌──────────┐       │
-│      │dialogue│ │ react │ │  plan  │ │ pipeline │       │
-│      └────────┘ └───────┘ └────────┘ └──────────┘       │
+│      ┌──────────┐ ┌───────┐ ┌──────────────┐           │
+│      │ dialogue │ │ react │ │ Plan&Execute │           │
+│      └──────────┘ └───────┘ └──────────────┘           │
 └──────┬─────────────────────────────────┬────────────────┘
        │                                 │
 ┌──────▼──────┐                  ┌───────▼─────────────────┐
@@ -59,20 +60,19 @@ Logos 是一款面向**游戏叙事创作者**（文案、叙事策划）的本�
 
 ### 🧠 范式路由（Paradigm Router）
 
-不是所有 Agent 场景都适合 ReAct。Logos 定义了 **4 种执行范式**，每个 Skill 在 manifest 中预先声明，路由层确认后调度：
+不是所有 Agent 场景都适合 ReAct。Logos 定义了 **3 种执行范式**，每个 Skill 在 manifest 中预先声明，路由层确认后调度：
 
 | 范式 | 适用场景 | 协议 |
 |------|----------|------|
-| **dialogue** | 自由文本多轮（聊天启发） | 自然语言，非 JSON |
-| **react** | 工具循环（检索问答、语病检查） | JSON-only ReAct |
+| **dialogue** | 自由文本多轮（聊天启发、语病检查） | 自然语言，非 JSON |
+| **react** | 工具循环（检索问答、创作启发、设定撰写） | JSON-only ReAct |
 | **plan** | 先计划再执行（大纲规划） | Phase A 结构化计划 |
-| **pipeline** | 确定性流水线（设定导入） | 阶段式 SSE 事件 |
 
 **设计取舍**：不搞运行时"智能猜范式"——Skill 作者在 manifest 定好边界，PR 只做路由确认。开发者可通过 `paradigm_override` 试验，但不作为默认路径。
 
-### 🔍 三路融合检索
+### 🔍 三路融合检索（KSFS 为基准 + 知识图谱补充）
 
-叙事写作检索与通用 RAG 不同——用户常搜**专有名词**（人名/地名/物品名），需要精确命中而非语义近似。Logos 采用 **三路召回 + 简单融合**：
+叙事写作检索与通用 RAG 不同——用户常搜**专有名词**（人名/地名/物品名），需要精确命中而非语义近似。Logos 以 **KSFS（Markdown 文件树）为唯一事实基准**，在其上构建三层索引：
 
 | 路 | 技术 | 职责 |
 |----|------|------|
@@ -82,14 +82,16 @@ Logos 是一款面向**游戏叙事创作者**（文案、叙事策划）的本�
 
 三路按 path 去重取 max score 排序，Agent 通过 `retrieve` 工具拿到 `Citation[]` 后，再调 `read_ksfs` 读全文核实——**chunk snippet 是"诱饵"，真相在全文**。
 
-### 🛡️ MCP 治理
+此外，**知识图谱（CozoDB + Datalog）** 提供实体关系查询补充：`kg_query` 工具可检索一跳/多跳邻居（如「孙悟空 → 持有 → 如意金箍棒」）和最短路径。数据层已实现，`retrieve_qa` / `setting_write` 等 Skill 已注册该工具。
 
-作为插件系统的入口，MCP 的管理比简单地挂载脚本更复杂：
+### 🛡️ Skill 治理
 
-- **Discovery 缓存**：同一配置下 `tools/list` 仅执行一次，避免每轮对话重复拉起子进程
-- **进程泄漏防护**：`psutil` 重复压测 + `call_mcp_tool_sync` 每次调用启停一次 stdio 进程，超时 kill
-- **工具白名单**：每 Skill 在 manifest 声明 `allowed_tools`，构造 scoped registry，不向 LLM 暴露全目录
-- **Fail-fast 配置校验**：`mcp_servers` 误写为非列表时抛出 `ValueError`，不静默降级
+Logos 的 Skill 系统既有**本地进程内工具**（检索、文件读写、草稿晋升等），也有**通过 MCP 协议接入的外部工具**（高德天气等）。无论接入方式，治理策略统一：
+
+- **工具白名单**：每 Skill 在 manifest 声明 `allowed_tools`，S&G 层构造 scoped registry，不向 LLM 暴露全目录
+- **路径沙箱**：`read_ksfs` / `write_draft` 等文件工具仅允许操作 KSFS 树内或 workspace 内的相对路径，禁止绝对路径与 `..` 穿越
+- **MCP 进程治理**：Discovery 缓存（同一配置下 `tools/list` 仅执行一次）；进程泄漏防护（每次调用启停一次 stdio 进程，超时 kill）
+- **Fail-fast 配置校验**：`mcp_servers` 等配置项误写为非列表时抛出 `ValueError`，不静默降级
 
 ### 📋 工程纪律
 
@@ -108,18 +110,20 @@ Logos 是一款面向**游戏叙事创作者**（文案、叙事策划）的本�
 
 - **Skill 驱动 GUI**：技能面板 → 任务三步向导 → SSE 流式执行 → 归档（Electron + React）
 - **KSFS 叙事知识库**：`.md` 文件树作为唯一事实源，含 front matter 元数据
+- **示例数据**：内置《西游记》主题示例 KSFS（人物/地点/势力/概念/种族共 9 篇实体），克隆即用
 - **设定导入 Pipeline**：粘贴结构文本 → LLM 渲染为草稿 → 人审晋升至 KSFS
 - **三路融合检索**：HSI + SVS (Chroma) + Sparse (FTS5)，增量同步
-- **MCP 可插拔工具**：echo 示例 + 高德天气，带治理与泄漏测试
-- **对话 / ReAct / Pipeline 三种范式**（Plan 为 Phase A 预览）
+- **知识图谱**：CozoDB Datalog 实体关系查询（`kg_query` 工具已注册）
+- **对话 / ReAct / Plan 三种范式**（Plan 为 Phase A 预览）
 - **Obs 可观测性**：工具调用链落盘、4 级日志 profile、GUI 可选日志根展示
 - **单实例 Electron 壳**：健康门、后端托管、退出清理、Windows portable 打包
 
 ### 🧊 规划中或有限
 
-- 知识图谱融合检索（数据层已实现，融合未接）
-- RRF 混合排序（当前三路取 max 已够用）
-- 大纲规划 Skill 产品定稿（Phase A 代码已就绪，但面板隐藏）
+- 知识图谱融合检索（`kg_query` 工具已注册，但尚未接入 `FusedRetrievalService` 的融合管道）
+- RRF 混合排序（当前三路取 max 已够用，基准集验证后可引入）
+- 大纲规划 Skill 产品定稿（Phase A 代码已就绪，但面板默认隐藏）
+- Pipeline 范式（`import_setting` 内部使用，未对用户开放为独立 Skill）
 - 安装包/签名/自动更新（便携版够用，暂缓）
 
 ---
@@ -207,7 +211,7 @@ Logos/
 │   │   └── ports/          # 端口抽象: 检索, 元数据, 向量, 稀疏索引
 │   ├── gui/                # React + Vite 前端
 │   └── electron/           # Electron 桌面壳
-├── skills/manifests/       # 产品 Skill YAML 声明 (7 个)
+├── skills/manifests/       # 产品 Skill YAML 声明
 ├── resources/prompts/      # Prompt 模板资产 (范式/技能/持久化档位)
 ├── resources/pipelines/    # Pipeline 阶段配置
 ├── resources/entity_template/ # 实体模板与渲染规格
@@ -229,7 +233,6 @@ Logos/
 | 想了解 Agent 范式 | [docs/子系统文档/Agent与范式路由.md](docs/子系统文档/Agent与范式路由.md) |
 | 想了解 Skill 系统 | [docs/子系统文档/任务与Skill界面.md](docs/子系统文档/任务与Skill界面.md) |
 | 想了解 MCP 集成 | [docs/子系统文档/Skills与MCP扩展.md](docs/子系统文档/Skills与MCP扩展.md) |
-| 想看 API 契约 | [docs/子系统文档/HTTP-API概览.md](docs/子系统文档/HTTP-API概览.md) |
 | 完整文档索引 | [docs/README.md](docs/README.md) |
 
 ---

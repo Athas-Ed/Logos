@@ -6,7 +6,7 @@ id: "80000"
 
 本目录为一份基于《西游记》的示例叙事知识库，供快速演示和体验检索功能使用。
 
-> ✅ 本目录**已提交至仓库**，Docker `start.cmd` 自动挂载为 KSFS 数据源。
+> ✅ 本目录**已提交至仓库**，默认 `config/defaults.yaml` 的 `paths.ksfs_root` 即指向此处，克隆仓库后可直接体验。
 
 ## 内容一览
 
@@ -30,8 +30,12 @@ id: "80000"
 
 ## 启动方式
 
-- **Docker 体验**：`start.cmd`（自动挂载本目录为 KSFS 数据源）
-- **本地开发**：编辑 `config/local.yaml` 的 `paths.ksfs_root` 指向 `./example_ksfs`，然后启动 `scripts/start_logos.cmd`
+默认 `config/defaults.yaml` 的 `paths.ksfs_root` 已指向 `./example_ksfs`，GitHub 克隆后直接启动即可拥有可体验的示例内容。
+
+- **Docker 体验**：`start.cmd` / `./start.sh`
+- **本地开发**：`scripts/start_logos.cmd`（Windows）或手动分步启动
+
+若有个人创作 KSFS，在 `config/local.yaml` 中覆写 `paths.ksfs_root` 指向你的目录即可。
 
 ## 面试用途
 

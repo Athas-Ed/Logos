@@ -10,7 +10,7 @@
 
 | 位置 | 角色 |
 |------|------|
-| `paths.ksfs_root`（默认 `resources/ksfs/`） | 已「落户」的设定，参与 HSI/SVS |
+| `paths.ksfs_root`（默认 `example_ksfs/`，含《西游记》示例数据） | 已「落户」的设定，参与 HSI/SVS |
 | `workspace/setting_entry/` | 设定导入或人工整理的**待晋升草稿** |
 | `workspace/` 其他子目录 | 一般创作工件，非事实源 |
 
@@ -24,7 +24,7 @@
 - **SVS**：Chroma 向量库，按正文分块嵌入，供语义检索。
 - **Sparse / Hybrid / KG**：规划中（参照检索子系统开发路线 R1～R4）。
 
-检索前通常会增量同步 KSFS → HSI → SVS。各目录下的 `README.md` **不**作为实体扫描。
+检索前通常会增量同步 KSFS → HSI → SVS。各目录下的 `README.md` 不作为实体扫描。
 
 ## 设定导入与重叠提示
 
@@ -44,7 +44,11 @@
 
 `resources/entity_template/` 存放 JSON Schema、渲染规格与 pipeline 配置（如 `default_import_v0`），与 `ksfs_root` **分离**，避免与用户实体混扫。
 
-**Git**：`resources/ksfs/`、`workspace/`、`example_ksfs/` 下的创作与示例实体**不入库**（见 [配置说明](../配置说明.md)「本地数据目录」）。
+**Git**：
+
+- `resources/ksfs/` 下的个人创作实体默认 **.gitignore** 不入库（仅 README 可提交）
+- `example_ksfs/` 下的《西游记》示例数据**已提交至仓库**，为开箱体验提供内容
+- `workspace/` 下的草稿档案默认不入库
 
 ## 格式约定摘要
 

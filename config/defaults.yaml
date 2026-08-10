@@ -2,10 +2,10 @@
 
 paths:
   workspace_root: "./workspace"
-  # 开发用示例 KSFS（本机目录，.gitignore 不入库）
+  # 示例 KSFS（含西游记人物/地点/势力示例数据，已提交至仓库）
   example_ksfs_root: "./example_ksfs"
-  # 个人创作 KSFS 事实源（树内 .md 不入库，仅 README 可提交）
-  ksfs_root: "./resources/ksfs"
+  # 默认使用示例 KSFS（方便新用户开箱体验）。若有个人创作 KSFS，在 local.yaml 中覆写此路径
+  ksfs_root: "./example_ksfs"
   # KSFS→HSI 登记时机（见 KSFS开发.md §3.2 / §3.3）：
   # - false（默认）：首次融合检索 ``query`` 前懒登记（发号、回写 id:）
   # - true：进程启动时在 FastAPI lifespan 内登记一次（仍与懒登记共用去重，重复路径不会双扫）

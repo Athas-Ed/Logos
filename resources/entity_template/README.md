@@ -9,7 +9,7 @@
 | 目录 | 用途 |
 |------|------|
 | **`resources/prompts/`** | CB **对话**用 Prompt，不承载 JSON Schema / 落盘渲染规则。 |
-| **`paths.ksfs_root`（默认 `resources/ksfs/`）** | **事实源**：用户/项目的实体 `.md`；勿把契约文件放在此树下以免与扫描语义混淆。 |
+| **`paths.ksfs_root`（默认 `example_ksfs/`）** | **事实源**：用户/项目的实体 `.md`；勿把契约文件放在此树下以免与扫描语义混淆。 |
 | **`workspace/setting_entry/`** | **待落户草稿**：设定导入经渲染写出的 `.md`（晋升前）；**非**事实源、**非**本目录；与 `ksfs_root` 分离。说明见仓库根 **`workspace/setting_entry/README.md`**、`KSFS开发.md` §2、§7.3。 |
 | **`resources/entity_template/`** | **本目录**：可提交的 **profile** 与子资源；版本化约定见 `original_docs/DECISIONS.md` §9。 |
 

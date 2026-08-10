@@ -19,9 +19,9 @@
 | 对话 | `dialogue` | 自由文本多轮，非 ReAct JSON | 聊天启发 |
 | ReAct | `react` | 每轮结构化 JSON + 工具 | 语病检查、检索问答 |
 | Plan | `plan` | 先计划再分步（演进中） | 大纲类 |
-| **Pipeline** | `pipeline` | 确定性阶段表；**非** ReAct 循环，也**非** CI Pipeline | 设定导入 |
+| Pipeline | `pipeline` | 确定性阶段表 | 设定导入 |
 
-PR **不**默认在运行时「智能猜范式」；Skill 作者在 manifest 中定好边界。开发者可在开启调试工具时用 `paradigm_override` 试验（见 API 文档）。
+PR 不默认在运行时「智能猜范式」；Skill 作者在 manifest 中定好边界。开发者可在开启调试工具时用 `paradigm_override` 试验（见 API 文档）。
 
 ### ReAct 步数上限
 

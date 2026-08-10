@@ -1,13 +1,13 @@
 ---
 id: "10004"
 ---
-# KSFS 知识库根（`paths.ksfs_root`）
+# 个人 KSFS 知识库（可选，`paths.ksfs_root` 覆盖目标）
 
-本目录为 **叙事知识唯一事实源** 的默认位置。
+本目录用于存放**个人创作**的叙事设定实体 `.md`。默认 `paths.ksfs_root` 指向 `example_ksfs/`（克隆即用），有个人创作后将本路径填入 `config/local.yaml` 的 `paths.ksfs_root` 即可。
 
 **请勿将个人 `.md` 创作提交到 Git**：除本说明外，树内实体文件已由 `.gitignore` 忽略。
 
 - 约定见 [**docs/子系统文档/KSFS与叙事知识库.md**](../../docs/子系统文档/KSFS与叙事知识库.md)
-- 本地开发示例树：仓库根 **`example_ksfs/`**（同样不入库；可从备份或自行创建，见 [**docs/配置说明.md**](../../docs/配置说明.md)「本地数据目录」）
+- **开箱体验**：仓库根 **`example_ksfs/`** 含《西游记》示例数据，默认 `ksfs_root` 即指向它
 
 **`.index/`**（默认在仓库根，已 gitignore）：HSI（`.high-speed_index`）与向量库（`.vector_index/`）。勿将索引目录与 KSFS 正文混放。

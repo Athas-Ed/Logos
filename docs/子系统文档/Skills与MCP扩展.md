@@ -36,16 +36,6 @@ manifest 位于 `skills/manifests/<skill_id>.yaml`，与 `skills/<name>/` 下的
 
 示例目录：`skills/example-stdio-mcp/`、`skills/amap-weather-mcp/`。
 
-## 与基础设施的区别
-
-| 属于 Skill / MCP | 属于基础设施 |
-|------------------|----------------|
-| 地图天气、echo 示例 | 统一 Retrieval 入口 |
-| 业务向 Prompt 与输入向导 | Chroma / HSI 同步 |
-| 可选文档摄取（转 Markdown） | OpenAI 兼容 LLM 客户端 |
-
-**不要**在 Skill 内重复实现 KSFS 同步或全局检索路由。
-
 ## 添加新 Skill（概要）
 
 1. 编写 `skills/manifests/my_skill.yaml`。

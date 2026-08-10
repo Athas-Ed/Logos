@@ -80,3 +80,8 @@ skills/**/DESIGN.md
 
 # Windows 目录元数据
 desktop.ini
+
+# 编译器本地配置文件
+.idea/
+*.iml
+.vscode/
