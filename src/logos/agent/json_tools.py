@@ -142,6 +142,22 @@ def parse_react_json(text: str) -> ParsedStep:
             final_answer=final,
         )
 
+    # 容错：LLM 常把 final_answer 写成嵌套对象而非字符串（如 outline_plan 的大纲 JSON）。
+    # 此时序列化回字符串，避免 ReAct 循环误判为非法 JSON 步骤而重试耗尽。
+    if isinstance(final, dict) and final:
+        try:
+            serialized = json.dumps(final, ensure_ascii=False)
+        except (TypeError, ValueError):
+            serialized = ""
+        if serialized:
+            return ParsedStep(
+                raw_text=text,
+                thought=thought_s,
+                action_name=None,
+                action_arguments=None,
+                final_answer=serialized,
+            )
+
     action = data.get("action")
     if isinstance(action, dict):
         name = action.get("name")

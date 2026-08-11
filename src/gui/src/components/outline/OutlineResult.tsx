@@ -1,6 +1,13 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { marked } from "marked";
 import styles from "./OutlineResult.module.css";
+
+export interface SettingConflict {
+  item_index: number;
+  level: "error" | "warning";
+  ksfs_entry_path: string;
+  description: string;
+}
 
 export interface OutlineResultProps {
   resultText: string;
@@ -14,6 +21,8 @@ export interface OutlineResultProps {
   originalUserText: string;
   originalTaskFields: Record<string, unknown>;
 }
+
+type CheckState = "idle" | "checking" | "done";
 
 function parseOutline(text: string): { title: string; steps: string[] } | null {
   const trimmed = text.trim();
@@ -67,7 +76,7 @@ function outlineToMarkdown(text: string): string {
 
 export function OutlineResult({
   resultText,
-  streaming: _streaming,
+  streaming,
   queued,
   onCopy,
   onSave,
@@ -80,6 +89,47 @@ export function OutlineResult({
   const [expandedSteps, setExpandedSteps] = useState<Set<number>>(new Set());
   const [showRewrite, setShowRewrite] = useState(false);
   const [rewriteFeedback, setRewriteFeedback] = useState("");
+
+  // ── 设定一致性检查 ──
+  const [conflicts, setConflicts] = useState<SettingConflict[]>([]);
+  const [checkState, setCheckState] = useState<CheckState>("idle");
+  const [checkedResultKey, setCheckedResultKey] = useState("");
+
+  const runCheck = useCallback(async (text: string) => {
+    const outline = parseOutline(text);
+    const steps = outline?.steps ?? [];
+    if (steps.length === 0) return;
+    setCheckState("checking");
+    try {
+      const resp = await fetch("/api/v1/setting-check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items: steps.map((s, i) => ({ index: i, content: s })),
+        }),
+      });
+      if (resp.ok) {
+        const data = (await resp.json()) as { conflicts: SettingConflict[] };
+        setConflicts(Array.isArray(data.conflicts) ? data.conflicts : []);
+      } else {
+        setConflicts([]);
+      }
+    } catch {
+      setConflicts([]);
+    } finally {
+      setCheckState("done");
+    }
+  }, []);
+
+  // 产出后自动触发检查（streaming 结束后、结果稳定时）
+  useEffect(() => {
+    if (streaming || !resultText) return;
+    if (checkedResultKey === resultText) return;
+    setCheckedResultKey(resultText);
+    setConflicts([]);
+    setCheckState("idle");
+    void runCheck(resultText);
+  }, [resultText, streaming, checkedResultKey, runCheck]);
 
   const outline = parseOutline(resultText);
   const steps = outline?.steps ?? [];
@@ -152,9 +202,10 @@ export function OutlineResult({
             type="button"
             className={styles.secondaryBtn}
             data-testid="outline-setting-check"
-            onClick={() => alert("设定一致性检查将在 setting_check Skill 完成后接入。")}
+            disabled={checkState === "checking"}
+            onClick={() => void runCheck(resultText)}
           >
-            设定检查
+            {checkState === "checking" ? "检查中…" : "设定检查"}
           </button>
           <button
             type="button"
@@ -182,6 +233,16 @@ export function OutlineResult({
           </button>
         </div>
       </div>
+
+      {checkState === "checking" ?
+        <p className={styles.checkStatus} data-testid="setting-check-status" role="status">
+          正在检索 KSFS 设定并检查一致性…
+        </p>
+      : checkState === "done" && conflicts.length === 0 ?
+        <p className={styles.checkOk} data-testid="setting-check-ok" role="status">
+          设定一致，未发现与已有 KSFS 设定的冲突。
+        </p>
+      : null}
 
       {showRewrite ?
         <div className={styles.rewritePanel}>
@@ -222,10 +283,13 @@ export function OutlineResult({
         <div className={styles.stepCards} data-testid="outline-step-cards">
           {steps.map((step, i) => {
             const isExpanded = expandedSteps.has(i);
+            const stepConflicts = conflicts.filter((c) => c.item_index === i);
+            const hasError = stepConflicts.some((c) => c.level === "error");
+            const hasWarning = stepConflicts.some((c) => c.level === "warning");
             return (
               <div
                 key={i}
-                className={`${styles.stepCard} ${isExpanded ? styles.stepCardExpanded : ""}`}
+                className={`${styles.stepCard} ${isExpanded ? styles.stepCardExpanded : ""} ${hasError ? styles.stepCardHasError : hasWarning ? styles.stepCardHasWarning : ""}`}
                 data-testid={`outline-step-${i}`}
               >
                 <button
@@ -238,6 +302,14 @@ export function OutlineResult({
                   <span className={styles.stepPreview}>
                     {step.length > 60 ? step.slice(0, 60) + "\u2026" : step}
                   </span>
+                  {stepConflicts.length > 0 ?
+                    <span
+                      className={`${styles.conflictBadge} ${hasError ? styles.conflictBadgeError : styles.conflictBadgeWarning}`}
+                      data-testid={`conflict-badge-${i}`}
+                    >
+                      {stepConflicts.length} 冲突
+                    </span>
+                  : null}
                   <span className={styles.stepToggle}>
                     {isExpanded ? "\u25B4" : "\u25BE"}
                   </span>
@@ -247,6 +319,26 @@ export function OutlineResult({
                     className={styles.stepCardBody}
                     dangerouslySetInnerHTML={renderMarkdown(step)}
                   />
+                : null}
+                {isExpanded && stepConflicts.length > 0 ?
+                  <div className={styles.conflictList} data-testid={`conflict-list-${i}`}>
+                    {stepConflicts.map((c, j) => (
+                      <div
+                        key={j}
+                        className={`${styles.conflictItem} ${c.level === "error" ? styles.conflictItemError : styles.conflictItemWarning}`}
+                      >
+                        <span className={styles.conflictLevel}>
+                          {c.level === "error" ? "错误" : "警告"}
+                        </span>
+                        <span className={styles.conflictDesc}>{c.description}</span>
+                        {c.ksfs_entry_path ?
+                          <span className={styles.conflictPath}>
+                            相关条目：{c.ksfs_entry_path}
+                          </span>
+                        : null}
+                      </div>
+                    ))}
+                  </div>
                 : null}
               </div>
             );

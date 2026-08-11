@@ -118,6 +118,7 @@ def build_v1_router() -> Any:
     from .api_developer import build_developer_router
     from .api_outline import build_outline_router
     from .api_review import build_review_router
+    from .api_setting_check import build_setting_check_router
 
     router = APIRouter(prefix="/api/v1", tags=["api-v1"])
     router.include_router(build_bootstrap_router())
@@ -126,4 +127,5 @@ def build_v1_router() -> Any:
     router.include_router(build_developer_router())
     router.include_router(build_outline_router())
     router.include_router(build_review_router())
+    router.include_router(build_setting_check_router())
     return router

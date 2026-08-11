@@ -1,0 +1,22 @@
+skill_id: setting_check
+display_name: 设定一致性检查
+description: 检查创作内容（大纲步骤、草稿片段等）是否与已有 KSFS 设定条目存在事实/概念冲突，返回冲突列表。
+ui_instructions: |
+  粘贴需要检查的创作内容（如大纲步骤、角色描写、事件片段）。
+  系统会自动检索相关 KSFS 设定条目，并返回是否存在事实/概念冲突。
+persistence_tier: p1
+paradigm: dialogue
+turn_policy: single
+panel_visible: true
+allowed_tools: []
+prompt_runtime_key: skills/setting_check
+blueprint_path: skills/setting_check/DESIGN.md
+input_schema:
+  type: object
+  properties:
+    text:
+      type: string
+      title: 待检查内容
+      description: 需要与 KSFS 设定核对的内容片段
+  required:
+    - text

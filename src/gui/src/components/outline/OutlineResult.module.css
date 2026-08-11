@@ -209,6 +209,93 @@
   margin-bottom: 0;
 }
 
+.checkStatus {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.checkOk {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--ok);
+}
+
+.stepCardHasError {
+  border-color: color-mix(in srgb, var(--err) 55%, var(--border));
+}
+
+.stepCardHasWarning {
+  border-color: color-mix(in srgb, #e6a23c 55%, var(--border));
+}
+
+.conflictBadge {
+  flex-shrink: 0;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.conflictBadgeError {
+  color: #fff;
+  background: var(--err);
+}
+
+.conflictBadgeWarning {
+  color: #fff;
+  background: #e6a23c;
+}
+
+.conflictList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.5rem 0.75rem 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.conflictItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 8px;
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.conflictItemError {
+  border: 1px solid color-mix(in srgb, var(--err) 45%, var(--border));
+  background: color-mix(in srgb, var(--err) 8%, var(--surface));
+}
+
+.conflictItemWarning {
+  border: 1px solid color-mix(in srgb, #e6a23c 45%, var(--border));
+  background: color-mix(in srgb, #e6a23c 8%, var(--surface));
+}
+
+.conflictLevel {
+  font-weight: 650;
+}
+
+.conflictItemError .conflictLevel {
+  color: var(--err);
+}
+
+.conflictItemWarning .conflictLevel {
+  color: #e6a23c;
+}
+
+.conflictDesc {
+  color: var(--text);
+}
+
+.conflictPath {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
 @media (max-width: 768px) {
   .stepCards {
     gap: 0.35rem;

@@ -24,6 +24,24 @@ def test_parse_react_json_non_dict_root_logs_warning() -> None:
     assert "list" in str(mock_warn.call_args)
 
 
+def test_parse_react_json_final_answer_nested_object_serialized() -> None:
+    """LLM 把 final_answer 写成嵌套对象时，应序列化为字符串而非判为非法。"""
+    step = parse_react_json(
+        '{"thought": "x", "final_answer": {"title": "t", "steps": ["a", "b"]}}'
+    )
+    assert step.final_answer is not None
+    assert '"title"' in step.final_answer
+    assert '"steps"' in step.final_answer
+    assert step.action_name is None
+
+
+def test_parse_react_json_final_answer_string_unchanged() -> None:
+    step = parse_react_json(
+        '{"thought": "x", "final_answer": "{\\"title\\": \\"t\\", \\"steps\\": [\\"a\\"]}"}'
+    )
+    assert step.final_answer == '{"title": "t", "steps": ["a"]}'
+
+
 def test_run_react_loop_logs_on_format_nudge() -> None:
     class _NoiseLLM:
         def complete(self, messages, *, json_mode: bool = False) -> str:
