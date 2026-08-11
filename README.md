@@ -97,7 +97,7 @@ Logos 的 Skill 系统既有**本地进程内工具**（检索、文件读写、
 
 | 实践 | 实现 |
 |------|------|
-| **API 契约同步** | `.githooks/commit-msg` + `pre-commit` 脚本——改 `api_v1.py` 须同时暂存 `API-V0.2.md` 与契约测试 |
+| **API 契约同步** | `.githooks/pre-commit` 脚本——改 `api_v1.py` 等须同时暂存契约测试 `test_stream5_api.py` |
 | **分层测试** | L1 单元 → L2 集成（无 HTTP）→ L3 契约（SSE 事件名校验）→ L4 慢测（真实 embedder） |
 | **检索基准** | 30-50 条中文叙事 query 的基准集，`Recall@k` / `MRR` / 组件隔离分析 |
 | **可观测性** | 工具调用链 `logos_tool_chain_v1` 写入维护轨日志，4 级 `log_profile`（minimal 到 audit） |
