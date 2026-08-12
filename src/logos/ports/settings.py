@@ -62,6 +62,8 @@ class AppSettings:
     react_max_steps: int = 16
     #: ``agent.react.max_QA_steps``：检索问答每轮 user 问题的步数上限（默认 20）
     react_max_qa_steps: int = 20
+    #: ``agent.react.max_tool_observation_chars``：S&G 输出治理——工具观测写入上下文前的最大字符数（默认 100000；0 表示不截断）
+    react_max_tool_observation_chars: int = 100000
     #: ``obs.log_profile``：minimal | standard | verbose | audit
     obs_log_profile: str = "standard"
     #: ``obs.show_log_root_in_gui``：为 True 时 ``GET /api/v1/bootstrap`` 暴露 ``obs_logs_root``，供 GUI 展示日志根（Obs O4）；默认 False
@@ -78,6 +80,10 @@ class AppSettings:
     kg_db_path: str = "./.index/.kg_cozo.db"
     #: ``paths.setting_entry_subdir``：相对 ``pending_review_subdir`` 的草稿子目录（默认 "setting_entry"）
     setting_entry_subdir: str = "setting_entry"
+    #: ``retrieval.sparse.enabled``：组合根是否默认装配 FTS5 稀疏索引（默认开启；加载失败自动降级为 HSI+SVS）
+    sparse_enabled: bool = True
+    #: ``retrieval.sparse.db_path``：FTS5 稀疏索引 SQLite 路径（默认 "./.index/.sparse_fts.sqlite"）
+    sparse_db_path: str = "./.index/.sparse_fts.sqlite"
     #: per-skill deployment overrides（config/local.yaml → skills.overrides.<skill_id>）
     skill_overrides: dict[str, dict[str, Any]] = field(default_factory=dict)
     #: per-skill 调优参数全局默认值（config/defaults.yaml → skills.config），

@@ -1,4 +1,9 @@
-"""工具返回内容的简单治理：超长输出截断，避免观测与上下文爆炸。"""
+"""S&G 输出治理：工具返回内容超长截断，避免观测写入 LLM 上下文时膨胀。
+
+接线：由 ``GuardedToolRegistry.execute`` 在工具结果返回后统一应用（内置与 MCP 工具一致）；
+上限来自配置 ``agent.react.max_tool_observation_chars``（0/None 表示不截断）。
+与生成质量路线项 H3「CB 预算与裁剪」配套。
+"""
 
 from __future__ import annotations
 

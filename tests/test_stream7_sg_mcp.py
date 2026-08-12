@@ -76,6 +76,34 @@ def test_guarded_registry_blocks_execute_for_non_whitelist() -> None:
     assert "拒绝" in reg.execute("retrieve", {})
 
 
+def test_guarded_registry_truncates_long_tool_output() -> None:
+    reg = GuardedToolRegistry(
+        allowed_names=frozenset({"echo"}),
+        max_observation_chars=20,
+    )
+    reg.register(
+        "echo",
+        description="d",
+        parameters={"type": "object", "properties": {}},
+        handler=lambda: "x" * 100,
+    )
+    out = reg.execute("echo", {})
+    assert len(out) <= 20
+    assert "已按 S&G 策略截断" in out
+
+
+def test_guarded_registry_passthrough_short_and_disabled() -> None:
+    cap = GuardedToolRegistry(allowed_names=frozenset({"echo"}), max_observation_chars=20)
+    cap.register("echo", description="d", parameters={"type": "object", "properties": {}},
+                 handler=lambda: "short")
+    assert cap.execute("echo", {}) == "short"
+
+    off = GuardedToolRegistry(allowed_names=frozenset({"echo"}), max_observation_chars=0)
+    off.register("echo", description="d", parameters={"type": "object", "properties": {}},
+                 handler=lambda: "x" * 100)
+    assert len(off.execute("echo", {})) == 100
+
+
 def test_build_v01_guarded_tool_registry_writes_under_workspace(tmp_path: Path) -> None:
     ws = tmp_path / "workspace"
     ws.mkdir()

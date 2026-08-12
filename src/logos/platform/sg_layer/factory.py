@@ -272,7 +272,10 @@ def build_v01_guarded_tool_registry(
     else:
         mcp_in_scope = frozenset(n for n in extra_names if n in scoped)
         allowed = (scoped & V01_SG_TOOL_WHITELIST) | mcp_in_scope | (extras & scoped)
-    reg = GuardedToolRegistry(allowed_names=allowed)
+    reg = GuardedToolRegistry(
+        allowed_names=allowed,
+        max_observation_chars=settings.react_max_tool_observation_chars,
+    )
     workspace = Path(settings.workspace_root).resolve()
     ksfs_root = Path(settings.ksfs_root).resolve()
     rsvc: RetrievalService = retrieval if retrieval is not None else _EmptyRetrieval()

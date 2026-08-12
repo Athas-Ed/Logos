@@ -237,6 +237,9 @@ def merged_dict_to_app_settings(data: Mapping[str, Any]) -> AppSettings:
     obs = data.get("obs") if isinstance(data.get("obs"), dict) else {}
     agent = data.get("agent") if isinstance(data.get("agent"), dict) else {}
     react = agent.get("react") if isinstance(agent.get("react"), dict) else {}
+    retrieval_raw = data.get("retrieval")
+    retrieval = retrieval_raw if isinstance(retrieval_raw, dict) else {}
+    sparse = retrieval.get("sparse") if isinstance(retrieval.get("sparse"), dict) else {}
     return AppSettings(
         workspace_root=str(paths.get("workspace_root", "./workspace")),
         example_ksfs_root=str(paths.get("example_ksfs_root", "./example_ksfs")),
@@ -286,6 +289,9 @@ def merged_dict_to_app_settings(data: Mapping[str, Any]) -> AppSettings:
         ui_max_history_full_text=max(1, _coerce_non_negative_int(ui.get("max_history_full_text"), default=5)),
         react_max_steps=max(1, _coerce_non_negative_int(react.get("max_steps"), default=16)),
         react_max_qa_steps=max(1, _coerce_non_negative_int(react.get("max_QA_steps"), default=20)),
+        react_max_tool_observation_chars=_coerce_non_negative_int(
+            react.get("max_tool_observation_chars"), default=100000
+        ),
         obs_log_profile=_normalize_log_profile(obs.get("log_profile")),
         obs_show_log_root_in_gui=_coerce_truthy(
             obs.get("show_log_root_in_gui"), default=False
@@ -303,6 +309,10 @@ def merged_dict_to_app_settings(data: Mapping[str, Any]) -> AppSettings:
         skill_overrides=skill_overrides,
         skill_config_defaults=skill_config_defaults,
         mcp_servers=mcp_servers,
+        sparse_enabled=_coerce_truthy(sparse.get("enabled"), default=True),
+        sparse_db_path=_str_opt(
+            sparse.get("db_path", "./.index/.sparse_fts.sqlite")
+        ),
     )
 
 

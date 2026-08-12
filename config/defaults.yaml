@@ -37,7 +37,7 @@ chroma:
   # A5：chunk_id 与分块策略变更后使用新 collection，避免与 v0 单文件块混存
   collection: "ksfs_chunks_v1"
 
-# R1 稀疏全文索引（FTS5）配置
+# 稀疏全文索引（FTS5）配置；app.py 组合根按此装配（加载失败自动降级为 HSI+SVS）
 retrieval:
   sparse:
     enabled: true
@@ -73,6 +73,8 @@ agent:
     max_steps: 16
     # 检索问答（retrieve_qa）每轮 user 问题的 ReAct 步数上限
     max_QA_steps: 20
+    # S&G 输出治理：工具观测写入上下文（append_observation）前的最大字符数；0 表示不截断
+    max_tool_observation_chars: 100000
 
 obs:
   log_profile: "standard"

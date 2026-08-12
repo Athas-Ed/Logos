@@ -60,6 +60,8 @@ def test_load_merged_from_repo_config() -> None:
     s = merged_dict_to_app_settings(data)
     assert s.logs_root == "./logs"
     assert isinstance(s.mcp_servers, tuple)
+    assert s.sparse_enabled is True
+    assert s.sparse_db_path == "./.index/.sparse_fts.sqlite"
 
 
 def test_ui_sse_and_cache_warn_from_yaml(tmp_path: Path) -> None:
@@ -103,6 +105,38 @@ def test_obs_show_log_root_in_gui_from_yaml(tmp_path: Path) -> None:
     )
     s = load_app_settings(cfg)
     assert s.obs_show_log_root_in_gui is True
+
+
+def test_sparse_settings_from_yaml(tmp_path: Path) -> None:
+    cfg = tmp_path / "config"
+    cfg.mkdir()
+    (cfg / "defaults.yaml").write_text(
+        "paths:\n  logs_root: ./logs\n  workspace_root: ./w\n"
+        "  example_ksfs_root: ./e\n  ksfs_root: ./k\n  index_root: ./i\n"
+        "  hsi_sqlite_path: ./h\n"
+        "retrieval:\n"
+        "  sparse:\n"
+        "    enabled: false\n"
+        "    db_path: ./.index/custom_sparse.sqlite\n",
+        encoding="utf-8",
+    )
+    s = load_app_settings(cfg)
+    assert s.sparse_enabled is False
+    assert s.sparse_db_path == "./.index/custom_sparse.sqlite"
+
+
+def test_react_max_tool_observation_chars_from_yaml(tmp_path: Path) -> None:
+    cfg = tmp_path / "config"
+    cfg.mkdir()
+    (cfg / "defaults.yaml").write_text(
+        "paths:\n  logs_root: ./logs\n  workspace_root: ./w\n"
+        "  example_ksfs_root: ./e\n  ksfs_root: ./k\n  index_root: ./i\n"
+        "  hsi_sqlite_path: ./h\n"
+        "agent:\n  react:\n    max_tool_observation_chars: 0\n",
+        encoding="utf-8",
+    )
+    s = load_app_settings(cfg)
+    assert s.react_max_tool_observation_chars == 0
 
 
 def test_mcp_servers_from_yaml(tmp_path: Path) -> None:

@@ -118,13 +118,28 @@ def main() -> None:
     from logos.persistence.chroma_bootstrap import default_svs_state_db_path
     svs_state_db = default_svs_state_db_path(index_root)
 
+    # Sparse（FTS5）全文索引：默认装配，加载失败自动降级为 None（退化为 HSI+SVS）
+    sparse_index = None
+    sparse_db = None
+    if settings.sparse_enabled:
+        try:
+            from logos.persistence import SqliteSparseIndex
+
+            sparse_index = SqliteSparseIndex(Path(settings.sparse_db_path))
+            sparse_db = Path(settings.sparse_db_path)
+        except Exception:  # noqa: BLE001
+            sparse_index = None
+            sparse_db = None
+
     retrieval = FusedRetrievalService(
         metadata_index=metadata,
         semantic_store=semantic_store,
         embedder=embedder,
+        sparse_index=sparse_index,
         lazy_hsi_ksfs_root=ksfs_root,
         lazy_hsi_db_path=hsi_db,
         lazy_svs_state_db=svs_state_db if not isinstance(semantic_store, _StubSemanticStore) else None,
+        lazy_sparse_db_path=sparse_db,
         refresh_indexes_on_query=settings.sync_hsi_on_retrieve,
     )
     knowledge_source = FilesystemKnowledgeSource(ksfs_root)
