@@ -385,7 +385,9 @@ def test_retrieve_qa_react_registry_scoped_tools(tmp_path: Path) -> None:
         settings,
         allowed_tools=frozenset(manifest.allowed_tools),
     )
-    assert set(reg.names()) == {"retrieve", "read_ksfs"}
+    tool_names = set(reg.names())
+    assert tool_names == set(manifest.allowed_tools)
+    assert "write_draft" not in tool_names  # 白名单内但未在 manifest 声明的工具不应被注册
 
 
 @pytest.mark.skipif(

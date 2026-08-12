@@ -80,10 +80,12 @@ class AgentShell:
         if paradigm != "react":
             msg = f"unsupported paradigm for run_task: {paradigm!r}"
             raise ValueError(msg)
+        from logos.agent import cb
+        merged_user = cb._merge_task_input_into_user(user_text, task_input)
         return react.run_react_loop(
             self.llm,
             self.tools,
-            user_text,
+            merged_user,
             max_steps=max_steps,
             extra_system=extra_system,
             json_mode=json_mode,
