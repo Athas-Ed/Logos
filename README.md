@@ -66,7 +66,7 @@ Logos 是一款面向**游戏叙事创作者**（文案、叙事策划）的本�
 |------|----------|------|
 | **dialogue** | 自由文本多轮（聊天启发、语病检查） | 自然语言，非 JSON |
 | **react** | 工具循环（检索问答、创作启发、设定撰写） | JSON-only ReAct |
-| **plan** | 先计划再执行（大纲规划） | Phase A 结构化计划 |
+| **plan** | 先计划再执行 | Phase A 结构化计划（当前无产品 Skill 绑定） |
 
 **设计取舍**：不搞运行时"智能猜范式"——Skill 作者在 manifest 定好边界，PR 只做路由确认。开发者可通过 `paradigm_override` 试验，但不作为默认路径。
 
@@ -122,7 +122,7 @@ Logos 的 Skill 系统既有**本地进程内工具**（检索、文件读写、
 
 - 知识图谱融合检索（`kg_query` 工具已注册，但尚未接入 `FusedRetrievalService` 的融合管道）
 - RRF 混合排序（当前三路取 max 已够用，基准集验证后可引入）
-- 大纲规划 Skill 产品定稿（Phase A 代码已就绪，但面板默认隐藏）
+- 大纲规划 Skill（`outline_plan`，ReAct 范式，检索设定后产出大纲；面板可见）
 - Pipeline 范式（`import_setting` 内部使用，未对用户开放为独立 Skill）
 - 安装包/签名/自动更新（便携版够用，暂缓）
 

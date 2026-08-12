@@ -14,17 +14,25 @@ manifest 位于 `skills/manifests/<skill_id>.yaml`，与 `skills/<name>/` 下的
 
 ## 内置 Skill 一览
 
-`skills/manifests/` 下当前包含以下 7 个产品 Skill（以实际文件为准）：
+`skills/manifests/` 下当前包含以下 10 个产品 Skill（以实际文件为准）：
 
 | skill_id | 范式 | 用途（概要） |
 |----------|------|----------------|
-| `chat_inspire` | react | 长对话启发 |
-| `draft_review` | react | 审核晋升：列出待审草稿，预览后晋升至 KSFS |
-| `import_setting` | pipeline | 结构化设定导入（确定性阶段表） |
+| `chat_inspire` | react | 长对话启发（`turn_policy: multi`） |
+| `draft_review` | react | 审核晋升：列出待审草稿，预览后晋升至 KSFS（`custom_page: review`） |
+| `import_setting` | pipeline | 结构化设定导入（确定性阶段表，`pipeline_profile: your_profile_v1`） |
 | `lint_zh` | dialogue | 中文语病检查（纯对话，无工具） |
-| `outline_plan` | plan | 大纲规划（Phase A 预览，面板默认隐藏） |
+| `outline_plan` | react | 大纲规划：检索已有设定后生成结构化分步大纲（原 plan 范式已改 react） |
 | `retrieve_qa` | react | 检索问答（三路融合检索 + read_ksfs 原文核实） |
+| `RQA` | react | `retrieve_qa` 的本地实验变体（额外允许 MCP 工具 `query_weather`；无专属 prompt） |
+| `setting_check` | dialogue | 设定一致性检查：检索相关 KSFS 条目并判定冲突（独立 LLM 服务，非 ReAct） |
 | `setting_write` | react | 设定撰写：基于 KSFS 上下文起草新条目 |
+| `weather` | react | 天气查询：调用 MCP 工具 `query_weather`（需注册 amap-weather-mcp） |
+
+> **MCP 依赖提示**：`weather` 与 `RQA` 的 `allowed_tools` 含 MCP 工具 `query_weather`，
+> 仅当 `config/local.yaml → skills.mcp_servers` 注册了 `amap-weather-mcp`（`AMAP_WEB_KEY`）时该工具才可用；
+> 未注册时这两个 Skill 仍出现在技能面板，但声明的工具不可用（Agent 调用会收到 "unknown tool" 类观测）。
+> `RQA` 为实验副本（`resources/prompts/skills/` 下无对应 `RQA.md`，复用通用 ReAct prompt）。
 
 ## MCP 集成
 
