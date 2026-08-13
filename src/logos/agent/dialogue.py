@@ -6,12 +6,10 @@ import json
 import logging
 from collections.abc import Iterator
 from dataclasses import dataclass
-from typing import Any
 
 from logos.ports.llm import ChatMessage, LLMClient
 
 from logos.agent import cb
-from logos.agent.prompt_echo import format_messages_for_prompt_echo
 from logos.agent.tool_registry import ToolRegistry
 
 _log = logging.getLogger("logos.agent.dialogue")
@@ -98,14 +96,12 @@ def iter_dialogue_task(
     extra_system: str | None = None,
     history: list[ChatMessage] | None = None,
     registry: ToolRegistry | None = None,
-    task_input: dict[str, Any] | None = None,
     stream_assistant: bool = True,
-    prompt_echo: bool = False,
 ) -> Iterator[DialogueStreamText | DialogueStreamDone]:
     """对话范式：``json_mode=false``，流式自然语言输出。"""
-    # 非 prompt_echo 模式：自动检索 KSFS 上下文注入
+    # 自动检索 KSFS 上下文注入
     ksfs_ctx = None
-    if registry and not prompt_echo:
+    if registry:
         ksfs_ctx = _retrieve_ksfs_context(user_text, registry)
     if ksfs_ctx is not None:
         extra_system = (extra_system or "") + "\n\n" + ksfs_ctx
@@ -116,13 +112,7 @@ def iter_dialogue_task(
         user_text,
         extra_system=extra_system,
         registry=registry,
-        task_input=task_input,
     )
-    if prompt_echo:
-        echo_text = format_messages_for_prompt_echo(messages)
-        yield DialogueStreamDone(DialogueResult(answer=echo_text, messages=messages))
-        return
-
     answer = ""
     if stream_assistant:
         for piece in llm.stream_completion(messages, json_mode=False):

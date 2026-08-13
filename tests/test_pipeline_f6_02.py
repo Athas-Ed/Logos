@@ -12,7 +12,7 @@ from logos.agent import pipeline as pipeline_mod
 from logos.agent import pr as pr_mod
 from logos.agent import react as react_mod
 from logos.agent.pipeline import PipelineRunner, PipelineStreamDone
-from logos.agent.shell import AgentShell
+from logos.agent.task import TaskDone, TaskPipelineStep, TaskSession
 from logos.agent.tool_registry import ToolRegistry
 from logos.platform.mcp_stdio import resolve_repo_root
 from logos.platform.skills_registry import (
@@ -113,9 +113,11 @@ def test_validate_rejects_invalid_slug(profile) -> None:
         validate_import_batch(batch, profile.schema_path)
 
 
-def test_shell_pipeline_does_not_call_react_loop(
+def test_task_session_pipeline_does_not_call_react_loop(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    from tests.test_stream5_api import _make_ports
+
     react_called: list[bool] = []
 
     def _fail_react(*_a, **_k):
@@ -127,24 +129,28 @@ def test_shell_pipeline_does_not_call_react_loop(
     batch = _load_batch("minimal_batch.json")
     llm = MagicMock()
     llm.complete.return_value = json.dumps(batch, ensure_ascii=False)
-    shell = AgentShell(llm=llm, tools=ToolRegistry())
+    ports = _make_ports(tmp_path)
     items = list(
-        shell.iter_paradigm_task(
-            "import_setting",
-            "paste",
+        TaskSession(
+            llm=llm,
+            tools=ToolRegistry(),
+            settings=ports.settings,
             workspace_root=tmp_path,
-        )
+        ).iter_task("import_setting", "paste")
     )
     assert not react_called
-    assert any(isinstance(i, PipelineStreamDone) for i in items)
-    done = next(i for i in items if isinstance(i, PipelineStreamDone))
-    assert done.result.written_paths
+    assert any(isinstance(i, TaskPipelineStep) for i in items)
+    done = next(i for i in items if isinstance(i, TaskDone))
+    assert done.kind == "pipeline"
+    assert done.written_paths
 
 
-def test_shell_pipeline_does_not_call_react_loop_via_runner(
+def test_task_session_pipeline_delegates_iter_run_pipeline(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Shell 将 pipeline 委托给 iter_run_pipeline，而非 ReAct。"""
+    """TaskSession 将 pipeline 委托给 iter_run_pipeline，而非 ReAct。"""
+    from tests.test_stream5_api import _make_ports
+
     seen: list[str] = []
 
     def fake_iter(*_a, **_k):
@@ -154,12 +160,13 @@ def test_shell_pipeline_does_not_call_react_loop_via_runner(
         )
 
     monkeypatch.setattr(pipeline_mod, "iter_run_pipeline", fake_iter)
-    shell = AgentShell(llm=MagicMock(), tools=ToolRegistry())
+    ports = _make_ports(tmp_path)
     list(
-        shell.iter_paradigm_task(
-            "import_setting",
-            "x",
+        TaskSession(
+            llm=MagicMock(),
+            tools=ToolRegistry(),
+            settings=ports.settings,
             workspace_root=tmp_path,
-        )
+        ).iter_task("import_setting", "x")
     )
     assert seen == ["pipeline"]

@@ -8,7 +8,12 @@ from typing import Any
 
 import yaml
 
-from logos.platform.mcp_stdio import resolve_repo_root
+from logos.platform.config.resolve import (
+    entity_template_root as _resolved_entity_template_root,
+)
+from logos.platform.config.resolve import (
+    pipelines_root as _resolved_pipelines_root,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -22,11 +27,11 @@ class EntityTemplateProfile:
 
 
 def entity_template_root() -> Path:
-    return resolve_repo_root() / "resources" / "entity_template"
+    return _resolved_entity_template_root()
 
 
 def pipelines_root() -> Path:
-    return resolve_repo_root() / "resources" / "pipelines"
+    return _resolved_pipelines_root()
 
 
 def load_entity_template_profile(profile_id: str) -> EntityTemplateProfile:

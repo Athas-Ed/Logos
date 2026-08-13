@@ -9,11 +9,11 @@ import threading
 from pathlib import Path
 from typing import Any
 
+from logos.platform.config import resolve_app_paths
 from logos.platform.mcp_stdio import (
     McpStdioSession,
     make_long_lived_mcp_handler,
     mcp_server_argv,
-    resolve_repo_root,
 )
 from logos.ports import AppSettings, McpServerEntry
 from logos.ports.retrieval import Citation, RetrievalService
@@ -74,7 +74,7 @@ def clear_mcp_discovery_cache() -> None:
 def _mcp_discovery_cache_key(settings: AppSettings) -> tuple[Any, ...]:
     """缓存键：仓库根、各启用项路径存在性 / mtime，避免 entrypoint 从缺失变为存在仍命中空结果。"""
 
-    repo = resolve_repo_root().resolve()
+    repo = resolve_app_paths(settings).repo_root
     parts: list[Any] = [str(repo)]
     for e in settings.mcp_servers:
         if not e.enabled:
@@ -192,7 +192,7 @@ def build_v01_guarded_tool_registry(
     """
     scoped = allowed_tools
     seen_mcp_tool_names: set[str] = set()
-    repo = resolve_repo_root()
+    repo = resolve_app_paths(settings).repo_root
 
     if scoped is not None and len(scoped) == 0:
         mcp_tool_specs: list[Any] = []
@@ -276,8 +276,9 @@ def build_v01_guarded_tool_registry(
         allowed_names=allowed,
         max_observation_chars=settings.react_max_tool_observation_chars,
     )
-    workspace = Path(settings.workspace_root).resolve()
-    ksfs_root = Path(settings.ksfs_root).resolve()
+    paths = resolve_app_paths(settings)
+    workspace = paths.workspace_root
+    ksfs_root = paths.ksfs_root
     rsvc: RetrievalService = retrieval if retrieval is not None else _EmptyRetrieval()
 
     def _retrieve(text: str, top_k: int = 8) -> str:
@@ -413,7 +414,7 @@ def build_v01_guarded_tool_registry(
 
         if not items:
             return json.dumps({"error": "items 不能为空"}, ensure_ascii=False)
-        hsi_db = Path(settings.hsi_sqlite_path).resolve()
+        hsi_db = resolve_app_paths(settings).hsi_sqlite_path
         port = FilesystemDraftPromotionPort(hsi_db=hsi_db)
         candidate_items: list[PromotionItem] = []
         for rel in items:

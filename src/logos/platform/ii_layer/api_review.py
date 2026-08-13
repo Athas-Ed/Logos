@@ -13,8 +13,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from .api_v1 import _resolve_hsi_db, _resolve_ksfs_root, _resolve_logs_root, _resolve_workspace_root
-from .deps import AppPortsDep, LLMDep
+from .deps import AppPortsDep, LLMDep, ResolvedPathsDep
 
 _log = logging.getLogger("logos.api.review")
 
@@ -161,15 +160,16 @@ def build_review_router() -> Any:
     def setting_entry_promote_v1(
         body: SettingEntryPromoteBody,
         ports: AppPortsDep,
+        paths: ResolvedPathsDep,
     ) -> SettingEntryPromoteResponse:
         """人审后将 setting_entry 草稿复制至 KSFS 并触发 HSI 同步。"""
         from logos.tools.draft_promotion_fs import FilesystemDraftPromotionPort
 
-        ws_root = _resolve_workspace_root(ports.settings)
-        ksfs_root = _resolve_ksfs_root(ports.settings)
-        logs_root = _resolve_logs_root(ports.settings)
+        ws_root = paths.workspace_root
+        ksfs_root = paths.ksfs_root
+        logs_root = paths.logs_root
         drafts_root = _scope_drafts_root(ws_root, ports.settings, "setting_entry")
-        hsi_db = _resolve_hsi_db(ports.settings)
+        hsi_db = paths.hsi_sqlite_path
         port = FilesystemDraftPromotionPort(hsi_db=hsi_db)
         candidates = port.list_promotion_candidates(drafts_root, ksfs_root)
         if body.draft_relpaths is not None:
@@ -210,10 +210,11 @@ def build_review_router() -> Any:
     @router.get("/drafts")
     def drafts_list_v1(
         ports: AppPortsDep,
+        paths: ResolvedPathsDep,
         scope: str = "setting_entry",
     ) -> DraftsListResponse:
         """列出 pending_review 下某 scope 的全部草稿文件。scope 空 = pending_review 根。"""
-        ws_root = _resolve_workspace_root(ports.settings)
+        ws_root = paths.workspace_root
         target = _scope_drafts_root(ws_root, ports.settings, scope)
 
         if not target.is_dir():
@@ -237,11 +238,12 @@ def build_review_router() -> Any:
     @router.get("/drafts/read")
     def drafts_read_v1(
         ports: AppPortsDep,
+        paths: ResolvedPathsDep,
         path: str,
         scope: str = "setting_entry",
     ) -> DraftsReadResponse:
         """读取 pending_review 下某 scope 内文件的正文。path 相对 scope 根。"""
-        ws_root = _resolve_workspace_root(ports.settings)
+        ws_root = paths.workspace_root
         full = _scope_rel_to_ws_path(ws_root, ports.settings, scope, path)
         content = full.read_text(encoding="utf-8")
         return DraftsReadResponse(path=path, content=content)
@@ -250,16 +252,17 @@ def build_review_router() -> Any:
     def drafts_promote_v1(
         body: DraftsPromoteBody,
         ports: AppPortsDep,
+        paths: ResolvedPathsDep,
     ) -> DraftsPromoteResponse:
         """将 pending_review/<scope>/ 下的草稿晋升至 KSFS。成功后删除源文件。"""
         from logos.ports.draft_promotion import PromotionItem
         from logos.tools.draft_promotion_fs import FilesystemDraftPromotionPort
 
-        ws_root = _resolve_workspace_root(ports.settings)
-        ksfs_root = _resolve_ksfs_root(ports.settings)
-        logs_root = _resolve_logs_root(ports.settings)
+        ws_root = paths.workspace_root
+        ksfs_root = paths.ksfs_root
+        logs_root = paths.logs_root
         drafts_root = _scope_drafts_root(ws_root, ports.settings, body.scope)
-        hsi_db = _resolve_hsi_db(ports.settings)
+        hsi_db = paths.hsi_sqlite_path
         port = FilesystemDraftPromotionPort(hsi_db=hsi_db)
 
         applied: list[str] = []
@@ -326,9 +329,10 @@ def build_review_router() -> Any:
     def drafts_delete_v1(
         body: DraftsDeleteBody,
         ports: AppPortsDep,
+        paths: ResolvedPathsDep,
     ) -> DraftsDeleteResponse:
         """删除 pending_review/<scope>/ 下的草稿源文件。path 相对 scope 根。"""
-        ws_root = _resolve_workspace_root(ports.settings)
+        ws_root = paths.workspace_root
         drafts_root = _scope_drafts_root(ws_root, ports.settings, body.scope)
         deleted: list[str] = []
         for rel in body.paths:
@@ -350,6 +354,7 @@ def build_review_router() -> Any:
         body: RewriteRequestBody,
         ports: AppPortsDep,
         llm: LLMDep,
+        paths: ResolvedPathsDep,
     ) -> RewriteResponse:
         """批量重写草稿：前端传入文件原文 + 要求，服务端调 LLM JSON mode 后直接写入文件。"""
         from logos.ports.llm import ChatMessage
@@ -390,7 +395,7 @@ def build_review_router() -> Any:
         if not isinstance(results, list):
             results = []
 
-        ws_root = _resolve_workspace_root(ports.settings)
+        ws_root = paths.workspace_root
         drafts_root = _scope_drafts_root(ws_root, ports.settings, body.scope)
         written: list[str] = []
         failed: list[str] = []
@@ -418,9 +423,10 @@ def build_review_router() -> Any:
     def drafts_write_v1(
         body: DraftsWriteBody,
         ports: AppPortsDep,
+        paths: ResolvedPathsDep,
     ) -> dict[str, Any]:
         """覆写 pending_review/<scope>/ 下的草稿文件。path 相对 scope 根。"""
-        ws_root = _resolve_workspace_root(ports.settings)
+        ws_root = paths.workspace_root
         drafts_root = _scope_drafts_root(ws_root, ports.settings, body.scope)
         target = (drafts_root / body.path).resolve()
         target.parent.mkdir(parents=True, exist_ok=True)

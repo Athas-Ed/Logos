@@ -19,3 +19,11 @@ class RetrievalService(Protocol):
 
     def query(self, *, text: str, top_k: int = 8) -> list[Citation]:
         ...
+
+
+@runtime_checkable
+class IndexSync(Protocol):
+    """检索 seam：query 前调用，承诺 KSFS→已装配索引均已对账。"""
+
+    def sync(self) -> None:
+        ...

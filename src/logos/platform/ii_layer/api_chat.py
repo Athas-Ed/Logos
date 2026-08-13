@@ -7,20 +7,16 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 from collections.abc import Iterator
-from typing import Any, Literal, cast
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-from logos.platform.skills_config import resolve_skill_config
 from .api_v1 import (
     _effective_presentation,
-    _resolve_ksfs_root,
-    _resolve_workspace_root,
     _sse_frame,
 )
-from .deps import AppPortsDep, LLMDep, RetrievalDep
+from .deps import AppPortsDep, LLMDep, ResolvedPathsDep, RetrievalDep
 
 _log = logging.getLogger("logos.api.chat")
 
@@ -60,12 +56,6 @@ class ChatRequestBody(BaseModel):
 # ── 辅助函数 ──
 
 
-def _allow_paradigm_override(settings: Any) -> bool:
-    if settings.developer_show_dev_tools_ui:
-        return True
-    return os.environ.get("LOGOS_FORCE_STUB_LLM", "").strip() == "1"
-
-
 def _resolve_skill_id(raw: str | None) -> str:
     sid = (raw or "").strip()
     if sid:
@@ -77,49 +67,22 @@ def _resolve_skill_id(raw: str | None) -> str:
     return _DEFAULT_SKILL_ID
 
 
-def _resolve_paradigm_override(
-    body: ChatRequestBody,
-    skill_id: str,
-    *,
-    settings: Any,
-    user_text: str,
-) -> Any:
-    from logos.agent import pr as paradigm_router
-
-    paradigm = paradigm_router.select_paradigm(skill_id, user_text=user_text)
-    raw = (body.paradigm_override or "").strip().lower()
-    if not raw or not _allow_paradigm_override(settings):
-        return paradigm
-    if raw not in ("dialogue", "react", "plan", "pipeline"):
-        _log.warning("忽略非法 paradigm_override=%r", body.paradigm_override)
-        return paradigm
-    return cast(Any, raw)
-
-
-def _operating_mode_suffix(mode: str) -> str:
-    """运行模式后缀：始终加载 author 模式。"""
-    from logos.agent.cb import load_operating_mode_suffix
-
-    _ = mode
-    return load_operating_mode_suffix("author")
-
-
 def _split_request_messages(
     raw: list[ChatMessageBody],
 ) -> tuple[str | None, list[Any], str]:
     """拆出前端 system 补充、对话历史（不含最后一条）、当前轮用户文本。"""
-    from logos.ports.llm import ChatMessage
+    from logos.ports.llm import ChatMessage as _ChatMessage
 
     if not raw:
         return None, [], ""
     system_parts: list[str] = []
-    conv: list[ChatMessage] = []
+    conv: list[_ChatMessage] = []
     for m in raw:
         if m.role == "system":
             if m.content.strip():
                 system_parts.append(m.content.strip())
         elif m.role in ("user", "assistant"):
-            conv.append(ChatMessage(role=m.role, content=m.content))
+            conv.append(_ChatMessage(role=m.role, content=m.content))
     client_extra = "\n\n".join(system_parts) if system_parts else None
     if not conv:
         return client_extra, [], ""
@@ -209,26 +172,20 @@ def build_chat_router() -> Any:
         llm: LLMDep,
         retrieval: RetrievalDep,
         ports: AppPortsDep,
+        paths: ResolvedPathsDep,
     ) -> StreamingResponse:
-        from logos.agent.shell import AgentShell
-        from logos.agent.dialogue import DialogueStreamDone, DialogueStreamText
-        from logos.agent.pipeline import (
-            PipelineStepEvent,
-            PipelineStreamDone,
-            PipelineWarningEvent,
-        )
-        from logos.agent.react import (
-            ReActStreamDone,
-            ReActStreamReasoning,
-            ReActStreamToolTrace,
-        )
-        from logos.platform.obs.tool_chain import (
-            clear_obs_log_profile_tls,
-            prime_obs_log_profile_for_chat,
-            reset_react_tool_steps,
+        from logos.agent.cb import load_operating_mode_suffix
+        from logos.agent.task import (
+            TaskCitations,
+            TaskDone,
+            TaskPipelineStep,
+            TaskPipelineWarning,
+            TaskReasoning,
+            TaskSession,
+            TaskText,
+            TaskToolTrace,
         )
         from logos.platform.sg_layer import build_v01_guarded_tool_registry
-        from logos.platform.sg_layer.guarded_registry import V01_SG_TOOL_WHITELIST
         from logos.platform.skills_registry import (
             SkillManifestNotFoundError,
             get_skill_manifest,
@@ -241,231 +198,142 @@ def build_chat_router() -> Any:
         except SkillManifestNotFoundError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-
         def event_stream() -> Iterator[str]:
-            prime_obs_log_profile_for_chat(str(ports.settings.obs_log_profile or "standard"))
-            reset_react_tool_steps()
             try:
-                try:
-                    from logos.agent import cb as cb_mod
-
-                    skill_cfg = resolve_skill_config(
-                        skill_id, skill_manifest, ports.settings
+                client_sys, history, user_text = _split_request_messages(body.messages)
+                ut = user_text.strip()
+                if not ut:
+                    yield _sse_frame(
+                        "error",
+                        {"code": "empty_message", "message": "缺少有效用户消息"},
                     )
-                    react_max_steps = int(skill_cfg.get("max_steps", ports.settings.react_max_steps))
-                    clip = skill_cfg.get("history_clip_max_full_turns")
-                    client_sys, history, user_text = _split_request_messages(body.messages)
-                    if clip is not None and history:
-                        history = cb_mod.clip_turn_history(
-                            history,
-                            max_full_rounds=int(clip),
+                    return
+
+                presentation = _effective_presentation(
+                    body.presentation, ports.settings.ui_default_presentation
+                )
+
+                citation_sink: list[Citation] = []
+                tools = build_v01_guarded_tool_registry(
+                    ports.settings,
+                    retrieval=retrieval,
+                    citation_sink=citation_sink,
+                    allowed_tools=frozenset(skill_manifest.allowed_tools),
+                )
+                session = TaskSession(
+                    llm=llm,
+                    tools=tools,
+                    settings=ports.settings,
+                    retrieval=retrieval,
+                    citation_sink=citation_sink,
+                    workspace_root=paths.workspace_root,
+                    ksfs_root=paths.ksfs_root,
+                    prompt_echo=ports.developer.prompt_echo,
+                )
+
+                extra = load_operating_mode_suffix(body.operating_mode)
+                if client_sys:
+                    extra = f"{extra}\n\n【来自前端的 system 补充】\n{client_sys}"
+                reasoning_acc: dict[str, str] = {}
+                done_seen = False
+                for item in session.iter_task(
+                    skill_id,
+                    ut,
+                    task_input=body.task_input,
+                    history=history,
+                    extra_system=extra,
+                    paradigm_override=body.paradigm_override,
+                ):
+                    if isinstance(item, TaskText):
+                        yield _sse_frame("delta", {"text": item.text})
+                    elif isinstance(item, TaskReasoning):
+                        yield from _yield_reasoning_sse(
+                            presentation, item.text, reasoning_acc
                         )
-                    ut = user_text.strip()
-                    if not ut:
+                    elif isinstance(item, TaskToolTrace):
+                        reasoning_acc.pop("reasoning_buf", None)
+                        yield from _yield_tool_trace_sse(presentation, item)
+                    elif isinstance(item, TaskCitations):
+                        ev, payload = _citation_event(presentation, list(item.items))
+                        yield _sse_frame(ev, payload)
+                    elif isinstance(item, TaskPipelineStep):
                         yield _sse_frame(
-                            "error",
-                            {"code": "empty_message", "message": "缺少有效用户消息"},
+                            "pipeline_step",
+                            {
+                                "step_id": item.step_id,
+                                "status": item.status,
+                                "summary": item.summary,
+                            },
                         )
-                        return
-
-                    presentation = _effective_presentation(
-                        body.presentation, ports.settings.ui_default_presentation
-                    )
-
-                    citation_sink: list[Citation] = []
-                    tools = build_v01_guarded_tool_registry(
-                        ports.settings,
-                        retrieval=retrieval,
-                        citation_sink=citation_sink,
-                        allowed_tools=frozenset(skill_manifest.allowed_tools),
-                    )
-                    shell = AgentShell(
-                        llm=llm,
-                        tools=tools,
-                        prompt_echo=ports.developer.prompt_echo,
-                    )
-
-                    extra = _operating_mode_suffix(body.operating_mode)
-                    if client_sys:
-                        extra = f"{extra}\n\n【来自前端的 system 补充】\n{client_sys}"
-                    paradigm = _resolve_paradigm_override(
-                        body,
-                        skill_id,
-                        settings=ports.settings,
-                        user_text=ut,
-                    )
-
-                    if paradigm == "pipeline":
-                        profile = skill_manifest.pipeline_profile
-                        if not profile:
+                        if item.status == "error":
                             yield _sse_frame(
                                 "error",
                                 {
-                                    "code": "invalid_skill",
-                                    "message": (
-                                        f"Skill {skill_id!r} 为 pipeline 但缺少 pipeline_profile"
-                                    ),
+                                    "code": "pipeline_step_failed",
+                                    "message": item.summary,
                                 },
                             )
                             return
-                        ws_root = _resolve_workspace_root(ports.settings)
-                        ksfs_root = _resolve_ksfs_root(ports.settings)
-                        pipeline_finished = False
-                        for item in shell.iter_paradigm_task(
-                            skill_id,
-                            ut,
-                            max_steps=16,
-                            extra_system=extra,
-                            history=history,
-                            task_input=body.task_input,
-                            stream_assistant=True,
-                            workspace_root=ws_root,
-                            ksfs_root=ksfs_root,
-                        ):
-                            if isinstance(item, PipelineStepEvent):
-                                yield _sse_frame(
-                                    "pipeline_step",
-                                    {
-                                        "step_id": item.step_id,
-                                        "status": item.status,
-                                        "summary": item.summary,
-                                    },
+                    elif isinstance(item, TaskPipelineWarning):
+                        yield _sse_frame(
+                            "pipeline_warning",
+                            {"warnings": list(item.warnings)},
+                        )
+                    elif isinstance(item, TaskDone):
+                        done_seen = True
+                        if item.kind == "pipeline":
+                            summary_lines = [
+                                f"批次 {item.batch_id or ''}："
+                                f"共 {item.unit_count} 个单元，"
+                                f"已写入 {len(item.written_paths)} 个文件。",
+                            ]
+                            for rel in item.written_paths:
+                                summary_lines.append(f"- {rel}")
+                            if item.warnings:
+                                summary_lines.append(
+                                    "警告：" + "；".join(item.warnings)
                                 )
-                                if item.status == "error":
-                                    yield _sse_frame(
-                                        "error",
-                                        {
-                                            "code": "pipeline_step_failed",
-                                            "message": item.summary,
-                                        },
-                                    )
-                                    return
-                            elif isinstance(item, PipelineWarningEvent):
-                                yield _sse_frame(
-                                    "pipeline_warning",
-                                    {"warnings": list(item.warnings)},
-                                )
-                            elif isinstance(item, PipelineStreamDone):
-                                result = item.result
-                                units = result.batch.get("units") or []
-                                summary_lines = [
-                                    f"批次 {result.batch.get('batch_id', '')}："
-                                    f"共 {len(units)} 个单元，"
-                                    f"已写入 {len(result.written_paths)} 个文件。",
-                                ]
-                                for rel in result.written_paths:
-                                    summary_lines.append(f"- {rel}")
-                                if result.warnings:
-                                    summary_lines.append(
-                                        "警告：" + "；".join(result.warnings)
-                                    )
-                                yield _sse_frame(
-                                    "delta",
-                                    {"text": "\n".join(summary_lines)},
-                                )
-                                yield _sse_frame(
-                                    "done",
-                                    {
-                                        "written_paths": list(result.written_paths),
-                                        "warnings": list(result.warnings),
-                                        "unit_count": len(units),
-                                        "batch_id": result.batch.get("batch_id"),
-                                    },
-                                )
-                                pipeline_finished = True
-                        if not pipeline_finished:
                             yield _sse_frame(
-                                "error",
+                                "delta",
+                                {"text": "\n".join(summary_lines)},
+                            )
+                            yield _sse_frame(
+                                "done",
                                 {
-                                    "code": "internal",
-                                    "message": "Pipeline 未正常结束",
+                                    "written_paths": list(item.written_paths),
+                                    "warnings": list(item.warnings),
+                                    "unit_count": item.unit_count,
+                                    "batch_id": item.batch_id,
                                 },
                             )
+                            return
+                        if item.chunked:
+                            for piece in _chunk_text(item.answer):
+                                if piece:
+                                    yield _sse_frame("delta", {"text": piece})
+                        done_payload: dict[str, Any] = {}
+                        if item.kind == "react" and item.hit_step_limit:
+                            done_payload["react_hit_step_limit"] = True
+                        yield _sse_frame("done", done_payload)
                         return
 
-                    if paradigm == "react":
-                        mcp_tool_names = frozenset(tools.names()) - V01_SG_TOOL_WHITELIST
-                        if mcp_tool_names:
-                            listed = ", ".join(sorted(mcp_tool_names))
-                            extra += (
-                                f"\n\n【工具】以下 MCP 暴露的工具已启用：{listed}。"
-                                "按用户意图在恰当时机调用；与 KSFS 无关的查询不必先 retrieve。"
-                            )
-
-                    answer_text = ""
-                    reasoning_acc: dict[str, str] = {}
-                    react_done: ReActStreamDone | None = None
-                    for item in shell.iter_paradigm_task(
-                        skill_id,
-                        ut,
-                        max_steps=react_max_steps,
-                        extra_system=extra,
-                        history=history,
-                        task_input=body.task_input,
-                        stream_assistant=True,
-                    ):
-                        if isinstance(item, DialogueStreamText):
-                            answer_text += item.text
-                            yield _sse_frame("delta", {"text": item.text})
-                        elif isinstance(item, DialogueStreamDone):
-                            answer_text = item.result.answer
-                        elif isinstance(item, ReActStreamReasoning):
-                            yield from _yield_reasoning_sse(
-                                presentation, item.text, reasoning_acc
-                            )
-                        elif isinstance(item, ReActStreamToolTrace):
-                            reasoning_acc.pop("reasoning_buf", None)
-                            yield from _yield_tool_trace_sse(presentation, item)
-                        elif isinstance(item, ReActStreamDone):
-                            answer_text = item.result.answer
-                            react_done = item
-
-                    if not answer_text and not ports.developer.prompt_echo:
-                        yield _sse_frame(
-                            "error",
-                            {
-                                "code": "internal",
-                                "message": "Agent 未返回结束状态",
-                            },
-                        )
-                        return
-
-                    if ports.developer.prompt_echo:
-                        if answer_text:
-                            yield _sse_frame("delta", {"text": answer_text})
-                        yield _sse_frame("done", {})
-                        return
-
-                    if paradigm == "react":
-                        cites = list(citation_sink)
-                        if not cites:
-                            cites = retrieval.query(text=ut, top_k=8)
-                        if cites:
-                            ev, payload = _citation_event(presentation, cites)
-                            yield _sse_frame(ev, payload)
-                        for piece in _chunk_text(answer_text):
-                            if piece:
-                                yield _sse_frame("delta", {"text": piece})
-                    done_payload: dict[str, Any] = {}
-                    if (
-                        paradigm == "react"
-                        and react_done is not None
-                        and react_done.result.hit_step_limit
-                    ):
-                        done_payload["react_hit_step_limit"] = True
-                    yield _sse_frame("done", done_payload)
-                except Exception as exc:  # noqa: BLE001 — 契约要求以 error 事件结束流
-                    _log.exception("POST /api/v1/chat 流处理异常")
-                    msg = str(exc)
-                    if isinstance(exc, OSError) and getattr(exc, "filename", None):
-                        msg = f"{msg}（路径: {exc.filename!s}）"
+                if not done_seen and not ports.developer.prompt_echo:
                     yield _sse_frame(
                         "error",
-                        {"code": type(exc).__name__, "message": msg},
+                        {
+                            "code": "internal",
+                            "message": "Agent 未返回结束状态",
+                        },
                     )
-            finally:
-                reset_react_tool_steps()
-                clear_obs_log_profile_tls()
+            except Exception as exc:  # noqa: BLE001 — 契约要求以 error 事件结束流
+                _log.exception("POST /api/v1/chat 流处理异常")
+                msg = str(exc)
+                if isinstance(exc, OSError) and getattr(exc, "filename", None):
+                    msg = f"{msg}（路径: {exc.filename!s}）"
+                yield _sse_frame(
+                    "error",
+                    {"code": type(exc).__name__, "message": msg},
+                )
 
         return StreamingResponse(
             event_stream(),

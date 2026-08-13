@@ -1,25 +1,17 @@
-"""FTS5 实现的 SparseIndex：chunk 级增量同步与检索。
+"""FTS5 实现的 SparseIndex：检索与 chunk 级写入。
 
-与 ``chroma_bootstrap.sync_ksfs_svs_incremental`` 平行设计，复用同一 HSI 变更检测
-和 ``svs_chunking.build_chunk_records`` / ``norm_text``。
+增量同步统一走 ``chroma_bootstrap.sync_ksfs_indexes``（Candidate 2 合并管线），
+本模块不再持有同步状态（见 ``svs_sync_state.DocSyncStateStore``）。
 """
 
 from __future__ import annotations
 
-import json
 import re
 import sqlite3
 from contextlib import closing
-from dataclasses import dataclass
 from pathlib import Path
 
 from logos.ports.sparse import SparseIndex, SparseQueryHit
-
-from ._front_matter import split_front_matter
-from .hdl_sync import sync_ksfs_hsi
-from .hsi_sqlite import SqliteMetadataIndex
-from .ksfs_filesystem import FilesystemKnowledgeSource, document_rel_posix
-from .svs_chunking import build_chunk_records, compute_chunk_id
 
 
 # ── CJK tokenization for FTS5 ──────────────────────────────────────────
@@ -39,16 +31,6 @@ def _cjk_space(text: str) -> str:
 
 # ── schema ──────────────────────────────────────────────────────────────
 
-_SCHEMA = """
-CREATE TABLE IF NOT EXISTS sparse_sync_state (
-    source_path TEXT NOT NULL PRIMARY KEY,
-    entity_id TEXT NOT NULL,
-    content_hash TEXT NOT NULL,
-    mtime_ns INTEGER NOT NULL,
-    chunk_ids_json TEXT NOT NULL
-);
-"""
-
 _FTS5_SCHEMA = """
 CREATE VIRTUAL TABLE IF NOT EXISTS sparse_fts USING fts5(
     chunk_id UNINDEXED,
@@ -61,23 +43,10 @@ CREATE VIRTUAL TABLE IF NOT EXISTS sparse_fts USING fts5(
 """
 
 
-# ── reports ─────────────────────────────────────────────────────────────
-
-@dataclass(frozen=True, slots=True)
-class SparseSyncReport:
-    """``sync_ksfs_sparse_incremental`` 摘要。"""
-
-    hsi_documents_scanned: int
-    documents_indexed: int
-    documents_skipped_unchanged: int
-    chunks_upserted: int
-    chunks_deleted_stale: int
-
-
 # ── SQLite-backed SparseIndex ───────────────────────────────────────────
 
 class SqliteSparseIndex:
-    """FTS5 全文索引实现，单个 SQLite 库容纳 FTS5 表 + 同步状态表。"""
+    """FTS5 全文索引实现（同步状态由 ``DocSyncStateStore`` 同库管理）。"""
 
     __slots__ = ("_path",)
 
@@ -95,7 +64,6 @@ class SqliteSparseIndex:
         con = sqlite3.connect(self._path, timeout=30.0)
         con.row_factory = sqlite3.Row
         con.execute("PRAGMA journal_mode=DELETE")
-        con.executescript(_SCHEMA)
         # FTS5 CREATE VIRTUAL TABLE 必须在单独 exec 中，不能混 execscript
         try:
             con.execute("SELECT count(*) FROM sparse_fts")
@@ -189,72 +157,8 @@ class SqliteSparseIndex:
             for r in rows
         ]
 
-    # -- sync state helpers (internal, for incremental sync) -------------
-
-    def _load_all_state(self) -> dict[str, _DocState]:
-        with closing(self._connect()) as con:
-            cur = con.execute(
-                """SELECT source_path, entity_id, content_hash, mtime_ns, chunk_ids_json
-                   FROM sparse_sync_state"""
-            )
-            rows = cur.fetchall()
-        out: dict[str, _DocState] = {}
-        for r in rows:
-            raw_ids = json.loads(str(r["chunk_ids_json"]))
-            if not isinstance(raw_ids, list):
-                continue
-            out[str(r["source_path"])] = _DocState(
-                entity_id=str(r["entity_id"]),
-                content_hash=str(r["content_hash"]),
-                mtime_ns=int(r["mtime_ns"]),
-                chunk_ids=tuple(str(x) for x in raw_ids),
-            )
-        return out
-
-    def _upsert_state(
-        self,
-        *,
-        source_path: str,
-        entity_id: str,
-        content_hash: str,
-        mtime_ns: int,
-        chunk_ids: tuple[str, ...],
-    ) -> None:
-        payload = json.dumps(list(chunk_ids), ensure_ascii=False)
-        with closing(self._connect()) as con:
-            con.execute(
-                """INSERT INTO sparse_sync_state
-                       (source_path, entity_id, content_hash, mtime_ns, chunk_ids_json)
-                   VALUES (?, ?, ?, ?, ?)
-                   ON CONFLICT(source_path) DO UPDATE SET
-                       entity_id = excluded.entity_id,
-                       content_hash = excluded.content_hash,
-                       mtime_ns = excluded.mtime_ns,
-                       chunk_ids_json = excluded.chunk_ids_json""",
-                (source_path, entity_id, content_hash, mtime_ns, payload),
-            )
-            con.commit()
-
-    def _delete_state_paths(self, source_paths: list[str]) -> None:
-        if not source_paths:
-            return
-        with closing(self._connect()) as con:
-            con.executemany(
-                "DELETE FROM sparse_sync_state WHERE source_path = ?",
-                [(p,) for p in source_paths],
-            )
-            con.commit()
-
 
 # ── internal helpers ────────────────────────────────────────────────────
-
-@dataclass(frozen=True, slots=True)
-class _DocState:
-    entity_id: str
-    content_hash: str
-    mtime_ns: int
-    chunk_ids: tuple[str, ...]
-
 
 def _fts_query(text: str) -> str | None:
     """将查询文本转为 FTS5 MATCH 表达式。
@@ -290,116 +194,3 @@ def default_sparse_db_path(index_root: Path | None = None) -> Path:
     """默认 sparse 索引库路径（与 HSI / SVS 同置于 ``.index`` 下）。"""
     base = index_root if index_root is not None else Path(".index")
     return base / ".sparse_fts.sqlite"
-
-
-# ── incremental sync ────────────────────────────────────────────────────
-
-def sync_ksfs_sparse_incremental(
-    *,
-    ksfs_root: Path,
-    hsi_db: Path,
-    sparse_index: SqliteSparseIndex,
-    sparse_db: Path,
-) -> SparseSyncReport:
-    """先 ``sync_ksfs_hsi``，再按 HSI 的变更检测做 **chunk 级** FTS5 增量。
-
-    与 ``chroma_bootstrap.sync_ksfs_svs_incremental`` 平行结构。
-    """
-    ksfs_r = ksfs_root.resolve()
-    hsi_path = hsi_db.resolve()
-
-    hsi_report = sync_ksfs_hsi(ksfs_root=ksfs_r, hsi_db=hsi_path)
-    hsi = SqliteMetadataIndex(hsi_path)
-
-    index = sparse_index
-    # 确保库 + 表已建
-    index._connect().close()  # noqa: SLF001
-
-    prev = index._load_all_state()  # noqa: SLF001
-
-    src = FilesystemKnowledgeSource(ksfs_r)
-    documents = src.iter_documents()
-    keep = frozenset(document_rel_posix(d, ksfs_r) for d in documents)
-
-    stale_paths = [p for p in prev if p not in keep]
-    deleted_vec = 0
-    stale_cids: list[str] = []
-    for p in stale_paths:
-        stale_cids.extend(prev[p].chunk_ids)
-    if stale_cids:
-        index.delete_ids(stale_cids)
-        deleted_vec += len(stale_cids)
-    if stale_paths:
-        index._delete_state_paths(stale_paths)  # noqa: SLF001
-
-    active = {p: prev[p] for p in prev if p in keep}
-    doc_skipped = 0
-    doc_idx = 0
-    chunks_up = 0
-
-    for doc in documents:
-        rel = document_rel_posix(doc, ksfs_r)
-        row = hsi.fetch_by_paths([rel]).get(rel)
-        if row is None:
-            continue
-
-        _, body = split_front_matter(doc.text)
-        records = build_chunk_records(rel, body or "")
-        chunk_ids: list[str] = []
-        texts: list[str] = []
-        norm_texts: list[str] = []
-        for rec in records:
-            cid = compute_chunk_id(
-                entity_id=row.entity_id,
-                chunk_index=rec.chunk_index,
-                chunk_text=rec.text,
-            )
-            chunk_ids.append(cid)
-            texts.append(rec.text)
-            norm_texts.append(rec.norm_text)
-
-        prior = active.get(rel)
-        unchanged = (
-            prior is not None
-            and prior.entity_id == row.entity_id
-            and prior.content_hash == row.content_hash
-            and prior.mtime_ns == row.mtime_ns
-            and prior.chunk_ids == tuple(chunk_ids)
-        )
-        if unchanged:
-            doc_skipped += 1
-            continue
-
-        if prior is not None and prior.chunk_ids:
-            index.delete_ids(list(prior.chunk_ids))
-            deleted_vec += len(prior.chunk_ids)
-
-        if not chunk_ids:
-            index._delete_state_paths([rel])  # noqa: SLF001
-            doc_idx += 1
-            continue
-
-        index.upsert_chunks(
-            chunk_ids=chunk_ids,
-            entity_ids=[row.entity_id] * len(chunk_ids),
-            source_paths=[rel] * len(chunk_ids),
-            texts=texts,
-            norm_texts=norm_texts,
-        )
-        index._upsert_state(  # noqa: SLF001
-            source_path=rel,
-            entity_id=row.entity_id,
-            content_hash=row.content_hash,
-            mtime_ns=row.mtime_ns,
-            chunk_ids=tuple(chunk_ids),
-        )
-        doc_idx += 1
-        chunks_up += len(chunk_ids)
-
-    return SparseSyncReport(
-        hsi_documents_scanned=hsi_report.documents_scanned,
-        documents_indexed=doc_idx,
-        documents_skipped_unchanged=doc_skipped,
-        chunks_upserted=chunks_up,
-        chunks_deleted_stale=deleted_vec,
-    )

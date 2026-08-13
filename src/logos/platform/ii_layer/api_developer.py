@@ -10,7 +10,7 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from .deps import AppPortsDep, RetrievalDep
+from .deps import AppPortsDep, ResolvedPathsDep, RetrievalDep
 
 _log = logging.getLogger("logos.api.developer")
 
@@ -53,6 +53,7 @@ def build_developer_router() -> Any:
     def developer_agent_tools(
         ports: AppPortsDep,
         retrieval: RetrievalDep,
+        paths: ResolvedPathsDep,
     ) -> dict[str, Any]:
         """列出当前会注入对话的 Agent 工具名（含 MCP）；仅开发 UI 开启时可用。"""
         if not ports.settings.developer_show_dev_tools_ui:
@@ -60,10 +61,9 @@ def build_developer_router() -> Any:
                 status_code=403,
                 detail="配置 developer.show_dev_tools_ui 为 false，禁止查看。",
             )
-        from logos.platform.mcp_stdio import resolve_repo_root
         from logos.platform.sg_layer import build_v01_guarded_tool_registry
 
-        repo = resolve_repo_root()
+        repo = paths.repo_root
         reg = build_v01_guarded_tool_registry(
             ports.settings,
             retrieval=retrieval,

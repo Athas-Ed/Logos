@@ -5,9 +5,9 @@ from __future__ import annotations
 from pathlib import Path
 
 from logos.persistence import (
+    IndexSync,
     SqliteMetadataIndex,
     content_hash_hex,
-    ensure_ksfs_hsi_registered,
     normalize_text_for_storage,
     sync_ksfs_hsi,
 )
@@ -77,14 +77,15 @@ def test_sync_ksfs_hsi_duplicate_id_conflict_reassigns(tmp_path: Path) -> None:
     assert ids == {'id: "10001"', 'id: "10002"'}
 
 
-def test_ensure_ksfs_hsi_registered_is_idempotent(tmp_path: Path) -> None:
+def test_index_sync_once_is_idempotent(tmp_path: Path) -> None:
     ksfs = tmp_path / "ksfs"
     hsi = tmp_path / "hsi" / "db.sqlite"
     (ksfs / "doc").mkdir(parents=True)
     (ksfs / "doc" / "note.md").write_text("# T\n\nonce\n", encoding="utf-8")
 
-    r1 = ensure_ksfs_hsi_registered(ksfs_root=ksfs, hsi_db=hsi)
-    r2 = ensure_ksfs_hsi_registered(ksfs_root=ksfs, hsi_db=hsi)
+    sync = IndexSync(ksfs_root=ksfs, hsi_db=hsi)
+    r1 = sync.sync_once()
+    r2 = sync.sync_once()
     assert r1 is not None
     assert r2 is None
     db = tmp_path / "hsi.sqlite"
@@ -117,8 +118,8 @@ def test_chunk_markdown_heading_sections() -> None:
     assert "# A" in parts[0] or "short" in parts[0]
 
 
-def test_sync_ksfs_svs_incremental_second_run_skips_upsert(tmp_path: Path) -> None:
-    from logos.persistence import sync_ksfs_hsi, sync_ksfs_svs_incremental
+def test_sync_ksfs_svs_second_run_skips_upsert(tmp_path: Path) -> None:
+    from logos.persistence import sync_ksfs_hsi, sync_ksfs_indexes
 
     ksfs = tmp_path / "ksfs"
     idx = tmp_path / ".index"
@@ -147,22 +148,22 @@ def test_sync_ksfs_svs_incremental_second_run_skips_upsert(tmp_path: Path) -> No
     store = _S()
     emb = _E()
     sync_ksfs_hsi(ksfs_root=ksfs, hsi_db=hsi)
-    r1 = sync_ksfs_svs_incremental(
+    r1 = sync_ksfs_indexes(
         ksfs_root=ksfs,
         hsi_db=hsi,
-        store=store,
+        semantic_store=store,
         embedder=emb,
         svs_state_db=state,
     )
-    assert r1.chunks_upserted >= 1
+    assert r1.svs_chunks_upserted >= 1
     u1 = store.upserts
-    r2 = sync_ksfs_svs_incremental(
+    r2 = sync_ksfs_indexes(
         ksfs_root=ksfs,
         hsi_db=hsi,
-        store=store,
+        semantic_store=store,
         embedder=emb,
         svs_state_db=state,
     )
-    assert r2.documents_skipped_unchanged >= 1
-    assert r2.chunks_upserted == 0
+    assert r2.svs_documents_skipped_unchanged >= 1
+    assert r2.svs_chunks_upserted == 0
     assert store.upserts == u1

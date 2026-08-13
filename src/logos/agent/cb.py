@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
-from logos.platform.mcp_stdio import resolve_repo_root
+from logos.platform.config.resolve import prompts_root as _resolved_prompts_root
 from logos.ports.llm import ChatMessage
 
 from logos.agent.tool_registry import ToolRegistry
@@ -21,7 +20,7 @@ _PROMPTS_ROOT: Path | None = None
 def prompts_root() -> Path:
     global _PROMPTS_ROOT  # noqa: PLW0603
     if _PROMPTS_ROOT is None:
-        _PROMPTS_ROOT = resolve_repo_root() / "resources" / "prompts"
+        _PROMPTS_ROOT = _resolved_prompts_root()
     return _PROMPTS_ROOT
 
 
@@ -32,39 +31,6 @@ def load_prompt_fragment(relative_path: str) -> str:
     if not path.is_file():
         return ""
     return path.read_text(encoding="utf-8").strip()
-
-
-def _merge_task_input_into_user(user_text: str, task_input: dict[str, Any] | None) -> str:
-    base = user_text.strip()
-    if not task_input:
-        return base
-    lines = [base] if base else []
-
-    text = task_input.get("text")
-    if isinstance(text, str) and text.strip():
-        if not base or text.strip() != base:
-            lines.append(f"【任务输入】\n{text.strip()}")
-        return "\n\n".join(lines).strip() or base
-
-    remaining = {k: v for k, v in task_input.items() if k != "text"}
-    if remaining:
-        field_lines = []
-        for key, value in remaining.items():
-            if isinstance(value, str) and value.strip():
-                title = key
-                field_lines.append(f"{title}：{value.strip()}")
-            elif not isinstance(value, str):
-                field_lines.append(f"{key}：{value!s}")
-        if field_lines:
-            lines.append("【任务输入】\n" + "\n".join(field_lines))
-    elif not base:
-        try:
-            import json
-            lines.append("【任务输入】\n" + json.dumps(task_input, ensure_ascii=False))
-        except (TypeError, ValueError):
-            lines.append(f"【任务输入】\n{task_input!s}")
-
-    return "\n\n".join(lines).strip() or base
 
 
 def build_plan_system_message(
@@ -92,18 +58,12 @@ def seed_plan_messages(
     user_text: str,
     *,
     extra_system: str | None = None,
-    task_input: dict[str, Any] | None = None,
 ) -> list[ChatMessage]:
-    """system + 历史 + 当前 user（Plan Phase A）。"""
+    """system + 历史 + 当前 user（Plan Phase A；*user_text* 须已合并 task_input）。"""
     system = build_plan_system_message(skill_id, extra_system=extra_system)
     out: list[ChatMessage] = [ChatMessage(role="system", content=system)]
     out.extend(history)
-    out.append(
-        ChatMessage(
-            role="user",
-            content=_merge_task_input_into_user(user_text, task_input),
-        )
-    )
+    out.append(ChatMessage(role="user", content=user_text))
     return out
 
 
@@ -169,24 +129,22 @@ def seed_dialogue_messages(
     *,
     extra_system: str | None = None,
     registry: ToolRegistry | None = None,
-    task_input: dict[str, Any] | None = None,
 ) -> list[ChatMessage]:
-    """system + 历史 + 当前 user（对话范式，无 ReAct JSON 头）。"""
+    """system + 历史 + 当前 user（对话范式，无 ReAct JSON 头；*user_text* 须已合并 task_input）。"""
     system = build_dialogue_system_message(skill_id, registry, extra_system=extra_system)
     out: list[ChatMessage] = [ChatMessage(role="system", content=system)]
     out.extend(history)
-    out.append(
-        ChatMessage(
-            role="user",
-            content=_merge_task_input_into_user(user_text, task_input),
-        )
-    )
+    out.append(ChatMessage(role="user", content=user_text))
     return out
 
 
 def load_operating_mode_suffix(mode: str) -> str:
-    """运行模式后缀：始终加载 author 模式。"""
-    _ = mode  # 保留参数兼容；始终返回 author
+    """运行模式后缀：加载 ``modes/<mode>.md``；该模式片段缺失时回退 ``author``。"""
+    safe = (mode or "").strip().lower()
+    if safe:
+        frag = load_prompt_fragment(f"modes/{safe}.md")
+        if frag:
+            return frag
     return load_prompt_fragment("modes/author.md")
 
 

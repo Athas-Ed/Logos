@@ -1,4 +1,4 @@
-"""决策层：Agent Shell、ReAct 循环、JSON 工具解析、最小 CB/PR、工具注册表 — Stream 4。"""
+"""决策层：TaskSession 统一入口、ReAct 循环、JSON 工具解析、最小 CB/PR、工具注册表 — Stream 4。"""
 
 from logos.agent.cb import (
     REACT_JSON_MANDATE_MARKERS,
@@ -27,11 +27,21 @@ from logos.agent.react import (
     iter_react_loop,
     run_react_loop,
 )
-from logos.agent.shell import AgentShell
+from logos.agent.task import (
+    TaskCitations,
+    TaskDone,
+    TaskEvent,
+    TaskPipelineStep,
+    TaskPipelineWarning,
+    TaskReasoning,
+    TaskSession,
+    TaskText,
+    TaskToolTrace,
+    merge_task_input_into_user,
+)
 from logos.agent.tool_registry import RegisteredTool, ToolRegistry
 
 __all__ = [
-    "AgentShell",
     "DialogueResult",
     "DialogueStreamDone",
     "DialogueStreamText",
@@ -42,6 +52,15 @@ __all__ = [
     "ReActStreamReasoning",
     "ReActStreamToolTrace",
     "RegisteredTool",
+    "TaskCitations",
+    "TaskDone",
+    "TaskEvent",
+    "TaskPipelineStep",
+    "TaskPipelineWarning",
+    "TaskReasoning",
+    "TaskSession",
+    "TaskText",
+    "TaskToolTrace",
     "ToolRegistry",
     "append_assistant",
     "append_format_nudge",
@@ -50,6 +69,7 @@ __all__ = [
     "build_react_system_message",
     "compose_prompt",
     "iter_dialogue_task",
+    "merge_task_input_into_user",
     "parse_react_json",
     "iter_react_loop",
     "run_react_loop",

@@ -170,16 +170,23 @@ def main() -> None:
         except Exception:  # noqa: BLE001
             _log.exception("KSFS→Chroma 重建失败（仍可依赖 HSI 分支）")
 
+    from logos.persistence.index_sync import IndexSync
+
+    index_sync = IndexSync(
+        ksfs_root=ksfs_root,
+        hsi_db=hsi_db,
+        semantic_store=semantic_store,
+        embedder=embedder,
+        svs_state_db=svs_state_db
+        if not isinstance(semantic_store, _StubSemanticStore)
+        else None,
+        sync_on_query=settings.sync_hsi_on_retrieve,
+    )
     retrieval = FusedRetrievalService(
         metadata_index=metadata,
         semantic_store=semantic_store,
         embedder=embedder,
-        lazy_hsi_ksfs_root=ksfs_root,
-        lazy_hsi_db_path=hsi_db,
-        lazy_svs_state_db=svs_state_db
-        if not isinstance(semantic_store, _StubSemanticStore)
-        else None,
-        refresh_indexes_on_query=settings.sync_hsi_on_retrieve,
+        index_sync=index_sync,
     )
     knowledge_source = FilesystemKnowledgeSource(ksfs_root)
 

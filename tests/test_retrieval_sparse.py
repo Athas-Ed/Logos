@@ -8,11 +8,12 @@ import pytest
 
 from logos.infrastructure.retrieval.fused import FusedRetrievalService
 from logos.persistence import (
+    IndexSync,
     SqliteMetadataIndex,
     SqliteSparseIndex,
     build_chunk_records,
     sync_ksfs_hsi,
-    sync_ksfs_sparse_incremental,
+    sync_ksfs_indexes,
 )
 
 
@@ -121,7 +122,7 @@ def test_sparse_mixed_language(tmp_path: Path) -> None:
     assert len(hits) == 1
 
 
-# ── sync_ksfs_sparse_incremental tests ──────────────────────────────────
+# ── sync_ksfs_indexes（Sparse 分支）tests ──────────────────────────────
 
 def test_sparse_sync_first_run(tmp_path: Path) -> None:
     """首次同步：应索引所有文档的 chunk。"""
@@ -136,15 +137,15 @@ def test_sparse_sync_first_run(tmp_path: Path) -> None:
     sparse = SqliteSparseIndex(sparse_db)
 
     sync_ksfs_hsi(ksfs_root=ksfs, hsi_db=hsi_db)
-    rep = sync_ksfs_sparse_incremental(
+    rep = sync_ksfs_indexes(
         ksfs_root=ksfs,
         hsi_db=hsi_db,
         sparse_index=sparse,
         sparse_db=sparse_db,
     )
-    assert rep.documents_indexed >= 1
-    assert rep.chunks_upserted >= 1
-    assert rep.documents_skipped_unchanged == 0
+    assert rep.sparse_documents_indexed >= 1
+    assert rep.sparse_chunks_upserted >= 1
+    assert rep.sparse_documents_skipped_unchanged == 0
     assert rep.chunks_deleted_stale == 0
 
     hits = sparse.search("琥珀钟楼", top_k=5)
@@ -163,17 +164,17 @@ def test_sparse_sync_second_run_skips(tmp_path: Path) -> None:
     sparse = SqliteSparseIndex(sparse_db)
 
     sync_ksfs_hsi(ksfs_root=ksfs, hsi_db=hsi_db)
-    r1 = sync_ksfs_sparse_incremental(
+    r1 = sync_ksfs_indexes(
         ksfs_root=ksfs, hsi_db=hsi_db, sparse_index=sparse, sparse_db=sparse_db,
     )
-    assert r1.chunks_upserted >= 1
-    u1 = r1.chunks_upserted
+    assert r1.sparse_chunks_upserted >= 1
+    u1 = r1.sparse_chunks_upserted
 
-    r2 = sync_ksfs_sparse_incremental(
+    r2 = sync_ksfs_indexes(
         ksfs_root=ksfs, hsi_db=hsi_db, sparse_index=sparse, sparse_db=sparse_db,
     )
-    assert r2.documents_skipped_unchanged >= 1
-    assert r2.chunks_upserted == 0
+    assert r2.sparse_documents_skipped_unchanged >= 1
+    assert r2.sparse_chunks_upserted == 0
     assert r2.chunks_deleted_stale == 0
 
 
@@ -188,16 +189,16 @@ def test_sparse_sync_detects_content_change(tmp_path: Path) -> None:
     sparse = SqliteSparseIndex(sparse_db)
 
     sync_ksfs_hsi(ksfs_root=ksfs, hsi_db=hsi_db)
-    sync_ksfs_sparse_incremental(
+    sync_ksfs_indexes(
         ksfs_root=ksfs, hsi_db=hsi_db, sparse_index=sparse, sparse_db=sparse_db,
     )
 
     md.write_text("---\n---\n\n# T\n\nv2 新内容新关键词\n", encoding="utf-8")
     sync_ksfs_hsi(ksfs_root=ksfs, hsi_db=hsi_db)
-    r2 = sync_ksfs_sparse_incremental(
+    r2 = sync_ksfs_indexes(
         ksfs_root=ksfs, hsi_db=hsi_db, sparse_index=sparse, sparse_db=sparse_db,
     )
-    assert r2.chunks_upserted >= 1
+    assert r2.sparse_chunks_upserted >= 1
     hits = sparse.search("新关键词", top_k=5)
     assert len(hits) >= 1
 
@@ -222,9 +223,12 @@ def test_fused_with_sparse_returns_fts_hits(tmp_path: Path) -> None:
         semantic_store=_NoopSemanticStore(),
         embedder=_Fixed512Embedder(),
         sparse_index=sparse,
-        lazy_hsi_ksfs_root=ksfs,
-        lazy_hsi_db_path=hsi_db,
-        lazy_sparse_db_path=sparse_db,
+        index_sync=IndexSync(
+            ksfs_root=ksfs,
+            hsi_db=hsi_db,
+            sparse_index=sparse,
+            sparse_db=sparse_db,
+        ),
     )
     cites = svc.query(text="琥珀钟楼", top_k=5)
     paths = {c.path for c in cites}
@@ -251,9 +255,12 @@ def test_fused_sparse_no_chroma_still_works(tmp_path: Path) -> None:
         semantic_store=_NoopSemanticStore(),
         embedder=_Fixed512Embedder(),
         sparse_index=sparse,
-        lazy_hsi_ksfs_root=ksfs,
-        lazy_hsi_db_path=hsi_db,
-        lazy_sparse_db_path=sparse_db,
+        index_sync=IndexSync(
+            ksfs_root=ksfs,
+            hsi_db=hsi_db,
+            sparse_index=sparse,
+            sparse_db=sparse_db,
+        ),
     )
     cites = svc.query(text="午夜校准", top_k=5)
     assert len(cites) >= 1, "无 Chroma 时 sparse+HSI 仍应命中"
@@ -276,8 +283,7 @@ def test_fused_sparse_disabled_falls_back(tmp_path: Path) -> None:
         semantic_store=_NoopSemanticStore(),
         embedder=_Fixed512Embedder(),
         sparse_index=None,
-        lazy_hsi_ksfs_root=ksfs,
-        lazy_hsi_db_path=hsi_db,
+        index_sync=IndexSync(ksfs_root=ksfs, hsi_db=hsi_db),
     )
     cites = svc.query(text="可见标题", top_k=5)
     assert len(cites) >= 1

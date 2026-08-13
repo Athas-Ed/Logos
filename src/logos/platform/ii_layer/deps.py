@@ -15,6 +15,7 @@ from logos.ports import (
 )
 
 from .container import AppPorts
+from logos.platform.config import ResolvedPaths, resolve_app_paths
 
 
 def get_app_ports(request: Request) -> AppPorts:
@@ -54,6 +55,12 @@ def get_text_embedder(ports: Annotated[AppPorts, Depends(get_app_ports)]) -> Tex
     return ports.text_embedder
 
 
+def get_resolved_paths(
+    ports: Annotated[AppPorts, Depends(get_app_ports)],
+) -> ResolvedPaths:
+    return resolve_app_paths(ports.settings)
+
+
 AppPortsDep = Annotated[AppPorts, Depends(get_app_ports)]
 SettingsDep = Annotated[AppSettings, Depends(get_settings)]
 LLMDep = Annotated[LLMClient, Depends(get_llm)]
@@ -62,3 +69,4 @@ KnowledgeSourceDep = Annotated[KnowledgeSource, Depends(get_knowledge_source)]
 MetadataIndexDep = Annotated[MetadataIndex, Depends(get_metadata_index)]
 SemanticStoreDep = Annotated[SemanticStore, Depends(get_semantic_store)]
 TextEmbedderDep = Annotated[TextEmbedder, Depends(get_text_embedder)]
+ResolvedPathsDep = Annotated[ResolvedPaths, Depends(get_resolved_paths)]

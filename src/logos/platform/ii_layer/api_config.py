@@ -152,15 +152,10 @@ def _write_llm_config(
 
 
 def _resolve_config_dir(settings: Any) -> Path:
-    """从当前环境推断 config 目录路径。"""
-    import os
+    """config 目录：优先 ``LOGOS_CONFIG_DIR`` 环境变量，否则 ``<repo>/config``。"""
+    from logos.platform.config import resolve_app_paths
 
-    env_dir = os.environ.get("LOGOS_CONFIG_DIR")
-    if env_dir:
-        return Path(env_dir).resolve()
-    from logos.platform.mcp_stdio import resolve_repo_root
-
-    return resolve_repo_root() / "config"
+    return resolve_app_paths(settings).config_dir
 
 
 # ── 路由 ────────────────────────────────────────────────────────────

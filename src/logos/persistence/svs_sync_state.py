@@ -1,4 +1,8 @@
-"""SVS 增量同步的 SQLite 状态（每源文件对应一组 ``chunk_id``）。"""
+"""索引增量同步状态存储：SVS 与 Sparse 共用同一 schema（物理库/表各自独立）。
+
+- SVS 状态库：``.svs_chunk_index.sqlite`` 表 ``svs_doc_embedding_state``；
+- Sparse 状态库：``.sparse_fts.sqlite`` 表 ``sparse_sync_state``（与 FTS5 同库）。
+"""
 
 from __future__ import annotations
 
@@ -9,8 +13,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
-_SCHEMA = """
-CREATE TABLE IF NOT EXISTS svs_doc_embedding_state (
+def _schema_sql(table: str) -> str:
+    return f"""
+CREATE TABLE IF NOT EXISTS {table} (
     source_path TEXT NOT NULL PRIMARY KEY,
     entity_id TEXT NOT NULL,
     content_hash TEXT NOT NULL,
@@ -21,7 +26,7 @@ CREATE TABLE IF NOT EXISTS svs_doc_embedding_state (
 
 
 @dataclass(frozen=True, slots=True)
-class SvsDocStateRow:
+class DocSyncStateRow:
     source_path: str
     entity_id: str
     content_hash: str
@@ -29,13 +34,17 @@ class SvsDocStateRow:
     chunk_ids: tuple[str, ...]
 
 
-class SvsEmbeddingStateStore:
-    """记录上次成功写入 Chroma 的 ``chunk_id`` 列表，用于增量删除/跳过。"""
+class DocSyncStateStore:
+    """记录上次成功写入索引的 ``chunk_id`` 列表，用于增量删除/跳过。
 
-    __slots__ = ("_path",)
+    表名由调用方指定（内部常量，非用户输入）；同一类按需实例化多份。
+    """
 
-    def __init__(self, db_path: Path) -> None:
+    __slots__ = ("_path", "_table")
+
+    def __init__(self, db_path: Path, *, table: str) -> None:
         self._path = db_path
+        self._table = table
 
     @property
     def db_path(self) -> Path:
@@ -46,26 +55,26 @@ class SvsEmbeddingStateStore:
         con = sqlite3.connect(self._path, timeout=30.0)
         con.row_factory = sqlite3.Row
         con.execute("PRAGMA journal_mode=DELETE")
-        con.executescript(_SCHEMA)
+        con.executescript(_schema_sql(self._table))
         return con
 
-    def load_all(self) -> dict[str, SvsDocStateRow]:
+    def load_all(self) -> dict[str, DocSyncStateRow]:
         with closing(self._connect()) as con:
             cur = con.execute(
-                """
+                f"""
                 SELECT source_path, entity_id, content_hash, mtime_ns, chunk_ids_json
-                FROM svs_doc_embedding_state
+                FROM {self._table}
                 """
             )
             rows = cur.fetchall()
-        out: dict[str, SvsDocStateRow] = {}
+        out: dict[str, DocSyncStateRow] = {}
         for r in rows:
             raw_ids = json.loads(str(r["chunk_ids_json"]))
             if not isinstance(raw_ids, list):
                 continue
             ids = tuple(str(x) for x in raw_ids)
             path = str(r["source_path"])
-            out[path] = SvsDocStateRow(
+            out[path] = DocSyncStateRow(
                 source_path=path,
                 entity_id=str(r["entity_id"]),
                 content_hash=str(r["content_hash"]),
@@ -86,8 +95,8 @@ class SvsEmbeddingStateStore:
         payload = json.dumps(list(chunk_ids), ensure_ascii=False)
         with closing(self._connect()) as con:
             con.execute(
-                """
-                INSERT INTO svs_doc_embedding_state
+                f"""
+                INSERT INTO {self._table}
                     (source_path, entity_id, content_hash, mtime_ns, chunk_ids_json)
                 VALUES (?, ?, ?, ?, ?)
                 ON CONFLICT(source_path) DO UPDATE SET
@@ -105,7 +114,7 @@ class SvsEmbeddingStateStore:
             return
         with closing(self._connect()) as con:
             con.executemany(
-                "DELETE FROM svs_doc_embedding_state WHERE source_path = ?",
+                f"DELETE FROM {self._table} WHERE source_path = ?",
                 [(p,) for p in source_paths],
             )
             con.commit()

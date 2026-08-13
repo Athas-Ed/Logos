@@ -11,15 +11,18 @@ from .paths import default_gui_dist_dir
 
 @asynccontextmanager
 async def _app_lifespan(app) -> AsyncIterator[None]:  # noqa: ANN001
-    """可选：``paths.sync_hsi_on_startup`` 为真时在启动阶段登记 HSI（默认由检索懒登记）。"""
+    """可选：``paths.sync_hsi_on_startup`` 为真时在启动阶段做一次 HSI 登记（默认由检索懒同步）。"""
+    from logos.platform.config import resolve_app_paths
+
     ports: AppPorts = app.state.ports
     if ports.settings.sync_hsi_on_startup:
-        from logos.persistence.registration import ensure_ksfs_hsi_registered
+        from logos.persistence.index_sync import IndexSync
 
-        ensure_ksfs_hsi_registered(
-            ksfs_root=Path(ports.settings.ksfs_root).resolve(),
-            hsi_db=Path(ports.settings.hsi_sqlite_path).resolve(),
-        )
+        paths = resolve_app_paths(ports.settings)
+        IndexSync(
+            ksfs_root=paths.ksfs_root,
+            hsi_db=paths.hsi_sqlite_path,
+        ).sync_once()
     yield
     # 关闭所有 MCP 长连接（后台线程 + 子进程）
     from logos.platform.sg_layer.factory import close_all_mcp_sessions
@@ -94,15 +97,18 @@ def main() -> None:
     settings = load_app_settings(config_dir=_repo / "config")
     configure_logging(settings)
 
-    ksfs_root = Path(settings.ksfs_root).resolve()
-    hsi_db = Path(settings.hsi_sqlite_path).resolve()
-    index_root = Path(settings.index_root).resolve()
+    from logos.platform.config import resolve_app_paths
+
+    paths = resolve_app_paths(settings)
+    ksfs_root = paths.ksfs_root
+    hsi_db = paths.hsi_sqlite_path
+    index_root = paths.index_root
     metadata = SqliteMetadataIndex(hsi_db)
 
     # 尝试加载 Chroma + 嵌入（容器内可能无 GPU 加速，降级到桩也可运行）
     try:
         semantic_store = ChromaSemanticStore(
-            persist_directory=settings.chroma_persist_directory,
+            persist_directory=str(paths.chroma_persist_directory),
             collection_name=settings.chroma_collection,
         )
     except Exception:  # noqa: BLE001
@@ -116,6 +122,7 @@ def main() -> None:
         embedder = _StubEmbedder512()
 
     from logos.persistence.chroma_bootstrap import default_svs_state_db_path
+    from logos.persistence.index_sync import IndexSync
     svs_state_db = default_svs_state_db_path(index_root)
 
     # Sparse（FTS5）全文索引：默认装配，加载失败自动降级为 None（退化为 HSI+SVS）
@@ -125,22 +132,28 @@ def main() -> None:
         try:
             from logos.persistence import SqliteSparseIndex
 
-            sparse_index = SqliteSparseIndex(Path(settings.sparse_db_path))
-            sparse_db = Path(settings.sparse_db_path)
+            sparse_index = SqliteSparseIndex(paths.sparse_db_path)
+            sparse_db = paths.sparse_db_path
         except Exception:  # noqa: BLE001
             sparse_index = None
             sparse_db = None
 
+    index_sync = IndexSync(
+        ksfs_root=ksfs_root,
+        hsi_db=hsi_db,
+        semantic_store=semantic_store,
+        embedder=embedder,
+        svs_state_db=svs_state_db if not isinstance(semantic_store, _StubSemanticStore) else None,
+        sparse_index=sparse_index,
+        sparse_db=sparse_db,
+        sync_on_query=settings.sync_hsi_on_retrieve,
+    )
     retrieval = FusedRetrievalService(
         metadata_index=metadata,
         semantic_store=semantic_store,
         embedder=embedder,
         sparse_index=sparse_index,
-        lazy_hsi_ksfs_root=ksfs_root,
-        lazy_hsi_db_path=hsi_db,
-        lazy_svs_state_db=svs_state_db if not isinstance(semantic_store, _StubSemanticStore) else None,
-        lazy_sparse_db_path=sparse_db,
-        refresh_indexes_on_query=settings.sync_hsi_on_retrieve,
+        index_sync=index_sync,
     )
     knowledge_source = FilesystemKnowledgeSource(ksfs_root)
 

@@ -6,14 +6,13 @@
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 from typing import Any, Literal, cast
 
 import httpx
 from pydantic import BaseModel, Field
 
 from .api_v1 import _effective_presentation, _resolve_llm_mode
-from .deps import AppPortsDep
+from .deps import AppPortsDep, ResolvedPathsDep
 
 _log = logging.getLogger("logos.api.bootstrap")
 
@@ -166,9 +165,10 @@ def build_bootstrap_router() -> Any:
         }
 
     @router.get("/bootstrap")
-    def bootstrap_v1(ports: AppPortsDep) -> BootstrapResponse:
-        from logos.platform.config.paths_resolve import resolve_conversations_cache_abs
-        from logos.platform.mcp_stdio import resolve_repo_root
+    def bootstrap_v1(
+        ports: AppPortsDep,
+        paths: ResolvedPathsDep,
+    ) -> BootstrapResponse:
         from logos.platform.skills_config import resolve_skill_config
         from logos.platform.skills_registry import get_skill_manifest, list_bootstrap_skill_summaries
 
@@ -179,7 +179,7 @@ def build_bootstrap_router() -> Any:
         show_root = bool(ports.settings.obs_show_log_root_in_gui)
         logs_abs: str | None = None
         if show_root:
-            logs_abs = str(Path(ports.settings.logs_root).expanduser().resolve())
+            logs_abs = str(paths.logs_root)
         skill_payloads = []
         for s in list_bootstrap_skill_summaries():
             manifest = get_skill_manifest(s.skill_id)
@@ -200,12 +200,7 @@ def build_bootstrap_router() -> Any:
                     input_schema=input_schema,
                 )
             )
-        repo = resolve_repo_root()
-        conv_cache_abs = str(
-            resolve_conversations_cache_abs(
-                repo, ports.settings.conversations_cache
-            )
-        )
+        conv_cache_abs = str(paths.conversations_cache)
 
         # ── 判断 LLM 模式 + 实际校验 API Key ────────────────────────
         llm_mode = _resolve_llm_mode(ports.settings, ports.llm)

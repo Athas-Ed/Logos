@@ -4,13 +4,11 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from dataclasses import dataclass
-from typing import Any
 
 from logos.ports.llm import ChatMessage, LLMClient
 
 from logos.agent import cb
 from logos.agent.dialogue import DialogueResult, DialogueStreamDone, DialogueStreamText
-from logos.agent.prompt_echo import format_messages_for_prompt_echo
 
 
 @dataclass(frozen=True, slots=True)
@@ -33,9 +31,7 @@ def iter_plan_phase_a(
     *,
     extra_system: str | None = None,
     history: list[ChatMessage] | None = None,
-    task_input: dict[str, Any] | None = None,
     stream_assistant: bool = True,
-    prompt_echo: bool = False,
 ) -> Iterator[DialogueStreamText | DialogueStreamDone]:
     """Plan Phase A：``json_mode=true`` 一次生成计划，流式映射为 SSE ``delta``。"""
     messages = cb.seed_plan_messages(
@@ -43,13 +39,7 @@ def iter_plan_phase_a(
         history or [],
         user_text,
         extra_system=extra_system,
-        task_input=task_input,
     )
-    if prompt_echo:
-        echo_text = format_messages_for_prompt_echo(messages)
-        result = DialogueResult(answer=echo_text, messages=messages)
-        yield DialogueStreamDone(result)
-        return
 
     plan_text = ""
     if stream_assistant:

@@ -70,7 +70,6 @@ def test_run_plan_phase_a_returns_steps_json() -> None:
         _PlanStubLLM(),
         "outline_plan",
         "写一篇火星殖民地科幻短篇",
-        task_input={"text": "火星殖民地科幻短篇"},
         stream_assistant=False,
     ):
         if isinstance(item, DialogueStreamDone):
@@ -78,6 +77,31 @@ def test_run_plan_phase_a_returns_steps_json() -> None:
     assert done is not None
     raw = done.result.answer
     data = json.loads(raw)
+    assert isinstance(data.get("steps"), list)
+    assert len(data["steps"]) >= 2
+
+
+def test_task_session_plan_paradigm_via_override(tmp_path: Path) -> None:
+    from logos.agent.task import TaskDone, TaskSession
+    from logos.agent.tool_registry import ToolRegistry
+    from tests.test_stream5_api import _make_ports
+
+    ports = _make_ports(tmp_path, developer_show_ui=True)
+    done = None
+    for item in TaskSession(
+        llm=_PlanStubLLM(),
+        tools=ToolRegistry(),
+        settings=ports.settings,
+    ).iter_task(
+        "outline_plan",
+        "写一篇火星殖民地科幻短篇",
+        paradigm_override="plan",
+    ):
+        if isinstance(item, TaskDone):
+            done = item
+    assert done is not None
+    assert done.kind == "plan"
+    data = json.loads(done.answer)
     assert isinstance(data.get("steps"), list)
     assert len(data["steps"]) >= 2
 

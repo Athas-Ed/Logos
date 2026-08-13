@@ -2,7 +2,7 @@
 
 - 使用 ``tmp_path`` 独立目录，不依赖仓库 ``resources/ksfs``、Electron 或 HTTP。
 - 与 ``scripts/run_dev_backend.py`` 装配思路对齐：``SqliteMetadataIndex`` +
-  ``FusedRetrievalService``（懒登记或 ``lazy_svs_state_db`` 触发 SVS 增量）。
+  ``FusedRetrievalService``（经 ``IndexSync`` 检索 seam 触发 HSI / SVS 增量）。
 """
 
 from __future__ import annotations
@@ -14,7 +14,7 @@ from pathlib import Path
 import pytest
 
 from logos.infrastructure.retrieval.fused import FusedRetrievalService
-from logos.persistence import SqliteMetadataIndex
+from logos.persistence import IndexSync, SqliteMetadataIndex
 
 
 class _Fixed512Embedder:
@@ -56,9 +56,7 @@ def test_e2e_cold_tmp_ksfs_lazy_hsi_then_fused_keyword(
         metadata_index=meta,
         semantic_store=_NoopSemanticStore(),
         embedder=_Fixed512Embedder(),
-        lazy_hsi_ksfs_root=ksfs,
-        lazy_hsi_db_path=hsi_db,
-        lazy_svs_state_db=None,
+        index_sync=IndexSync(ksfs_root=ksfs, hsi_db=hsi_db),
     )
     cites = retrieval.query(text="琥珀钟楼", top_k=5)
     paths = {c.path for c in cites}
@@ -75,7 +73,7 @@ def test_e2e_cold_tmp_ksfs_lazy_hsi_then_fused_keyword(
 def test_e2e_tmp_ksfs_hsi_svs_chroma_fused_snippet(
     tmp_path: Path,
 ) -> None:
-    """含 ``lazy_svs_state_db``：每次 ``query`` 前 SVS 增量；向量分支应带回正文片段。"""
+    """含 SVS 装配（IndexSync 触发）：每次 ``query`` 前 SVS 增量；向量分支应带回正文片段。"""
     from logos.infrastructure.vector.chroma_store import ChromaSemanticStore
 
     ksfs = tmp_path / "ksfs"
@@ -101,9 +99,13 @@ def test_e2e_tmp_ksfs_hsi_svs_chroma_fused_snippet(
         metadata_index=meta,
         semantic_store=store,
         embedder=_Fixed512Embedder(),
-        lazy_hsi_ksfs_root=ksfs,
-        lazy_hsi_db_path=hsi_db,
-        lazy_svs_state_db=svs_state_db,
+        index_sync=IndexSync(
+            ksfs_root=ksfs,
+            hsi_db=hsi_db,
+            semantic_store=store,
+            embedder=_Fixed512Embedder(),
+            svs_state_db=svs_state_db,
+        ),
     )
     cites = retrieval.query(text=marker, top_k=8)
     assert cites, "融合检索应至少返回一条命中"
@@ -130,10 +132,7 @@ def test_fused_query_resyncs_hsi_after_ksfs_edit(tmp_path: Path) -> None:
         metadata_index=meta,
         semantic_store=_NoopSemanticStore(),
         embedder=_Fixed512Embedder(),
-        lazy_hsi_ksfs_root=ksfs,
-        lazy_hsi_db_path=hsi_db,
-        lazy_svs_state_db=None,
-        refresh_indexes_on_query=True,
+        index_sync=IndexSync(ksfs_root=ksfs, hsi_db=hsi_db),
     )
     retrieval.query(text="初稿", top_k=5)
     row1 = meta.fetch_by_paths(["Test/Test.md"])["Test/Test.md"]

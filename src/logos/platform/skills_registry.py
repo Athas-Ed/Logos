@@ -13,7 +13,9 @@ from typing import Any, Literal
 import yaml
 
 from logos.agent.paradigm_types import Paradigm
-from logos.platform.mcp_stdio import resolve_repo_root
+from logos.platform.config.resolve import (
+    skills_manifests_root as _resolved_skills_manifests_root,
+)
 
 PersistenceTier = Literal["p0", "p1", "p2"]
 TurnPolicy = Literal["single", "multi"]
@@ -70,7 +72,7 @@ class SkillManifest:
 
 def manifests_dir() -> Path:
     """``skills/manifests`` 目录（相对仓库根）。"""
-    return resolve_repo_root() / "skills" / "manifests"
+    return _resolved_skills_manifests_root()
 
 
 def _manifest_path(skill_id: str) -> Path:

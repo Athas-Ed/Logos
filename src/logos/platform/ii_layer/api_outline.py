@@ -11,8 +11,7 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from .api_v1 import _resolve_ksfs_root, _resolve_workspace_root
-from .deps import AppPortsDep
+from .deps import ResolvedPathsDep
 
 _log = logging.getLogger("logos.api.outline")
 
@@ -37,8 +36,11 @@ def build_outline_router() -> Any:
     router = APIRouter()
 
     @router.post("/outlines/save")
-    def save_outline(body: SaveOutlineRequest, ports: AppPortsDep) -> SaveOutlineResponse:
-        ws_root = _resolve_workspace_root(ports.settings)
+    def save_outline(
+        body: SaveOutlineRequest,
+        paths: ResolvedPathsDep,
+    ) -> SaveOutlineResponse:
+        ws_root = paths.workspace_root
         outlines_dir = ws_root / "outlines"
         outlines_dir.mkdir(parents=True, exist_ok=True)
 
@@ -54,8 +56,8 @@ def build_outline_router() -> Any:
         return SaveOutlineResponse(path=rel)
 
     @router.get("/ksfs/lookup")
-    def list_ksfs_lookup(ports: AppPortsDep) -> list[dict[str, str]]:
-        ksfs_root = _resolve_ksfs_root(ports.settings)
+    def list_ksfs_lookup(paths: ResolvedPathsDep) -> list[dict[str, str]]:
+        ksfs_root = paths.ksfs_root
         entries: list[dict[str, str]] = []
         if not ksfs_root.is_dir():
             return entries

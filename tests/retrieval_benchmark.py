@@ -21,12 +21,11 @@ import pytest
 
 from logos.infrastructure.retrieval.fused import FusedRetrievalService
 from logos.persistence import (
+    IndexSync,
     SqliteMetadataIndex,
     SqliteSparseIndex,
     default_svs_state_db_path,
     sync_ksfs_hsi,
-    sync_ksfs_sparse_incremental,
-    sync_ksfs_svs_incremental,
 )
 from logos.ports.metadata import MetadataRecord
 from logos.ports.retrieval import Citation
@@ -283,11 +282,15 @@ def make_retrieval_service(
         semantic_store=store,
         embedder=svs_embedder,
         sparse_index=sparse_index,
-        lazy_hsi_ksfs_root=ksfs_root,
-        lazy_hsi_db_path=hsi_db,
-        lazy_svs_state_db=svs_state if use_svs else None,
-        lazy_sparse_db_path=sparse_db_path,
-        refresh_indexes_on_query=True,
+        index_sync=IndexSync(
+            ksfs_root=ksfs_root,
+            hsi_db=hsi_db,
+            semantic_store=store,
+            embedder=svs_embedder,
+            svs_state_db=svs_state if use_svs else None,
+            sparse_index=sparse_index,
+            sparse_db=sparse_db_path,
+        ),
     )
     return svc
 
