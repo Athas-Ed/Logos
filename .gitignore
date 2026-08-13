@@ -1,3 +1,6 @@
+# 开发自用原始脚本（仅本地保留，不入库）
+original_scripts/
+
 # 本地 KSFS 脚本工具集（正式打包前暂不提交）
 scripts/KSFS工具/
 
