@@ -1,4 +1,4 @@
-# 本地渲染规格：由实现读取，将校验后的 JSON 转为 workspace/setting_entry/ 下 .md
+# 本地渲染规格：由实现读取，将校验后的 JSON 转为 pending_review/setting_entry/ 下 .md
 version: "0.1.0"
 
 # 解析：目标根 = {workspace_root}/{drafts_subdir}/ （drafts_subdir 见 manifest）

@@ -6,6 +6,7 @@ import logging
 import shutil
 from pathlib import Path
 
+from logos.paths import PathSandboxViolationError, resolve_path_under_root
 from logos.persistence.hdl_sync import sync_ksfs_hsi
 from logos.ports.draft_promotion import PromotionItem, PromotionReport
 
@@ -20,22 +21,8 @@ def _iter_markdown_entities(root: Path) -> list[Path]:
     for p in sorted(root.rglob("*.md")):
         if p.name == "README.md":
             continue
-        try:
-            p.relative_to(root)
-        except ValueError:
-            continue
         out.append(p)
     return out
-
-
-def _rel_path_safe(rel: str, *, label: str) -> tuple[bool, str]:
-    raw = (rel or "").strip().replace("\\", "/")
-    if not raw or raw.startswith("/"):
-        return False, f"{label} 无效：空或绝对路径"
-    parts = Path(raw).parts
-    if ".." in parts:
-        return False, f"{label} 不允许包含 ..：{rel!r}"
-    return True, raw
 
 
 class FilesystemDraftPromotionPort:
@@ -54,8 +41,9 @@ class FilesystemDraftPromotionPort:
         items: list[PromotionItem] = []
         for path in _iter_markdown_entities(root):
             rel = path.relative_to(root).as_posix()
-            ok, _ = _rel_path_safe(rel, label="草稿相对路径")
-            if not ok:
+            try:
+                resolve_path_under_root(root, rel)
+            except PathSandboxViolationError:
                 continue
             st = path.stat()
             items.append(
@@ -83,21 +71,15 @@ class FilesystemDraftPromotionPort:
         seen_dst: set[str] = set()
 
         for it in items:
-            ok_d, dmsg = _rel_path_safe(it.draft_relpath, label="草稿")
-            ok_k, kmsg = _rel_path_safe(it.proposed_ksfs_relpath, label="KSFS 目标")
-            if not ok_d:
-                errors.append(dmsg)
-                continue
-            if not ok_k:
-                errors.append(kmsg)
-                continue
-            src = drafts_r / Path(it.draft_relpath)
-            dst = ksfs_r / Path(it.proposed_ksfs_relpath)
             try:
-                src.relative_to(drafts_r)
-                dst.relative_to(ksfs_r)
-            except ValueError:
-                errors.append(f"路径越界：{it.draft_relpath!r} / {it.proposed_ksfs_relpath!r}")
+                src = resolve_path_under_root(drafts_r, it.draft_relpath)
+            except PathSandboxViolationError as exc:
+                errors.append(f"草稿路径被拒绝：{it.draft_relpath!r} — {exc}")
+                continue
+            try:
+                dst = resolve_path_under_root(ksfs_r, it.proposed_ksfs_relpath)
+            except PathSandboxViolationError as exc:
+                errors.append(f"KSFS 目标路径被拒绝：{it.proposed_ksfs_relpath!r} — {exc}")
                 continue
 
             if not src.is_file():

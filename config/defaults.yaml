@@ -15,8 +15,6 @@ paths:
   # 实体模板契约根；见 resources/entity_template/README.md
   entity_template_root: "./resources/entity_template"
   entity_template_profile: "your_profile_v1"
-  # 待落户设定草稿子目录（位于 workspace_root 下）；见 KSFS开发.md §2
-  setting_entry_subdir: "setting_entry"
   # 设定撰写（setting_write）专用草稿子目录
   writing_entry_subdir: "writing_entry"
   # 审核晋升（draft_review）专用草稿子目录

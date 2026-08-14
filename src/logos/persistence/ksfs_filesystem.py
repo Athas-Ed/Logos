@@ -7,7 +7,7 @@ from pathlib import Path
 from logos.ports.knowledge_source import SourceDocument
 
 from ._hash import content_hash_hex, normalize_text_for_storage
-from ._paths import resolve_under_root, to_posix_relative
+from logos.paths import resolve_path_under_root, to_posix_relative
 
 
 class FilesystemKnowledgeSource:
@@ -44,7 +44,7 @@ class FilesystemKnowledgeSource:
         return [self._load(p) for p in paths]
 
     def read_document(self, relative_path: str) -> SourceDocument:
-        path = resolve_under_root(self._root, relative_path)
+        path = resolve_path_under_root(self._root, relative_path)
         if not path.is_file():
             raise FileNotFoundError(relative_path)
         return self._load(path)

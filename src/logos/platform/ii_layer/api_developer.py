@@ -70,7 +70,7 @@ def build_developer_router() -> Any:
         )
         mcp_status: list[dict[str, Any]] = []
         for e in ports.settings.mcp_servers:
-            script = (repo / e.entrypoint).resolve()
+            script = repo / e.entrypoint
             mcp_status.append(
                 {
                     "id": e.id,

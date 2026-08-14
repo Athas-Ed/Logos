@@ -1,4 +1,4 @@
-# 渲染规格：将校验后的 JSON 转为 workspace/setting_entry/ 下 .md
+# 渲染规格：将校验后的 JSON 转为 pending_review/setting_entry/ 下 .md
 # YAML 头（结构化数据）与 body（叙事正文）分离设计
 version: "1.0.0"
 

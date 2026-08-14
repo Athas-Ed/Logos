@@ -253,9 +253,6 @@ def merged_dict_to_app_settings(data: Mapping[str, Any]) -> AppSettings:
         ),
         hsi_sqlite_path=str(paths.get("hsi_sqlite_path", "./.index/.high-speed_index")),
         kg_db_path=str(paths.get("kg_db_path", "./.index/.kg_cozo.db")),
-        setting_entry_subdir=str(
-            paths.get("setting_entry_subdir", "setting_entry")
-        ),
         writing_entry_subdir=str(
             paths.get("writing_entry_subdir", "writing_entry")
         ),

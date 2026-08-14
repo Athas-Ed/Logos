@@ -1,4 +1,8 @@
-"""草稿与文件类工具的路径沙箱：禁止逃出 Config 指定的 workspace 根。"""
+"""统一路径安全模块：用户路径在根下的沙箱解析（Candidate 3 单一来源）。
+
+所有需要把「用户提供的相对路径」解析到某个根目录之下的代码，
+必须经 :func:`resolve_path_under_root` 或本文档级包装，禁止各自实现。
+"""
 
 from __future__ import annotations
 
@@ -6,20 +10,28 @@ from pathlib import Path
 
 
 class PathSandboxViolationError(ValueError):
-    """用户路径无法解析为 workspace 下的安全路径。"""
+    """用户路径无法解析为根下的安全路径。"""
 
 
-def resolve_path_under_root(root: Path, user_path: str) -> Path:
-    """将 *user_path* 解析为 *root* 下的绝对路径；失败则抛 :class:`PathSandboxViolationError`。
+def resolve_path_under_root(
+    root: Path,
+    user_path: str,
+    *,
+    allow_empty: bool = False,
+) -> Path:
+    """将 *user_path* 解析为 *root* 下的绝对路径；失败抛 :class:`PathSandboxViolationError`。
 
-    规则（V0.1）：
+    规则：
+    - 空路径默认拒绝；*allow_empty* 时返回 *root* 本身（列根语义）；
     - 仅允许相对路径片段，禁止绝对路径；
-    - 禁止任何 ``..`` 段（在规范化前检查）；
+    - 禁止 ``..`` 段（在规范化前检查）；
     - 解析后必须仍在 *root* 的规范路径之下（防符号链接逃逸）。
     """
     root_resolved = root.resolve()
-    raw = (user_path or "").strip()
+    raw = (user_path or "").strip().replace("\\", "/")
     if not raw:
+        if allow_empty:
+            return root_resolved
         msg = "路径不能为空"
         raise PathSandboxViolationError(msg)
 
@@ -37,10 +49,15 @@ def resolve_path_under_root(root: Path, user_path: str) -> Path:
     try:
         full.relative_to(root_resolved)
     except ValueError as e:
-        msg = "路径解析后落在 workspace 之外"
+        msg = "路径解析后落在根目录之外"
         raise PathSandboxViolationError(msg) from e
 
     return full
+
+
+def to_posix_relative(root: Path, path: Path) -> str:
+    rel = path.resolve().relative_to(root.resolve())
+    return rel.as_posix()
 
 
 def write_draft_under_workspace(workspace_root: Path, path: str, content: str) -> str:

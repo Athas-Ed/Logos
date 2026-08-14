@@ -62,12 +62,16 @@ GUI 首屏数据，字段包括（节选）：
 
 ### `POST /api/v1/setting-entry/promote`
 
-将 `workspace/setting_entry/` 下草稿晋升至 KSFS。
+将 `workspace/pending_review/setting_entry/` 下草稿晋升至 KSFS。
 
 - Body：`draft_relpaths`（可选，相对 `setting_entry` 根的路径列表）
 - Response：`ok`、`applied`、`skipped`、`notes`
 
 语义与 `python -m logos.tools.promote_draft --apply` 一致。
+
+> 草稿类端点（`drafts/*`、`outlines/save`）的路径统一经沙箱校验：相对路径必须落在
+> `pending_review/`（outline 为 `outlines/`）内，绝对路径与 `..` 逃逸一律拒绝。
+> 拒绝形态见 `original_docs/重要子系统开发文档/API-V0.2.md` §2.3。
 
 ## 开发者端点
 

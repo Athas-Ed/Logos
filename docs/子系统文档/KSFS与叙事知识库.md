@@ -11,7 +11,7 @@
 | 位置 | 角色 |
 |------|------|
 | `paths.ksfs_root`（默认 `example_ksfs/`，含《西游记》示例数据） | 已「落户」的设定，参与 HSI/SVS |
-| `workspace/setting_entry/` | 设定导入或人工整理的**待晋升草稿** |
+| `workspace/pending_review/setting_entry/` | 设定导入或人工整理的**待晋升草稿** |
 | `workspace/` 其他子目录 | 一般创作工件，非事实源 |
 
 **不要**把未审核草稿直接当作 KSFS 事实源使用。
@@ -28,11 +28,11 @@
 
 ## 设定导入与重叠提示
 
-**设定导入** Skill 可将结构化批次渲染为 `setting_entry/` 下的 Markdown。导入前可进行**只读重叠扫描**（批内重复、草稿覆盖、KSFS 路径冲突），结果以 warnings 形式呈现，**不由 LLM 判定**是否冲突。
+**设定导入** Skill 可将结构化批次渲染为 `pending_review/setting_entry/` 下的 Markdown。导入前可进行**只读重叠扫描**（批内重复、草稿覆盖、KSFS 路径冲突），结果以 warnings 形式呈现，**不由 LLM 判定**是否冲突。
 
 ## 草稿晋升
 
-人审通过后，将 `setting_entry/` 中选定草稿**复制**到 KSFS 对应路径，并触发 HSI 同步：
+人审通过后，将 `pending_review/setting_entry/` 中选定草稿**复制**到 KSFS 对应路径，并触发 HSI 同步：
 
 - **API**：`POST /api/v1/setting-entry/promote`（可选 `draft_relpaths`）
 - **CLI**：`python -m logos.tools.promote_draft --workspace ./workspace --target-ksfs <KSFS根> --apply`

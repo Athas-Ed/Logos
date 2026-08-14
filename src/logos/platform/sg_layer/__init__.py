@@ -11,7 +11,7 @@ from logos.platform.sg_layer.guarded_registry import (
     V01_EXAMPLE_MCP_TOOL_NAMES,
     V01_SG_TOOL_WHITELIST,
 )
-from logos.platform.sg_layer.path_sandbox import (
+from logos.paths import (
     PathSandboxViolationError,
     read_text_under_root,
     resolve_path_under_root,

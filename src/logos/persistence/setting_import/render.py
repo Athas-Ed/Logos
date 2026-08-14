@@ -1,5 +1,5 @@
 """
-渲染管线：将校验后的 JSON 批次按 ``render_spec.yaml`` 写为 ``workspace/setting_entry/`` 下的 Markdown 文件。
+渲染管线：将校验后的 JSON 批次按 ``render_spec.yaml`` 写为 ``workspace/pending_review/setting_entry/`` 下的 Markdown 文件。
 
 设计要点（求职 / 展示用）：
 - YAML front matter 与正文分离：front matter 承载结构化元数据（tags / aliases / relations），
@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from logos.persistence._paths import resolve_under_root
+from logos.paths import resolve_path_under_root
 
 from .profile import EntityTemplateProfile, load_render_spec
 
@@ -191,7 +191,7 @@ def render_batch_to_setting_entry(
         classifications = render_spec.get("classifications") or {}
         class_cfg = classifications[unit["classification"]]
         rel_path = str(class_cfg["rel_path_template"]).format(slug=unit["slug"])
-        target = resolve_under_root(drafts_root, rel_path)
+        target = resolve_path_under_root(drafts_root, rel_path)
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(markdown, encoding="utf-8", newline="\n")
         written.append(

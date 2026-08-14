@@ -28,7 +28,7 @@ from .builtin_tool_schemas import (
     WRITE_DRAFT_PARAMETERS,
 )
 from .guarded_registry import GuardedToolRegistry, V01_SG_TOOL_WHITELIST
-from .path_sandbox import read_text_under_root, write_draft_under_workspace
+from logos.paths import read_text_under_root, resolve_path_under_root, write_draft_under_workspace
 
 _log = logging.getLogger(__name__)
 
@@ -325,7 +325,6 @@ def build_v01_guarded_tool_registry(
         base = root
         raw = (path or "").strip().replace("\\", "/")
         if raw:
-            from logos.platform.sg_layer.path_sandbox import resolve_path_under_root
             try:
                 base = resolve_path_under_root(root, raw)
             except ValueError as exc:

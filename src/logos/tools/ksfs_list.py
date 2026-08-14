@@ -5,27 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-
-class KsfsPathSandboxError(ValueError):
-    """路径无法解析为 KSFS 根下的安全路径。"""
-
-
-def _resolve_under_root(root: Path, user_path: str) -> Path:
-    root_resolved = root.resolve()
-    raw = (user_path or "").strip().replace("\\", "/")
-    if not raw:
-        return root_resolved
-    candidate = Path(raw)
-    if candidate.is_absolute():
-        raise KsfsPathSandboxError("不允许使用绝对路径")
-    if ".." in candidate.parts:
-        raise KsfsPathSandboxError("路径中不允许出现 ..")
-    full = (root_resolved / candidate).resolve()
-    try:
-        full.relative_to(root_resolved)
-    except ValueError as e:
-        raise KsfsPathSandboxError("路径解析后落在 KSFS 根之外") from e
-    return full
+from logos.paths import PathSandboxViolationError, resolve_path_under_root
 
 
 def list_ksfs_entries(
@@ -39,8 +19,8 @@ def list_ksfs_entries(
     cap = max(1, min(int(max_entries), 1000))
     root_r = ksfs_root.resolve()
     try:
-        base = _resolve_under_root(root_r, relative_dir)
-    except KsfsPathSandboxError as exc:
+        base = resolve_path_under_root(root_r, relative_dir, allow_empty=True)
+    except PathSandboxViolationError as exc:
         return json.dumps({"error": str(exc)}, ensure_ascii=False)
 
     if not base.exists():

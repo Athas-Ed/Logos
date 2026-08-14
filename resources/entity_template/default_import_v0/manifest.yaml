@@ -10,7 +10,7 @@ llm_instructions: llm_instructions.md
 drafts_subdir: pending_review/setting_entry
 
 notes: >
-  首版用于 Schema 校验 + 本地渲染落盘到 workspace/setting_entry/ 下约定子树。
+  首版用于 Schema 校验 + 本地渲染落盘到 workspace/pending_review/setting_entry/ 下约定子树。
   S&G 全量接入前可用窄白名单路径实现（见下一阶段开发计划 §2.6.7）。
 
 extras:

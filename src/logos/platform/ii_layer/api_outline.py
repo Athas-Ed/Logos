@@ -11,6 +11,10 @@ from typing import Any
 
 from pydantic import BaseModel
 
+from fastapi import HTTPException
+
+from logos.paths import PathSandboxViolationError, resolve_path_under_root
+
 from .deps import ResolvedPathsDep
 
 _log = logging.getLogger("logos.api.outline")
@@ -48,7 +52,10 @@ def build_outline_router() -> Any:
         safe_name = body.filename or f"outline_{ts}.md"
         if not safe_name.endswith(".md"):
             safe_name += ".md"
-        file_path = outlines_dir / safe_name
+        try:
+            file_path = resolve_path_under_root(outlines_dir, safe_name)
+        except PathSandboxViolationError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
         file_path.write_text(body.content, encoding="utf-8")
         rel = str(file_path.relative_to(ws_root))

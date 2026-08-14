@@ -11,7 +11,10 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from fastapi import HTTPException
 from pydantic import BaseModel, Field
+
+from logos.paths import PathSandboxViolationError, resolve_path_under_root
 
 from .deps import AppPortsDep, LLMDep, ResolvedPathsDep
 
@@ -19,7 +22,7 @@ _log = logging.getLogger("logos.api.review")
 
 
 class SettingEntryPromoteBody(BaseModel):
-    """将 ``workspace/setting_entry/`` 下草稿晋升至 KSFS（F6-08）。"""
+    """将 ``workspace/pending_review/setting_entry/`` 下草稿晋升至 KSFS（F6-08）。"""
 
     draft_relpaths: list[str] | None = Field(
         default=None,
@@ -122,14 +125,10 @@ def _scope_drafts_root(ws_root: Path, settings: Any, scope: str) -> Path:
     """Return the drafts root directory for a *scope* under ``pending_review/<scope>/``.
 
     ``scope=""`` means the ``pending_review/`` root itself.
+    *scope* 经统一沙箱校验；逃逸抛 :class:`PathSandboxViolationError`。
     """
     base = ws_root / settings.pending_review_subdir
-    return base if not scope else base / scope
-
-
-def _scope_rel_to_ws_path(ws_root: Path, settings: Any, scope: str, rel: str) -> Path:
-    """Convert a *scope*-relative path to a full workspace-relative :class:`Path`."""
-    return _scope_drafts_root(ws_root, settings, scope) / rel.replace("\\", "/").lstrip("/")
+    return resolve_path_under_root(base, scope, allow_empty=True)
 
 
 def _now_iso() -> str:
@@ -215,7 +214,10 @@ def build_review_router() -> Any:
     ) -> DraftsListResponse:
         """列出 pending_review 下某 scope 的全部草稿文件。scope 空 = pending_review 根。"""
         ws_root = paths.workspace_root
-        target = _scope_drafts_root(ws_root, ports.settings, scope)
+        try:
+            target = _scope_drafts_root(ws_root, ports.settings, scope)
+        except PathSandboxViolationError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
         if not target.is_dir():
             return DraftsListResponse(files=[])
@@ -244,7 +246,11 @@ def build_review_router() -> Any:
     ) -> DraftsReadResponse:
         """读取 pending_review 下某 scope 内文件的正文。path 相对 scope 根。"""
         ws_root = paths.workspace_root
-        full = _scope_rel_to_ws_path(ws_root, ports.settings, scope, path)
+        try:
+            drafts_root = _scope_drafts_root(ws_root, ports.settings, scope)
+            full = resolve_path_under_root(drafts_root, path)
+        except PathSandboxViolationError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
         content = full.read_text(encoding="utf-8")
         return DraftsReadResponse(path=path, content=content)
 
@@ -261,7 +267,10 @@ def build_review_router() -> Any:
         ws_root = paths.workspace_root
         ksfs_root = paths.ksfs_root
         logs_root = paths.logs_root
-        drafts_root = _scope_drafts_root(ws_root, ports.settings, body.scope)
+        try:
+            drafts_root = _scope_drafts_root(ws_root, ports.settings, body.scope)
+        except PathSandboxViolationError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
         hsi_db = paths.hsi_sqlite_path
         port = FilesystemDraftPromotionPort(hsi_db=hsi_db)
 
@@ -269,11 +278,11 @@ def build_review_router() -> Any:
         failed: list[str] = []
         fail_reasons: list[str] = []
         for rel in body.paths:
-            src = (drafts_root / rel).resolve()
             try:
-                src.relative_to(drafts_root)
-            except ValueError:
+                src = resolve_path_under_root(drafts_root, rel)
+            except PathSandboxViolationError as exc:
                 failed.append(rel)
+                fail_reasons.append(f"{rel}: {exc}")
                 continue
             if not src.is_file():
                 failed.append(rel)
@@ -333,13 +342,15 @@ def build_review_router() -> Any:
     ) -> DraftsDeleteResponse:
         """删除 pending_review/<scope>/ 下的草稿源文件。path 相对 scope 根。"""
         ws_root = paths.workspace_root
-        drafts_root = _scope_drafts_root(ws_root, ports.settings, body.scope)
+        try:
+            drafts_root = _scope_drafts_root(ws_root, ports.settings, body.scope)
+        except PathSandboxViolationError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
         deleted: list[str] = []
         for rel in body.paths:
-            target = (drafts_root / rel).resolve()
             try:
-                target.relative_to(drafts_root)
-            except ValueError:
+                target = resolve_path_under_root(drafts_root, rel)
+            except PathSandboxViolationError:
                 continue
             if target.is_file():
                 try:
@@ -396,7 +407,10 @@ def build_review_router() -> Any:
             results = []
 
         ws_root = paths.workspace_root
-        drafts_root = _scope_drafts_root(ws_root, ports.settings, body.scope)
+        try:
+            drafts_root = _scope_drafts_root(ws_root, ports.settings, body.scope)
+        except PathSandboxViolationError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
         written: list[str] = []
         failed: list[str] = []
         for entry in results:
@@ -405,7 +419,12 @@ def build_review_router() -> Any:
             if not rpath:
                 continue
             try:
-                target = (drafts_root / rpath).resolve()
+                target = resolve_path_under_root(drafts_root, rpath)
+            except PathSandboxViolationError as exc:
+                _log.warning("drafts/rewrite 路径被拒绝：%s", exc)
+                failed.append(rpath)
+                continue
+            try:
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_text(rcontent, encoding="utf-8")
                 written.append(rpath)
@@ -427,8 +446,14 @@ def build_review_router() -> Any:
     ) -> dict[str, Any]:
         """覆写 pending_review/<scope>/ 下的草稿文件。path 相对 scope 根。"""
         ws_root = paths.workspace_root
-        drafts_root = _scope_drafts_root(ws_root, ports.settings, body.scope)
-        target = (drafts_root / body.path).resolve()
+        try:
+            drafts_root = _scope_drafts_root(ws_root, ports.settings, body.scope)
+        except PathSandboxViolationError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        try:
+            target = resolve_path_under_root(drafts_root, body.path)
+        except PathSandboxViolationError as exc:
+            return {"ok": False, "path": body.path, "result": f"error: {exc}"}
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(body.content, encoding="utf-8")
         return {"ok": True, "path": body.path, "result": "written"}

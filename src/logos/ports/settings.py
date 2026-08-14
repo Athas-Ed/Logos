@@ -78,8 +78,6 @@ class AppSettings:
     sync_hsi_on_retrieve: bool = True
     #: ``paths.kg_db_path``（默认 "./.index/.kg_cozo.db"；被 factory.py 中 kg_query 工具消费）
     kg_db_path: str = "./.index/.kg_cozo.db"
-    #: ``paths.setting_entry_subdir``：相对 ``pending_review_subdir`` 的草稿子目录（默认 "setting_entry"）
-    setting_entry_subdir: str = "setting_entry"
     #: ``retrieval.sparse.enabled``：组合根是否默认装配 FTS5 稀疏索引（默认开启；加载失败自动降级为 HSI+SVS）
     sparse_enabled: bool = True
     #: ``retrieval.sparse.db_path``：FTS5 稀疏索引 SQLite 路径（默认 "./.index/.sparse_fts.sqlite"）

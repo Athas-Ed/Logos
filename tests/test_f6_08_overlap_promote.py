@@ -28,7 +28,7 @@ def test_overlap_scan_warns_existing_draft_and_ksfs(tmp_path: Path) -> None:
 
     ws = tmp_path / "workspace"
     ws.mkdir()
-    drafts = ws / "setting_entry" / "人物"
+    drafts = ws / "pending_review" / "setting_entry" / "人物"
     drafts.mkdir(parents=True)
     (drafts / "lin-dong.md").write_text("# existing draft\n", encoding="utf-8")
 
@@ -52,8 +52,8 @@ def test_pipeline_overlap_sse_warning(tmp_path: Path) -> None:
     profile = load_entity_template_profile("your_profile_v1")
     batch = _load_batch("minimal_batch.json")
     ws = tmp_path / "workspace"
-    (ws / "setting_entry" / "人物").mkdir(parents=True)
-    (ws / "setting_entry" / "人物" / "lin-dong.md").write_text("x", encoding="utf-8")
+    (ws / "pending_review" / "setting_entry" / "人物").mkdir(parents=True)
+    (ws / "pending_review" / "setting_entry" / "人物" / "lin-dong.md").write_text("x", encoding="utf-8")
     ksfs = tmp_path / "ksfs"
     ksfs.mkdir()
 
@@ -77,7 +77,7 @@ def test_pipeline_overlap_sse_warning(tmp_path: Path) -> None:
 
 def test_setting_entry_promote_api(tmp_path: Path) -> None:
     ws = tmp_path / "workspace"
-    drafts = ws / "setting_entry"
+    drafts = ws / "pending_review" / "setting_entry"
     drafts.mkdir(parents=True)
     (drafts / "promote-me.md").write_text("# Draft\n\nbody\n", encoding="utf-8")
     ksfs = tmp_path / "ksfs"
